@@ -2,7 +2,7 @@
 
 ## Pending 
 
-- Npne
+- None
 
 ## Fixed
 
