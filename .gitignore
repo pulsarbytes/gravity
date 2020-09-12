@@ -1,0 +1,15 @@
+# Compiled Object files
+*.o
+*.a
+
+# Visual Studio Code
+.vscode/*
+!.vscode/settings.json
+!.vscode/c_cpp_properties.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# Other files
+*.txt
+*~
