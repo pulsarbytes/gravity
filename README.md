@@ -45,17 +45,17 @@ Alternatively, a Makefile is provided as a convenience.
 
 ## Keyboard controls
 
-`Space` Thrust
-`Right arrow` Rotate right
-`Left arrow` Rotate left
-`Tab` Toggle console
+- `Space` Thrust
+- `Right arrow` Rotate right
+- `Left arrow` Rotate left
+- `Tab` Toggle console
 
 ## Console contents
 
-`1st line` Frames per second
-`2nd line` X axis distance from Sun
-`3rd line` Y axis distance from Sun
-`4th line` Velocity vector
+- `1st line` Frames per second
+- `2nd line` X axis distance from Sun
+- `3rd line` Y axis distance from Sun
+- `4th line` Velocity vector
 
 ## Common issues
 
@@ -70,7 +70,7 @@ See [BUGS](BUGS.md).
     it under the terms of the GNU General Public License version 2 only,
     as published by the Free Software Foundation.
 
-        http://www.apache.org/licenses/LICENSE-2.0
+        https://www.gnu.org/licenses/
     
     This program is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
