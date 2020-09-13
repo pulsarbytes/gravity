@@ -43,6 +43,20 @@ Install the extension [C/C++ by Microsoft](https://marketplace.visualstudio.com/
 Alternatively, a Makefile is provided as a convenience.
 
 
+## Keyboard controls
+
+`Space` Thrust
+`Right arrow` Rotate right
+`Left arrow` Rotate left
+`Tab` Toggle console
+
+## Console contents
+
+`1st line` Frames per second
+`2nd line` X axis distance from Sun
+`3rd line` Y axis distance from Sun
+`4th line` Velocity vector
+
 ## Common issues
 
 See [BUGS](BUGS.md).
