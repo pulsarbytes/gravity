@@ -81,7 +81,7 @@ int init_sdl(void)
     if (font == NULL)
     {
         SDL_Log("Could not load font: %s\n", SDL_GetError());
-        TTF_Init();
+        TTF_Quit();
         SDL_DestroyRenderer(renderer);
         SDL_DestroyWindow(window);
         SDL_Quit();
@@ -102,7 +102,7 @@ int init_sdl(void)
 void close_sdl(void)
 {
     TTF_CloseFont(font);
-    TTF_Init();
+    TTF_Quit();
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
     SDL_Quit();
