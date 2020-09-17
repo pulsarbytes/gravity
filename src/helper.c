@@ -1,5 +1,5 @@
 /*
- * helper.c - Contains helper functions
+ * helper.c - Definitions for helper functions
  */
 
 #include <stdlib.h>
