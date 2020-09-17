@@ -1,5 +1,5 @@
 /*
- * Gravity - A basic 2d game engine that models gravity and orbital motion
+ * Gravity - A basic 2d game engine in C that models gravity and orbital motion
  * by Yannis Maragos - https://www.pulsarbytes.net
  * 
  * v1.0.0
@@ -314,7 +314,7 @@ struct ship_t create_ship(void)
     struct ship_t ship;
 
     ship.image = "../assets/sprites/ship.png";
-    ship.radius = 17;
+    ship.radius = SHIP_RADIUS;
     ship.position.x = SHIP_STARTING_X;
     ship.position.y = SHIP_STARTING_Y;
     ship.vx = 0;
