@@ -1,5 +1,5 @@
 /*
- * events.c - Functions for game console
+ * console.c - Function definitions for game console
  */
 
 #include <stdio.h>
