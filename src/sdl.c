@@ -1,5 +1,5 @@
 /*
- * sld.c - Contains functions to initialize and close SDL
+ * sdl.c - Functions for initializing and closing SDL
  */
 
 #include <SDL2/SDL.h>
