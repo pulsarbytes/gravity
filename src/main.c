@@ -98,8 +98,8 @@ int main(int argc, char *argv[])
     int quit = 0;
 
     // Global coordinates
-    int x_coord = 0;
-    int y_coord = 0;
+    float x_coord = 0;
+    float y_coord = 0;
 
     // Initialize SDL
     if (!init_sdl())
