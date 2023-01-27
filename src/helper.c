@@ -10,7 +10,7 @@
 #include "../include/common.h"
 #include "../include/structs.h"
 
-#define COSMIC_CONSTANT         7.75
+#define COSMIC_CONSTANT 7.75
 
 /*
  * Clean up planets (recursive)
@@ -25,10 +25,10 @@ static void cleanup_planets(struct planet_t *planet)
     }
 
     SDL_DestroyTexture(planet->texture);
-    
+
     if (planet != NULL)
     {
-        free(planet);
+        // free(planet);
         planet = NULL;
     }
 }
