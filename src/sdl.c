@@ -7,7 +7,7 @@
 
 #include "../include/common.h"
 
-#define FULLSCREEN 0
+#define FULLSCREEN 1
 #define FONT_SIZE 14
 
 extern SDL_Window *window;
