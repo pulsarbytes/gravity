@@ -89,7 +89,7 @@ struct planet_t create_solar_system(void);
 struct ship_t create_ship(void);
 void update_planets(struct planet_t *planet, struct planet_t *parent, struct ship_t *, const struct camera_t *);
 void project_planet(struct planet_t *, const struct camera_t *);
-void update_ship_velocity(struct planet_t *planet, struct planet_t *parent, struct ship_t *, const struct camera_t *);
+void apply_gravity_to_ship(struct planet_t *planet, struct planet_t *parent, struct ship_t *, const struct camera_t *);
 void update_camera(struct camera_t *, struct ship_t *);
 void update_ship(struct ship_t *, const struct camera_t *);
 
@@ -624,8 +624,8 @@ void update_planets(struct planet_t *planet, struct planet_t *parent, struct shi
     else
         project_planet(planet, camera);
 
-    // Update ship velocity
-    update_ship_velocity(planet, parent, ship, camera);
+    // Update ship speed due to gravity
+    apply_gravity_to_ship(planet, parent, ship, camera);
 }
 
 /*
@@ -710,9 +710,9 @@ void project_planet(struct planet_t *planet, const struct camera_t *camera)
 }
 
 /*
- * Update ship velocity
+ * Apply planet gravity to ship and update speed and velocity
  */
-void update_ship_velocity(struct planet_t *planet, struct planet_t *parent, struct ship_t *ship, const struct camera_t *camera)
+void apply_gravity_to_ship(struct planet_t *planet, struct planet_t *parent, struct ship_t *ship, const struct camera_t *camera)
 {
     float delta_x = 0.0;
     float delta_y = 0.0;
@@ -826,9 +826,10 @@ void update_ship_velocity(struct planet_t *planet, struct planet_t *parent, stru
             ship->vx = SPEED_LIMIT * ship->vx / velocity;
             ship->vy = SPEED_LIMIT * ship->vy / velocity;
         }
-
-        velocity = sqrt((ship->vx * ship->vx) + (ship->vy * ship->vy));
     }
+
+    // Update velocity
+    velocity = sqrt((ship->vx * ship->vx) + (ship->vy * ship->vy));
 }
 
 /*
