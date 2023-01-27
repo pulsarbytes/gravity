@@ -152,9 +152,7 @@ int main(int argc, char *argv[])
 
         // Update camera
         if (CAMERA_ON)
-        {
             update_camera(&camera, &ship);
-        }
 
         // Update ship
         update_ship(&ship, &camera);
@@ -172,18 +170,14 @@ int main(int argc, char *argv[])
 
         // Update game console
         if (console)
-        {
             update_game_console(game_console_entries);
-        }
 
         // Switch buffers, display back buffer
         SDL_RenderPresent(renderer);
 
         // Set FPS
         if ((1000 / FPS) > ((end_time = SDL_GetTicks()) - start_time))
-        {
             SDL_Delay((1000 / FPS) - (end_time - start_time));
-        }
 
         // Log FPS
         log_fps(end_time - start_time);
@@ -239,9 +233,7 @@ int create_bgstars(struct bgstar_t bgstars[], int max_bgstars, struct ship_t *sh
             }
 
             if (i >= max_bgstars)
-            {
                 end = TRUE;
-            }
         }
     }
 
@@ -267,25 +259,17 @@ void update_bgstars(struct bgstar_t bgstars[], int stars_count, struct ship_t *s
 
             // Right boundary
             if (bgstars[i].position.x > ship->position.x - camera->x)
-            {
                 bgstars[i].position.x -= camera->w;
-            }
             // Left boundary
             else if (bgstars[i].position.x < camera->x - ship->position.x)
-            {
                 bgstars[i].position.x += camera->w;
-            }
 
             // Top boundary
             if (bgstars[i].position.y > ship->position.y - camera->y)
-            {
                 bgstars[i].position.y -= camera->h;
-            }
             // Bottom boundary
             else if (bgstars[i].position.y < camera->y - ship->position.y)
-            {
                 bgstars[i].position.y += camera->h;
-            }
         }
 
         SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
@@ -564,7 +548,10 @@ struct planet_t create_solar_system(void)
  */
 void update_planets(struct planet_t *planet, struct planet_t *parent, struct ship_t *ship, const struct camera_t *camera)
 {
-    if (parent != NULL)
+    int is_star = parent == NULL;
+    float distance_star = 0.0;
+
+    if (!is_star)
     {
         float delta_x = 0.0;
         float delta_y = 0.0;
@@ -602,27 +589,40 @@ void update_planets(struct planet_t *planet, struct planet_t *parent, struct shi
         planet->position.y += dy;
     }
 
-    int i = 0;
-
-    for (i = 0; i < MAX_MOONS && planet->moons[i] != NULL; i++)
+    // If star, get ship distance from star
+    if (is_star)
     {
-        update_planets(planet->moons[i], planet, ship, camera);
+        float delta_x_star = 0.0;
+        float delta_y_star = 0.0;
+        delta_x_star = planet->position.x - ship->position.x;
+        delta_y_star = planet->position.y - ship->position.y;
+        distance_star = sqrt(delta_x_star * delta_x_star + delta_y_star * delta_y_star);
     }
 
-    planet->rect.x = (int)(planet->position.x - planet->radius - camera->x);
-    planet->rect.y = (int)(planet->position.y - planet->radius - camera->y);
+    // Don't update if it's a star and ship is outside STAR_CUTOFF
+    if (!is_star || (is_star && distance_star < STAR_CUTOFF * planet->radius))
+    {
+        int i = 0;
+
+        // Update moons
+        for (i = 0; i < MAX_MOONS && planet->moons[i] != NULL; i++)
+        {
+            update_planets(planet->moons[i], planet, ship, camera);
+        }
+    }
 
     // Draw planet if in camera
     if (planet->position.x - planet->radius <= camera->x + camera->w && planet->position.x + planet->radius > camera->x &&
         planet->position.y - planet->radius <= camera->y + camera->h && planet->position.y + planet->radius > camera->y)
     {
+        planet->rect.x = (int)(planet->position.x - planet->radius - camera->x);
+        planet->rect.y = (int)(planet->position.y - planet->radius - camera->y);
+
         SDL_RenderCopy(renderer, planet->texture, NULL, &planet->rect);
     }
     // Draw planet projection
     else
-    {
         project_planet(planet, camera);
-    }
 
     // Update ship velocity
     update_ship_velocity(planet, parent, ship, camera);
@@ -830,19 +830,13 @@ void update_ship(struct ship_t *ship, const struct camera_t *camera)
 
     // Update ship angle
     if (right && !left && landing_stage == STAGE_OFF)
-    {
         ship->angle += 3;
-    }
 
     if (left && !right && landing_stage == STAGE_OFF)
-    {
         ship->angle -= 3;
-    }
 
     if (ship->angle > 360)
-    {
         ship->angle -= 360;
-    }
 
     // Apply ship thrust
     if (thrust)
@@ -883,7 +877,5 @@ void update_ship(struct ship_t *ship, const struct camera_t *camera)
 
     // Draw ship thrust
     if (thrust)
-    {
         SDL_RenderCopyEx(renderer, ship->texture, &ship->thrust_img_rect, &ship->rect, ship->angle, &ship->rotation_pt, SDL_FLIP_NONE);
-    }
 }
