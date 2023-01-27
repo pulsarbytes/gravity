@@ -145,10 +145,7 @@ int main(int argc, char *argv[])
         SDL_RenderClear(renderer);
 
         // Draw background stars
-        if (CAMERA_ON)
-        {
-            update_bgstars(bgstars, bgstars_count, &ship, &camera);
-        }
+        update_bgstars(bgstars, bgstars_count, &ship, &camera);
 
         // Updates planets in solar system recursively
         update_planets(&sol, NULL, &ship, &camera);
@@ -221,10 +218,10 @@ int create_bgstars(struct bgstar_t bgstars[], int max_bgstars, struct ship_t *sh
             if (is_star)
             {
                 struct bgstar_t star;
-                star.position.x = column + ship->position.x;
-                star.position.y = row + ship->position.y;
-                star.rect.x = 0;
-                star.rect.y = 0;
+                star.position.x = column;
+                star.position.y = row;
+                star.rect.x = star.position.x;
+                star.rect.y = star.position.y;
 
                 if (rand() % 12 < 1)
                 {
@@ -260,32 +257,35 @@ void update_bgstars(struct bgstar_t bgstars[], int stars_count, struct ship_t *s
 
     for (i = 0; i < stars_count; i++)
     {
-        bgstars[i].position.x -= 0.2 * ship->vx / FPS;
-        bgstars[i].position.y -= 0.2 * ship->vy / FPS;
+        if (CAMERA_ON)
+        {
+            bgstars[i].position.x -= 0.2 * ship->vx / FPS;
+            bgstars[i].position.y -= 0.2 * ship->vy / FPS;
 
-        bgstars[i].rect.x = (int)(bgstars[i].position.x + (camera->w / 2));
-        bgstars[i].rect.y = (int)(bgstars[i].position.y + (camera->h / 2));
+            bgstars[i].rect.x = (int)(bgstars[i].position.x + (camera->w / 2));
+            bgstars[i].rect.y = (int)(bgstars[i].position.y + (camera->h / 2));
 
-        // Right boundary
-        if (bgstars[i].position.x > ship->position.x - camera->x)
-        {
-            bgstars[i].position.x -= camera->w;
-        }
-        // Left boundary
-        else if (bgstars[i].position.x < camera->x - ship->position.x)
-        {
-            bgstars[i].position.x += camera->w;
-        }
+            // Right boundary
+            if (bgstars[i].position.x > ship->position.x - camera->x)
+            {
+                bgstars[i].position.x -= camera->w;
+            }
+            // Left boundary
+            else if (bgstars[i].position.x < camera->x - ship->position.x)
+            {
+                bgstars[i].position.x += camera->w;
+            }
 
-        // Top boundary
-        if (bgstars[i].position.y > ship->position.y - camera->y)
-        {
-            bgstars[i].position.y -= camera->h;
-        }
-        // Bottom boundary
-        else if (bgstars[i].position.y < camera->y - ship->position.y)
-        {
-            bgstars[i].position.y += camera->h;
+            // Top boundary
+            if (bgstars[i].position.y > ship->position.y - camera->y)
+            {
+                bgstars[i].position.y -= camera->h;
+            }
+            // Bottom boundary
+            else if (bgstars[i].position.y < camera->y - ship->position.y)
+            {
+                bgstars[i].position.y += camera->h;
+            }
         }
 
         SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
