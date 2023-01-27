@@ -37,6 +37,7 @@
 #define SHIP_RADIUS 17
 #define SHIP_STARTING_X 0
 #define SHIP_STARTING_Y -700
+#define SHIP_IN_ORBIT 1
 #define STAR_CUTOFF 60
 #define PLANET_CUTOFF 10
 #define LANDING_CUTOFF 3
@@ -120,6 +121,10 @@ int main(int argc, char *argv[])
 
     // Create solar system
     struct planet_t sol = create_solar_system();
+
+    // Put ship in orbit
+    if (SHIP_IN_ORBIT)
+        ship.vx = orbital_velocity(abs((int)sol.position.y - (int)ship.position.y), sol.radius);
 
     // Create stars background
     int max_bgstars = (int)(display_mode.w * display_mode.h * STARS_PER_SQUARE / STARS_SQUARE);
