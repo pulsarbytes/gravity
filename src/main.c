@@ -43,13 +43,14 @@
 #define SPEED_LIMIT 300
 #define APPROACH_LIMIT 100
 #define PROJECTION_OFFSET 10
+#define CAMERA_ON 1
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
 #endif
 
 static enum {
-    STAGE_OFF = -1,
-    STAGE_0
+    STAGE_OFF = -1, // Not landed
+    STAGE_0         // Landed
 } landing_stage = STAGE_OFF;
 
 // External variable definitions
@@ -59,7 +60,6 @@ SDL_Renderer *renderer = NULL;
 TTF_Font *font = NULL;
 SDL_Color text_color;
 
-const int camera_on = TRUE;
 static float velocity;
 const float g_launch = 0.7 * G_CONSTANT;
 const float g_thrust = 1 * G_CONSTANT;
@@ -145,7 +145,7 @@ int main(int argc, char *argv[])
         SDL_RenderClear(renderer);
 
         // Draw background stars
-        if (camera_on)
+        if (CAMERA_ON)
         {
             update_bgstars(bgstars, bgstars_count, &ship, &camera);
         }
@@ -154,7 +154,7 @@ int main(int argc, char *argv[])
         update_planets(&sol, NULL, &ship, &camera);
 
         // Update camera
-        if (camera_on)
+        if (CAMERA_ON)
         {
             update_camera(&camera, &ship);
         }
@@ -865,7 +865,7 @@ void update_ship(struct ship_t *ship, const struct camera_t *camera)
     ship->position.x += (float)ship->vx / FPS;
     ship->position.y += (float)ship->vy / FPS;
 
-    if (camera_on)
+    if (CAMERA_ON)
     {
         // Static rect position at center of screen fixes flickering caused by float-to-int inaccuracies
         ship->rect.x = (camera->w / 2) - ship->radius;
