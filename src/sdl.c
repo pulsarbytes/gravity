@@ -7,7 +7,8 @@
 
 #include "../include/common.h"
 
-#define FONT_SIZE               14
+#define FULLSCREEN 0
+#define FONT_SIZE 14
 
 extern SDL_Window *window;
 extern SDL_DisplayMode display_mode;
@@ -18,7 +19,7 @@ extern SDL_Color text_color;
 /*
  * Initialize SDL
  */
-int init_sdl(void)
+int init_sdl()
 {
     // Attempt to initialize SDL
     if (SDL_Init(SDL_INIT_EVERYTHING) != 0)
@@ -51,7 +52,8 @@ int init_sdl(void)
     }
 
     // Make Fullscreen
-    SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN);
+    if (FULLSCREEN)
+        SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN);
 
     // Create a 2D rendering context for the window
     Uint32 render_flags = SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC;
