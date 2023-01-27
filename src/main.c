@@ -818,7 +818,17 @@ void update_ship_velocity(struct planet_t *planet, struct planet_t *parent, stru
         ship->vy += g_planet * delta_y / distance;
     }
 
-    velocity = sqrt((ship->vx * ship->vx) + (ship->vy * ship->vy));
+    // Enfore speed limit if within STAR_CUTOFF
+    if (!is_star || (is_star && distance < STAR_CUTOFF * planet->radius))
+    {
+        if (velocity > SPEED_LIMIT)
+        {
+            ship->vx = SPEED_LIMIT * ship->vx / velocity;
+            ship->vy = SPEED_LIMIT * ship->vy / velocity;
+        }
+
+        velocity = sqrt((ship->vx * ship->vx) + (ship->vy * ship->vy));
+    }
 }
 
 /*
@@ -846,13 +856,6 @@ void update_ship(struct ship_t *ship, const struct camera_t *camera)
 
         ship->vx += g_thrust * sin(radians);
         ship->vy -= g_thrust * cos(radians);
-    }
-
-    // Speed limit
-    if (velocity > SPEED_LIMIT)
-    {
-        ship->vx = SPEED_LIMIT * ship->vx / velocity;
-        ship->vy = SPEED_LIMIT * ship->vy / velocity;
     }
 
     // Update ship position
