@@ -1,9 +1,9 @@
 # A list of known bugs
 
-## Pending 
+## Pending
 
-- None
+-   [ ] Fix float overflow when moving in great distances from the center of the solar system
 
 ## Fixed
 
-- None
+-   None
