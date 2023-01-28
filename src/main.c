@@ -36,8 +36,8 @@
 #define STARS_PER_SQUARE 5
 #define SHIP_RADIUS 17
 #define SHIP_PROJECTION_RADIUS 10
-#define SHIP_STARTING_X -7000 // 0 is sol center
-#define SHIP_STARTING_Y -7000 // 0 is sol center
+#define SHIP_STARTING_X 0    // 0 is sol center, negative is left
+#define SHIP_STARTING_Y -700 // 0 is sol center, negative is up
 #define SHIP_IN_ORBIT 0
 #define STAR_CUTOFF 60
 #define PLANET_CUTOFF 10
@@ -88,14 +88,13 @@ float orbital_velocity(float height, int radius);
 int create_bgstars(struct bgstar_t bgstars[], int max_bgstars, struct ship_t *);
 void update_bgstars(struct bgstar_t bgstars[], int stars_count, struct ship_t *, const struct camera_t *);
 struct planet_t create_solar_system(void);
-struct ship_t create_ship(void);
-struct ship_t create_ship_projection(void);
+struct ship_t create_ship(int radius, int x, int y);
 void update_planets(struct planet_t *planet, struct planet_t *parent, struct ship_t *, const struct camera_t *);
 void project_planet(struct planet_t *, const struct camera_t *);
 void apply_gravity_to_ship(struct planet_t *planet, struct planet_t *parent, struct ship_t *, const struct camera_t *);
 void update_camera(struct camera_t *, struct ship_t *);
-void update_ship(struct ship_t *, struct ship_t *, const struct camera_t *);
-void project_ship(struct ship_t *, struct ship_t *, const struct camera_t *);
+void update_ship(struct ship_t *ship, struct ship_t *projection, const struct camera_t *);
+void project_ship(struct ship_t *ship, struct ship_t *projection, const struct camera_t *);
 
 int main(int argc, char *argv[])
 {
@@ -113,10 +112,10 @@ int main(int argc, char *argv[])
     }
 
     // Create ship
-    struct ship_t ship = create_ship();
+    struct ship_t ship = create_ship(SHIP_RADIUS, SHIP_STARTING_X, SHIP_STARTING_Y);
 
     // Create ship projection
-    struct ship_t ship_projection = create_ship_projection();
+    struct ship_t ship_projection = create_ship(SHIP_PROJECTION_RADIUS, 0, 0);
 
     // Create camera, sync initial position with ship
     struct camera_t camera = {
@@ -302,14 +301,14 @@ void update_camera(struct camera_t *camera, struct ship_t *ship)
 /*
  * Create a ship
  */
-struct ship_t create_ship(void)
+struct ship_t create_ship(int radius, int x, int y)
 {
     struct ship_t ship;
 
     ship.image = "../assets/sprites/ship.png";
-    ship.radius = SHIP_RADIUS;
-    ship.position.x = SHIP_STARTING_X;
-    ship.position.y = SHIP_STARTING_Y;
+    ship.radius = radius;
+    ship.position.x = x;
+    ship.position.y = y;
     ship.vx = 0;
     ship.vy = 0;
     ship.angle = 0;
@@ -318,39 +317,6 @@ struct ship_t create_ship(void)
     SDL_FreeSurface(surface);
     ship.rect.x = ship.position.x - ship.radius;
     ship.rect.y = ship.position.y - ship.radius;
-    ship.rect.w = 2 * ship.radius;
-    ship.rect.h = 2 * ship.radius;
-    ship.main_img_rect.x = 0; // start clipping at x of texture
-    ship.main_img_rect.y = 0; // start clipping at y of texture
-    ship.main_img_rect.w = 162;
-    ship.main_img_rect.h = 162;
-    ship.thrust_img_rect.x = 256; // start clipping at x of texture
-    ship.thrust_img_rect.y = 0;   // start clipping at y of texture
-    ship.thrust_img_rect.w = 162;
-    ship.thrust_img_rect.h = 162;
-
-    // Point around which ship will be rotated (relative to destination rect)
-    ship.rotation_pt.x = ship.radius;
-    ship.rotation_pt.y = ship.radius;
-
-    return ship;
-}
-
-/*
- * Create ship projection
- */
-struct ship_t create_ship_projection(void)
-{
-    struct ship_t ship;
-
-    ship.image = "../assets/sprites/ship.png";
-    ship.radius = SHIP_PROJECTION_RADIUS;
-    ship.angle = 0;
-    SDL_Surface *surface = IMG_Load(ship.image);
-    ship.texture = SDL_CreateTextureFromSurface(renderer, surface);
-    SDL_FreeSurface(surface);
-    ship.rect.x = 0;
-    ship.rect.y = 0;
     ship.rect.w = 2 * ship.radius;
     ship.rect.h = 2 * ship.radius;
     ship.main_img_rect.x = 0; // start clipping at x of texture
