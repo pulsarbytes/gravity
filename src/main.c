@@ -44,7 +44,7 @@
 #define SPEED_LIMIT 300
 #define APPROACH_LIMIT 100
 #define PROJECTION_OFFSET 10
-#define CAMERA_ON 1
+#define CAMERA_ON 0
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
 #endif
@@ -93,6 +93,7 @@ void project_planet(struct planet_t *, const struct camera_t *);
 void apply_gravity_to_ship(struct planet_t *planet, struct planet_t *parent, struct ship_t *, const struct camera_t *);
 void update_camera(struct camera_t *, struct ship_t *);
 void update_ship(struct ship_t *, const struct camera_t *);
+void project_ship(struct ship_t *, const struct camera_t *);
 
 int main(int argc, char *argv[])
 {
@@ -318,6 +319,9 @@ struct ship_t create_ship(void)
     ship.main_img_rect.y = 0; // start clipping at y of texture
     ship.main_img_rect.w = 162;
     ship.main_img_rect.h = 162;
+    ship.color.r = 255;
+    ship.color.g = 255;
+    ship.color.b = 255;
     ship.thrust_img_rect.x = 256; // start clipping at x of texture
     ship.thrust_img_rect.y = 0;   // start clipping at y of texture
     ship.thrust_img_rect.w = 162;
@@ -838,7 +842,7 @@ void apply_gravity_to_ship(struct planet_t *planet, struct planet_t *parent, str
 }
 
 /*
- * Update ship position and draw ship
+ * Update ship position, listen for key controls and draw ship
  */
 void update_ship(struct ship_t *ship, const struct camera_t *camera)
 {
@@ -881,10 +885,98 @@ void update_ship(struct ship_t *ship, const struct camera_t *camera)
         ship->rect.y = (int)(ship->position.y - ship->radius - camera->y);
     }
 
-    // Draw ship
-    SDL_RenderCopyEx(renderer, ship->texture, &ship->main_img_rect, &ship->rect, ship->angle, &ship->rotation_pt, SDL_FLIP_NONE);
+    // Draw ship if in camera
+    if (CAMERA_ON || (!CAMERA_ON && (ship->position.x <= camera->x + camera->w && ship->position.x > camera->x &&
+                                     ship->position.y <= camera->y + camera->h && ship->position.y > camera->y)))
+    {
+        SDL_RenderCopyEx(renderer, ship->texture, &ship->main_img_rect, &ship->rect, ship->angle, &ship->rotation_pt, SDL_FLIP_NONE);
+    }
+    // Draw ship projection
+    else
+        project_ship(ship, camera);
 
     // Draw ship thrust
     if (thrust)
         SDL_RenderCopyEx(renderer, ship->texture, &ship->thrust_img_rect, &ship->rect, ship->angle, &ship->rotation_pt, SDL_FLIP_NONE);
+}
+
+/*
+ * Draw ship projection on axis
+ */
+void project_ship(struct ship_t *ship, const struct camera_t *camera)
+{
+    float delta_x, delta_y, point;
+
+    delta_x = ship->position.x - (camera->x + ((camera->w / 2)));
+    delta_y = ship->position.y - (camera->y + ((camera->h / 2) + (SHIP_RADIUS / 2)));
+
+    if (delta_x > 0 && delta_y < 0)
+    {
+        point = (int)(((camera->h / 2) - PROJECTION_OFFSET) * delta_x / (-delta_y));
+
+        if (point <= (camera->w / 2) - PROJECTION_OFFSET)
+        {
+            ship->projection.x = (camera->w / 2) + point;
+            ship->projection.y = PROJECTION_OFFSET;
+        }
+        else
+        {
+            point = (int)(((camera->h / 2) - PROJECTION_OFFSET) - ((camera->w / 2) - PROJECTION_OFFSET) * (-delta_y) / delta_x);
+            ship->projection.x = camera->w - PROJECTION_OFFSET;
+            ship->projection.y = point + PROJECTION_OFFSET;
+        }
+    }
+    else if (delta_x > 0 && delta_y > 0)
+    {
+        point = (int)(((camera->w / 2) - PROJECTION_OFFSET) * delta_y / delta_x);
+
+        if (point <= (camera->h / 2) - PROJECTION_OFFSET)
+        {
+            ship->projection.x = camera->w - PROJECTION_OFFSET;
+            ship->projection.y = (camera->h / 2) + point;
+        }
+        else
+        {
+            point = (int)(((camera->h / 2) - PROJECTION_OFFSET) * delta_x / delta_y);
+            ship->projection.x = (camera->w / 2) + point;
+            ship->projection.y = camera->h - PROJECTION_OFFSET;
+        }
+    }
+    else if (delta_x < 0 && delta_y > 0)
+    {
+        point = (int)(((camera->h / 2) - PROJECTION_OFFSET) * (-delta_x) / delta_y);
+
+        if (point <= (camera->w / 2) - PROJECTION_OFFSET)
+        {
+            ship->projection.x = (camera->w / 2) - point;
+            ship->projection.y = camera->h - PROJECTION_OFFSET;
+        }
+        else
+        {
+            point = (int)(((camera->h / 2) - PROJECTION_OFFSET) - ((camera->w / 2) - PROJECTION_OFFSET) * delta_y / (-delta_x));
+            ship->projection.x = PROJECTION_OFFSET;
+            ship->projection.y = camera->h - PROJECTION_OFFSET - point;
+        }
+    }
+    else if (delta_x < 0 && delta_y < 0)
+    {
+        point = (int)(((camera->w / 2) - PROJECTION_OFFSET) * (-delta_y) / (-delta_x));
+
+        if (point <= (camera->h / 2) - PROJECTION_OFFSET)
+        {
+            ship->projection.x = PROJECTION_OFFSET;
+            ship->projection.y = (camera->h / 2) - point;
+        }
+        else
+        {
+            point = (int)(((camera->w / 2) - PROJECTION_OFFSET) - ((camera->h / 2) - PROJECTION_OFFSET) * (-delta_x) / (-delta_y));
+            ship->projection.x = point + PROJECTION_OFFSET;
+            ship->projection.y = PROJECTION_OFFSET;
+        }
+    }
+
+    ship->projection.w = 5;
+    ship->projection.h = 5;
+    SDL_SetRenderDrawColor(renderer, ship->color.r, ship->color.g, ship->color.b, 255);
+    SDL_RenderFillRect(renderer, &ship->projection);
 }
