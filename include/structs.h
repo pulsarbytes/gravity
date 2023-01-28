@@ -47,8 +47,6 @@ struct ship_t
     float vy;
     SDL_Texture *texture;
     SDL_Rect rect;
-    SDL_Rect projection;
-    SDL_Color color;
     SDL_Rect main_img_rect;
     SDL_Rect thrust_img_rect;
     SDL_Point rotation_pt;

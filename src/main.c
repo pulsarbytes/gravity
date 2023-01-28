@@ -35,9 +35,10 @@
 #define STARS_SQUARE 10000
 #define STARS_PER_SQUARE 5
 #define SHIP_RADIUS 17
-#define SHIP_STARTING_X 0
-#define SHIP_STARTING_Y -700
-#define SHIP_IN_ORBIT 1
+#define SHIP_PROJECTION_RADIUS 10
+#define SHIP_STARTING_X -7000 // 0 is sol center
+#define SHIP_STARTING_Y -7000 // 0 is sol center
+#define SHIP_IN_ORBIT 0
 #define STAR_CUTOFF 60
 #define PLANET_CUTOFF 10
 #define LANDING_CUTOFF 3
@@ -88,12 +89,13 @@ int create_bgstars(struct bgstar_t bgstars[], int max_bgstars, struct ship_t *);
 void update_bgstars(struct bgstar_t bgstars[], int stars_count, struct ship_t *, const struct camera_t *);
 struct planet_t create_solar_system(void);
 struct ship_t create_ship(void);
+struct ship_t create_ship_projection(void);
 void update_planets(struct planet_t *planet, struct planet_t *parent, struct ship_t *, const struct camera_t *);
 void project_planet(struct planet_t *, const struct camera_t *);
 void apply_gravity_to_ship(struct planet_t *planet, struct planet_t *parent, struct ship_t *, const struct camera_t *);
 void update_camera(struct camera_t *, struct ship_t *);
-void update_ship(struct ship_t *, const struct camera_t *);
-void project_ship(struct ship_t *, const struct camera_t *);
+void update_ship(struct ship_t *, struct ship_t *, const struct camera_t *);
+void project_ship(struct ship_t *, struct ship_t *, const struct camera_t *);
 
 int main(int argc, char *argv[])
 {
@@ -112,6 +114,9 @@ int main(int argc, char *argv[])
 
     // Create ship
     struct ship_t ship = create_ship();
+
+    // Create ship projection
+    struct ship_t ship_projection = create_ship_projection();
 
     // Create camera, sync initial position with ship
     struct camera_t camera = {
@@ -161,7 +166,7 @@ int main(int argc, char *argv[])
             update_camera(&camera, &ship);
 
         // Update ship
-        update_ship(&ship, &camera);
+        update_ship(&ship, &ship_projection, &camera);
 
         // Update coordinates
         x_coord = ship.position.x;
@@ -319,9 +324,39 @@ struct ship_t create_ship(void)
     ship.main_img_rect.y = 0; // start clipping at y of texture
     ship.main_img_rect.w = 162;
     ship.main_img_rect.h = 162;
-    ship.color.r = 255;
-    ship.color.g = 255;
-    ship.color.b = 255;
+    ship.thrust_img_rect.x = 256; // start clipping at x of texture
+    ship.thrust_img_rect.y = 0;   // start clipping at y of texture
+    ship.thrust_img_rect.w = 162;
+    ship.thrust_img_rect.h = 162;
+
+    // Point around which ship will be rotated (relative to destination rect)
+    ship.rotation_pt.x = ship.radius;
+    ship.rotation_pt.y = ship.radius;
+
+    return ship;
+}
+
+/*
+ * Create ship projection
+ */
+struct ship_t create_ship_projection(void)
+{
+    struct ship_t ship;
+
+    ship.image = "../assets/sprites/ship.png";
+    ship.radius = SHIP_PROJECTION_RADIUS;
+    ship.angle = 0;
+    SDL_Surface *surface = IMG_Load(ship.image);
+    ship.texture = SDL_CreateTextureFromSurface(renderer, surface);
+    SDL_FreeSurface(surface);
+    ship.rect.x = 0;
+    ship.rect.y = 0;
+    ship.rect.w = 2 * ship.radius;
+    ship.rect.h = 2 * ship.radius;
+    ship.main_img_rect.x = 0; // start clipping at x of texture
+    ship.main_img_rect.y = 0; // start clipping at y of texture
+    ship.main_img_rect.w = 162;
+    ship.main_img_rect.h = 162;
     ship.thrust_img_rect.x = 256; // start clipping at x of texture
     ship.thrust_img_rect.y = 0;   // start clipping at y of texture
     ship.thrust_img_rect.w = 162;
@@ -644,18 +679,22 @@ void project_planet(struct planet_t *planet, const struct camera_t *camera)
 {
     float delta_x, delta_y, point;
 
+    // Find screen quadrant for planet exit from screen; 0, 0 is screen center, negative y is up
     delta_x = planet->position.x - (camera->x + ((camera->w / 2) - PROJECTION_OFFSET));
     delta_y = planet->position.y - (camera->y + ((camera->h / 2) - PROJECTION_OFFSET));
 
+    // 1st quadrant (clockwise)
     if (delta_x > 0 && delta_y < 0)
     {
         point = (int)(((camera->h / 2) - PROJECTION_OFFSET) * delta_x / (-delta_y));
 
+        // Top
         if (point <= (camera->w / 2) - PROJECTION_OFFSET)
         {
             planet->projection.x = (camera->w / 2) + point;
             planet->projection.y = PROJECTION_OFFSET;
         }
+        // Right
         else
         {
             point = (int)(((camera->h / 2) - PROJECTION_OFFSET) - ((camera->w / 2) - PROJECTION_OFFSET) * (-delta_y) / delta_x);
@@ -663,15 +702,18 @@ void project_planet(struct planet_t *planet, const struct camera_t *camera)
             planet->projection.y = point + PROJECTION_OFFSET;
         }
     }
+    // 2nd quadrant
     else if (delta_x > 0 && delta_y > 0)
     {
         point = (int)(((camera->w / 2) - PROJECTION_OFFSET) * delta_y / delta_x);
 
+        // Right
         if (point <= (camera->h / 2) - PROJECTION_OFFSET)
         {
             planet->projection.x = camera->w - PROJECTION_OFFSET;
             planet->projection.y = (camera->h / 2) + point;
         }
+        // Bottom
         else
         {
             point = (int)(((camera->h / 2) - PROJECTION_OFFSET) * delta_x / delta_y);
@@ -679,31 +721,37 @@ void project_planet(struct planet_t *planet, const struct camera_t *camera)
             planet->projection.y = camera->h - PROJECTION_OFFSET;
         }
     }
+    // 3rd quadrant
     else if (delta_x < 0 && delta_y > 0)
     {
         point = (int)(((camera->h / 2) - PROJECTION_OFFSET) * (-delta_x) / delta_y);
 
+        // Bottom
         if (point <= (camera->w / 2) - PROJECTION_OFFSET)
         {
             planet->projection.x = (camera->w / 2) - point;
             planet->projection.y = camera->h - PROJECTION_OFFSET;
         }
+        // Left
         else
         {
             point = (int)(((camera->h / 2) - PROJECTION_OFFSET) - ((camera->w / 2) - PROJECTION_OFFSET) * delta_y / (-delta_x));
             planet->projection.x = PROJECTION_OFFSET;
-            planet->projection.y = camera->h - PROJECTION_OFFSET - point;
+            planet->projection.y = camera->h - point - PROJECTION_OFFSET;
         }
     }
+    // 4th quadrant
     else if (delta_x < 0 && delta_y < 0)
     {
         point = (int)(((camera->w / 2) - PROJECTION_OFFSET) * (-delta_y) / (-delta_x));
 
+        // Left
         if (point <= (camera->h / 2) - PROJECTION_OFFSET)
         {
             planet->projection.x = PROJECTION_OFFSET;
             planet->projection.y = (camera->h / 2) - point;
         }
+        // Top
         else
         {
             point = (int)(((camera->w / 2) - PROJECTION_OFFSET) - ((camera->h / 2) - PROJECTION_OFFSET) * (-delta_x) / (-delta_y));
@@ -827,7 +875,7 @@ void apply_gravity_to_ship(struct planet_t *planet, struct planet_t *parent, str
         ship->vy += g_planet * delta_y / distance;
     }
 
-    // Enfore speed limit if within STAR_CUTOFF
+    // Enforce speed limit if within STAR_CUTOFF
     if (!is_star || (is_star && distance < STAR_CUTOFF * planet->radius))
     {
         if (velocity > SPEED_LIMIT)
@@ -844,7 +892,7 @@ void apply_gravity_to_ship(struct planet_t *planet, struct planet_t *parent, str
 /*
  * Update ship position, listen for key controls and draw ship
  */
-void update_ship(struct ship_t *ship, const struct camera_t *camera)
+void update_ship(struct ship_t *ship, struct ship_t *ship_projection, const struct camera_t *camera)
 {
     float radians;
 
@@ -893,7 +941,7 @@ void update_ship(struct ship_t *ship, const struct camera_t *camera)
     }
     // Draw ship projection
     else
-        project_ship(ship, camera);
+        project_ship(ship, ship_projection, camera);
 
     // Draw ship thrust
     if (thrust)
@@ -903,80 +951,98 @@ void update_ship(struct ship_t *ship, const struct camera_t *camera)
 /*
  * Draw ship projection on axis
  */
-void project_ship(struct ship_t *ship, const struct camera_t *camera)
+void project_ship(struct ship_t *ship, struct ship_t *projection, const struct camera_t *camera)
 {
     float delta_x, delta_y, point;
 
+    // Find screen quadrant for ship exit from screen; 0, 0 is screen center, negative y is up
     delta_x = ship->position.x - (camera->x + ((camera->w / 2)));
-    delta_y = ship->position.y - (camera->y + ((camera->h / 2) + (SHIP_RADIUS / 2)));
+    delta_y = ship->position.y - (camera->y + ((camera->h / 2)));
 
+    // Mirror ship angle
+    projection->angle = ship->angle;
+
+    // 1st quadrant (clockwise)
     if (delta_x > 0 && delta_y < 0)
     {
         point = (int)(((camera->h / 2) - PROJECTION_OFFSET) * delta_x / (-delta_y));
 
+        // Top
         if (point <= (camera->w / 2) - PROJECTION_OFFSET)
         {
-            ship->projection.x = (camera->w / 2) + point;
-            ship->projection.y = PROJECTION_OFFSET;
+            projection->rect.x = (camera->w / 2) + point - PROJECTION_OFFSET;
+            projection->rect.y = 0;
         }
+        // Right
         else
         {
             point = (int)(((camera->h / 2) - PROJECTION_OFFSET) - ((camera->w / 2) - PROJECTION_OFFSET) * (-delta_y) / delta_x);
-            ship->projection.x = camera->w - PROJECTION_OFFSET;
-            ship->projection.y = point + PROJECTION_OFFSET;
+            projection->rect.x = camera->w - (2 * PROJECTION_OFFSET);
+            projection->rect.y = point;
         }
     }
+    // 2nd quadrant
     else if (delta_x > 0 && delta_y > 0)
     {
         point = (int)(((camera->w / 2) - PROJECTION_OFFSET) * delta_y / delta_x);
 
+        // Right
         if (point <= (camera->h / 2) - PROJECTION_OFFSET)
         {
-            ship->projection.x = camera->w - PROJECTION_OFFSET;
-            ship->projection.y = (camera->h / 2) + point;
+            projection->rect.x = camera->w - (2 * PROJECTION_OFFSET);
+            projection->rect.y = (camera->h / 2) + point - PROJECTION_OFFSET;
         }
+        // Bottom
         else
         {
             point = (int)(((camera->h / 2) - PROJECTION_OFFSET) * delta_x / delta_y);
-            ship->projection.x = (camera->w / 2) + point;
-            ship->projection.y = camera->h - PROJECTION_OFFSET;
+            projection->rect.x = (camera->w / 2) + point - PROJECTION_OFFSET;
+            projection->rect.y = camera->h - (2 * PROJECTION_OFFSET);
         }
     }
+    // 3rd quadrant
     else if (delta_x < 0 && delta_y > 0)
     {
         point = (int)(((camera->h / 2) - PROJECTION_OFFSET) * (-delta_x) / delta_y);
 
+        // Bottom
         if (point <= (camera->w / 2) - PROJECTION_OFFSET)
         {
-            ship->projection.x = (camera->w / 2) - point;
-            ship->projection.y = camera->h - PROJECTION_OFFSET;
+            projection->rect.x = (camera->w / 2) - point - PROJECTION_OFFSET;
+            projection->rect.y = camera->h - (2 * PROJECTION_OFFSET);
         }
+        // Left
         else
         {
             point = (int)(((camera->h / 2) - PROJECTION_OFFSET) - ((camera->w / 2) - PROJECTION_OFFSET) * delta_y / (-delta_x));
-            ship->projection.x = PROJECTION_OFFSET;
-            ship->projection.y = camera->h - PROJECTION_OFFSET - point;
+            projection->rect.x = 0;
+            projection->rect.y = camera->h - point - (2 * PROJECTION_OFFSET);
         }
     }
+    // 4th quadrant
     else if (delta_x < 0 && delta_y < 0)
     {
         point = (int)(((camera->w / 2) - PROJECTION_OFFSET) * (-delta_y) / (-delta_x));
 
+        // Left
         if (point <= (camera->h / 2) - PROJECTION_OFFSET)
         {
-            ship->projection.x = PROJECTION_OFFSET;
-            ship->projection.y = (camera->h / 2) - point;
+            projection->rect.x = 0;
+            projection->rect.y = (camera->h / 2) - point - PROJECTION_OFFSET;
         }
+        // Top
         else
         {
             point = (int)(((camera->w / 2) - PROJECTION_OFFSET) - ((camera->h / 2) - PROJECTION_OFFSET) * (-delta_x) / (-delta_y));
-            ship->projection.x = point + PROJECTION_OFFSET;
-            ship->projection.y = PROJECTION_OFFSET;
+            projection->rect.x = point;
+            projection->rect.y = 0;
         }
     }
 
-    ship->projection.w = 5;
-    ship->projection.h = 5;
-    SDL_SetRenderDrawColor(renderer, ship->color.r, ship->color.g, ship->color.b, 255);
-    SDL_RenderFillRect(renderer, &ship->projection);
+    // Draw ship projection
+    SDL_RenderCopyEx(renderer, projection->texture, &projection->main_img_rect, &projection->rect, projection->angle, &projection->rotation_pt, SDL_FLIP_NONE);
+
+    // Draw projection thrust
+    if (thrust)
+        SDL_RenderCopyEx(renderer, projection->texture, &projection->thrust_img_rect, &projection->rect, projection->angle, &projection->rotation_pt, SDL_FLIP_NONE);
 }
