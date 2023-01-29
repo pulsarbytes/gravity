@@ -30,7 +30,7 @@ void log_fps(unsigned int time_diff)
 
     if (total_time >= 1000)
     {
-        log_game_console(game_console_entries, FPS_INDEX, (float) current_fps);
+        log_game_console(game_console_entries, FPS_INDEX, (float)current_fps);
 
         total_time = 0;
         current_fps = 0;
@@ -59,6 +59,7 @@ void update_game_console(struct game_console_entry entries[])
     {
         entries[i].surface = TTF_RenderText_Solid(font, entries[i].value, text_color);
         entries[i].texture = SDL_CreateTextureFromSurface(renderer, entries[i].surface);
+        SDL_FreeSurface(entries[i].surface);
         entries[i].rect.x = 120;
         entries[i].rect.y = (i + 1) * 20;
         entries[i].rect.w = 100;
@@ -77,6 +78,5 @@ void destroy_game_console(struct game_console_entry entries[])
     for (i = 0; i < LOG_COUNT; i++)
     {
         SDL_DestroyTexture(entries[i].texture);
-        SDL_FreeSurface(entries[i].surface);
     }
 }
