@@ -45,7 +45,7 @@
 #define SPEED_LIMIT 300
 #define APPROACH_LIMIT 100
 #define PROJECTION_OFFSET 10
-#define CAMERA_ON 0
+#define CAMERA_ON 1
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
 #endif
@@ -646,11 +646,11 @@ void project_planet(struct planet_t *planet, const struct camera_t *camera)
     float delta_x, delta_y, point;
 
     // Find screen quadrant for planet exit from screen; 0, 0 is screen center, negative y is up
-    delta_x = planet->position.x - (camera->x + ((camera->w / 2) - PROJECTION_OFFSET));
-    delta_y = planet->position.y - (camera->y + ((camera->h / 2) - PROJECTION_OFFSET));
+    delta_x = planet->position.x - (camera->x + (camera->w / 2));
+    delta_y = planet->position.y - (camera->y + (camera->h / 2));
 
     // 1st quadrant (clockwise)
-    if (delta_x > 0 && delta_y < 0)
+    if (delta_x >= 0 && delta_y < 0)
     {
         point = (int)(((camera->h / 2) - PROJECTION_OFFSET) * delta_x / (-delta_y));
 
@@ -663,15 +663,22 @@ void project_planet(struct planet_t *planet, const struct camera_t *camera)
         // Right
         else
         {
-            point = (int)(((camera->h / 2) - PROJECTION_OFFSET) - ((camera->w / 2) - PROJECTION_OFFSET) * (-delta_y) / delta_x);
+            if (delta_x > 0)
+                point = (int)(((camera->h / 2) - PROJECTION_OFFSET) - ((camera->w / 2) - PROJECTION_OFFSET) * (-delta_y) / delta_x);
+            else
+                point = (int)(((camera->h / 2) - PROJECTION_OFFSET) - ((camera->w / 2) - PROJECTION_OFFSET));
+
             planet->projection.x = camera->w - PROJECTION_OFFSET;
             planet->projection.y = point + PROJECTION_OFFSET;
         }
     }
     // 2nd quadrant
-    else if (delta_x > 0 && delta_y > 0)
+    else if (delta_x >= 0 && delta_y >= 0)
     {
-        point = (int)(((camera->w / 2) - PROJECTION_OFFSET) * delta_y / delta_x);
+        if (delta_x > 0)
+            point = (int)(((camera->w / 2) - PROJECTION_OFFSET) * delta_y / delta_x);
+        else
+            point = (int)((camera->w / 2) - PROJECTION_OFFSET);
 
         // Right
         if (point <= (camera->h / 2) - PROJECTION_OFFSET)
@@ -682,15 +689,22 @@ void project_planet(struct planet_t *planet, const struct camera_t *camera)
         // Bottom
         else
         {
-            point = (int)(((camera->h / 2) - PROJECTION_OFFSET) * delta_x / delta_y);
+            if (delta_y > 0)
+                point = (int)(((camera->h / 2) - PROJECTION_OFFSET) * delta_x / delta_y);
+            else
+                point = (int)(((camera->h / 2) - PROJECTION_OFFSET));
+
             planet->projection.x = (camera->w / 2) + point;
             planet->projection.y = camera->h - PROJECTION_OFFSET;
         }
     }
     // 3rd quadrant
-    else if (delta_x < 0 && delta_y > 0)
+    else if (delta_x < 0 && delta_y >= 0)
     {
-        point = (int)(((camera->h / 2) - PROJECTION_OFFSET) * (-delta_x) / delta_y);
+        if (delta_y > 0)
+            point = (int)(((camera->h / 2) - PROJECTION_OFFSET) * (-delta_x) / delta_y);
+        else
+            point = (int)(((camera->h / 2) - PROJECTION_OFFSET));
 
         // Bottom
         if (point <= (camera->w / 2) - PROJECTION_OFFSET)
@@ -922,14 +936,14 @@ void project_ship(struct ship_t *ship, struct ship_t *projection, const struct c
     float delta_x, delta_y, point;
 
     // Find screen quadrant for ship exit from screen; 0, 0 is screen center, negative y is up
-    delta_x = ship->position.x - (camera->x + ((camera->w / 2)));
-    delta_y = ship->position.y - (camera->y + ((camera->h / 2)));
+    delta_x = ship->position.x - (camera->x + (camera->w / 2));
+    delta_y = ship->position.y - (camera->y + (camera->h / 2));
 
     // Mirror ship angle
     projection->angle = ship->angle;
 
     // 1st quadrant (clockwise)
-    if (delta_x > 0 && delta_y < 0)
+    if (delta_x >= 0 && delta_y < 0)
     {
         point = (int)(((camera->h / 2) - PROJECTION_OFFSET) * delta_x / (-delta_y));
 
@@ -942,15 +956,22 @@ void project_ship(struct ship_t *ship, struct ship_t *projection, const struct c
         // Right
         else
         {
-            point = (int)(((camera->h / 2) - PROJECTION_OFFSET) - ((camera->w / 2) - PROJECTION_OFFSET) * (-delta_y) / delta_x);
+            if (delta_x > 0)
+                point = (int)(((camera->h / 2) - PROJECTION_OFFSET) - ((camera->w / 2) - PROJECTION_OFFSET) * (-delta_y) / delta_x);
+            else
+                point = (int)(((camera->h / 2) - PROJECTION_OFFSET) - ((camera->w / 2) - PROJECTION_OFFSET));
+
             projection->rect.x = camera->w - (2 * PROJECTION_OFFSET);
             projection->rect.y = point;
         }
     }
     // 2nd quadrant
-    else if (delta_x > 0 && delta_y > 0)
+    else if (delta_x >= 0 && delta_y >= 0)
     {
-        point = (int)(((camera->w / 2) - PROJECTION_OFFSET) * delta_y / delta_x);
+        if (delta_x > 0)
+            point = (int)(((camera->w / 2) - PROJECTION_OFFSET) * delta_y / delta_x);
+        else
+            point = (int)(((camera->w / 2) - PROJECTION_OFFSET));
 
         // Right
         if (point <= (camera->h / 2) - PROJECTION_OFFSET)
@@ -961,15 +982,22 @@ void project_ship(struct ship_t *ship, struct ship_t *projection, const struct c
         // Bottom
         else
         {
-            point = (int)(((camera->h / 2) - PROJECTION_OFFSET) * delta_x / delta_y);
+            if (delta_y > 0)
+                point = (int)(((camera->h / 2) - PROJECTION_OFFSET) * delta_x / delta_y);
+            else
+                point = (int)(((camera->h / 2) - PROJECTION_OFFSET));
+
             projection->rect.x = (camera->w / 2) + point - PROJECTION_OFFSET;
             projection->rect.y = camera->h - (2 * PROJECTION_OFFSET);
         }
     }
     // 3rd quadrant
-    else if (delta_x < 0 && delta_y > 0)
+    else if (delta_x < 0 && delta_y >= 0)
     {
-        point = (int)(((camera->h / 2) - PROJECTION_OFFSET) * (-delta_x) / delta_y);
+        if (delta_y > 0)
+            point = (int)(((camera->h / 2) - PROJECTION_OFFSET) * (-delta_x) / delta_y);
+        else
+            point = (int)(((camera->h / 2) - PROJECTION_OFFSET));
 
         // Bottom
         if (point <= (camera->w / 2) - PROJECTION_OFFSET)
