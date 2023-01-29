@@ -87,7 +87,7 @@ void cleanup_resources(struct planet_t *planet, struct ship_t *ship);
 float orbital_velocity(float height, int radius);
 int create_bgstars(struct bgstar_t bgstars[], int max_bgstars, struct ship_t *);
 void update_bgstars(struct bgstar_t bgstars[], int stars_count, struct ship_t *, const struct camera_t *);
-struct planet_t create_solar_system(void);
+struct planet_t create_star(void);
 struct ship_t create_ship(int radius, int x, int y);
 void update_planets(struct planet_t *planet, struct planet_t *parent, struct ship_t *, const struct camera_t *);
 void project_planet(struct planet_t *, const struct camera_t *);
@@ -124,8 +124,8 @@ int main(int argc, char *argv[])
         .w = display_mode.w,
         .h = display_mode.h};
 
-    // Create solar system
-    struct planet_t sol = create_solar_system();
+    // Create a star
+    struct planet_t sol = create_star();
 
     // Put ship in orbit
     if (SHIP_IN_ORBIT)
@@ -336,9 +336,9 @@ struct ship_t create_ship(int radius, int x, int y)
 }
 
 /*
- * Create a solar system
+ * Create a star with planets and moons (recursive)
  */
-struct planet_t create_solar_system(void)
+struct planet_t create_star(void)
 {
     // Sol
     struct planet_t sol;
