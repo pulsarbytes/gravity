@@ -1,11 +1,41 @@
 #ifndef COMMON_H
 #define COMMON_H
 
-#define MAX_PLANETS 20
+#define FPS 60
+#define FULLSCREEN 1
+#define CAMERA_ON 1
+
+#define CONSOLE_ON 1
+#define FONT_SIZE 14
+#define PROJECTION_OFFSET 10
+
+#define COSMIC_CONSTANT 7.75
+#define G_CONSTANT 5
+
+#define STARS_SQUARE 10000
+#define STARS_PER_SQUARE 5
+#define STAR_CUTOFF 100
+
+#define MAX_PLANETS 12
 #define MAX_MOONS 8
 #define MAX(x, y) ((x) > (y) ? (x) : (y))
 #define MAX_PLANETS_MOONS MAX(MAX_PLANETS, MAX_MOONS)
-#define G_CONSTANT 5
+#define MAX_PLANET_NAME 100
+
+#define PLANET_CUTOFF 10
+#define PLANET_DISTANCE 1500
+#define MOON_DISTANCE 250
+
+#define SHIP_RADIUS 17
+#define SHIP_PROJECTION_RADIUS 10
+#define SHIP_STARTING_X 0    // 0 is star center, negative is left
+#define SHIP_STARTING_Y -700 // 0 is star center, negative is up
+#define SHIP_IN_ORBIT 0
+#define SPEED_LIMIT 300
+
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
 
 enum
 {
