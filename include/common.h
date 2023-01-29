@@ -1,14 +1,23 @@
 #ifndef COMMON_H
 #define COMMON_H
 
-#define MAX_MOONS               10
-#define G_CONSTANT              5
+#define MAX_MOONS 10
+#define G_CONSTANT 5
 
-enum { FALSE, TRUE };
-enum { OFF, ON };
+enum
+{
+    FALSE,
+    TRUE
+};
+enum
+{
+    OFF,
+    ON
+};
 
 // Must be in sync with game_console_entries
-enum {
+enum
+{
     FPS_INDEX,
     X_INDEX,
     Y_INDEX,
