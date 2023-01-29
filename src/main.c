@@ -41,11 +41,14 @@
 #define SHIP_IN_ORBIT 0
 #define STAR_CUTOFF 60
 #define PLANET_CUTOFF 10
+#define PLANET_DISTANCE 1200
+#define MOON_DISTANCE 200
 #define LANDING_CUTOFF 3
 #define SPEED_LIMIT 300
 #define APPROACH_LIMIT 100
 #define PROJECTION_OFFSET 10
 #define CAMERA_ON 1
+#define CONSOLE_ON 0
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
 #endif
@@ -180,16 +183,19 @@ int main(int argc, char *argv[])
         x_coord = ship.position.x;
         y_coord = ship.position.y;
 
-        // Log coordinates (relative to star)
-        log_game_console(game_console_entries, X_INDEX, x_coord);
-        log_game_console(game_console_entries, Y_INDEX, y_coord);
+        if (CONSOLE_ON)
+        {
+            // Log coordinates (relative to star)
+            log_game_console(game_console_entries, X_INDEX, x_coord);
+            log_game_console(game_console_entries, Y_INDEX, y_coord);
 
-        // Log velocity (relative to star)
-        log_game_console(game_console_entries, V_INDEX, velocity);
+            // Log velocity (relative to star)
+            log_game_console(game_console_entries, V_INDEX, velocity);
 
-        // Update game console
-        if (console)
-            update_game_console(game_console_entries);
+            // Update game console
+            if (console)
+                update_game_console(game_console_entries);
+        }
 
         // Switch buffers, display back buffer
         SDL_RenderPresent(renderer);
@@ -202,8 +208,11 @@ int main(int argc, char *argv[])
         log_fps(end_time - start_time);
     }
 
-    // Destroy game console
-    destroy_game_console(game_console_entries);
+    if (CONSOLE_ON)
+    {
+        // Destroy game console
+        destroy_game_console(game_console_entries);
+    }
 
     // Cleanup resources
     cleanup_resources(star, &ship);
@@ -388,6 +397,34 @@ void create_system(struct planet_t *planet)
 
     for (int i = 0; i < max_planets; i++)
     {
+        // Do not add planets if they are too close to star
+        // To-do
+
+        // Do not add moons if they end up closer to star or to other planets
+        if (planet->level == LEVEL_PLANET)
+        {
+            int moon_distance_planet = (i + 1) * MOON_DISTANCE;
+            int planet_distance_star = abs(planet->position.y - planet->parent->position.y);
+
+            // Check star distance
+            if (moon_distance_planet > (planet_distance_star / 2))
+                continue;
+
+            // Check previous planet distance
+            if (i > 0)
+            {
+                if (moon_distance_planet > (PLANET_DISTANCE / 2))
+                    continue;
+            }
+
+            // Check next planet distance
+            if (i < max_planets - 1)
+            {
+                if (moon_distance_planet > (PLANET_DISTANCE / 2))
+                    continue;
+            }
+        }
+
         struct planet_t *moon = (struct planet_t *)malloc(sizeof(struct planet_t));
 
         if (planet->level == LEVEL_STAR)
@@ -396,6 +433,7 @@ void create_system(struct planet_t *planet)
             sprintf(moon->name, "%s%d", name, i);
             moon->image = "../assets/images/earth.png";
             moon->radius = 100;
+            moon->position.y = (planet->position.y) - ((i + 1) * PLANET_DISTANCE); // To-do: variable planet distance
             moon->color.r = 135;
             moon->color.g = 206;
             moon->color.b = 235;
@@ -407,13 +445,13 @@ void create_system(struct planet_t *planet)
             sprintf(moon->name, "%s%d", name, i);
             moon->image = "../assets/images/moon.png";
             moon->radius = 50;
+            moon->position.y = planet->position.y - ((i + 1) * MOON_DISTANCE); // To-do: variable moon distance
             moon->color.r = 220;
             moon->color.g = 220;
             moon->color.b = 220;
             moon->level = LEVEL_MOON;
         }
 
-        moon->position.y = planet->position.y - ((i + 1) * 1000);
         moon->position.x = 0.0;
         moon->vx = orbital_velocity(abs((int)planet->position.y - (int)moon->position.y), planet->radius); // Initial velocity
         moon->vy = 0.0;
@@ -434,44 +472,6 @@ void create_system(struct planet_t *planet)
 
         create_system(moon);
     }
-
-    // // Mercury
-    // mercury->radius = 60;
-    // mercury->position.y = star.position.y - 1500;
-    // mercury->color.r = 192;
-    // mercury->color.g = 192;
-    // mercury->color.b = 192;
-
-    // // Venus
-    // venus->radius = 100;
-    // venus->position.y = star.position.y - 3000;
-    // venus->color.r = 215;
-    // venus->color.g = 140;
-    // venus->color.b = 0;
-
-    // // Earth
-    // earth->radius = 100;
-    // earth->position.y = star.position.y - 4500;
-    // earth->color.r = 135;
-    // earth->color.g = 206;
-    // earth->color.b = 235;
-
-    // // Moon
-    // moon->position.y = earth->position.y - 1200;
-
-    // // Mars
-    // mars->radius = 70;
-    // mars->position.y = star.position.y - 6000;
-    // mars->color.r = 255;
-    // mars->color.g = 69;
-    // mars->color.b = 0;
-
-    // // Jupiter
-    // jupiter->radius = 160;
-    // jupiter->position.y = star.position.y - 7800;
-    // jupiter->color.r = 244;
-    // jupiter->color.g = 164;
-    // jupiter->color.b = 96;
 }
 
 /*
