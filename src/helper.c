@@ -17,18 +17,19 @@
  */
 static void cleanup_planets(struct planet_t *planet)
 {
+    int planets_size = sizeof(planet->planets) / sizeof(planet->planets[0]);
     int i = 0;
 
-    for (i = 0; i < MAX_MOONS && planet->moons[i] != NULL; i++)
+    for (i = 0; i < planets_size && planet->planets[i] != NULL; i++)
     {
-        cleanup_planets(planet->moons[i]);
+        cleanup_planets(planet->planets[i]);
     }
 
     SDL_DestroyTexture(planet->texture);
 
     if (planet != NULL)
     {
-        // free(planet);
+        free(planet);
         planet = NULL;
     }
 }

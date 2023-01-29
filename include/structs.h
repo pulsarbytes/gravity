@@ -21,7 +21,7 @@ struct position_t
 // Struct for a planet
 struct planet_t
 {
-    char *name;
+    char name[50];
     char *image;
     int radius;
     struct position_t position;
@@ -33,7 +33,9 @@ struct planet_t
     SDL_Rect rect;
     SDL_Rect projection;
     SDL_Color color;
-    struct planet_t *moons[MAX_MOONS];
+    struct planet_t *planets[MAX_PLANETS];
+    struct planet_t *parent;
+    int level;
 };
 
 // Struct for a ship

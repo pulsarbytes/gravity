@@ -1,7 +1,8 @@
 #ifndef COMMON_H
 #define COMMON_H
 
-#define MAX_MOONS 10
+#define MAX_PLANETS 8
+#define MAX_MOONS 2
 #define G_CONSTANT 5
 
 enum

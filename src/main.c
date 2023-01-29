@@ -36,8 +36,8 @@
 #define STARS_PER_SQUARE 5
 #define SHIP_RADIUS 17
 #define SHIP_PROJECTION_RADIUS 10
-#define SHIP_STARTING_X 0    // 0 is sol center, negative is left
-#define SHIP_STARTING_Y -700 // 0 is sol center, negative is up
+#define SHIP_STARTING_X 0    // 0 is star center, negative is left
+#define SHIP_STARTING_Y -700 // 0 is star center, negative is up
 #define SHIP_IN_ORBIT 0
 #define STAR_CUTOFF 60
 #define PLANET_CUTOFF 10
@@ -49,6 +49,13 @@
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
 #endif
+
+enum
+{
+    LEVEL_STAR = 1,
+    LEVEL_PLANET,
+    LEVEL_MOON
+};
 
 static enum {
     STAGE_OFF = -1, // Not landed
@@ -83,15 +90,16 @@ void log_game_console(struct game_console_entry entries[], int index, float valu
 void update_game_console(struct game_console_entry entries[]);
 void destroy_game_console(struct game_console_entry entries[]);
 void log_fps(unsigned int time_diff);
-void cleanup_resources(struct planet_t *planet, struct ship_t *ship);
+void cleanup_resources(struct planet_t *, struct ship_t *);
 float orbital_velocity(float height, int radius);
 int create_bgstars(struct bgstar_t bgstars[], int max_bgstars, struct ship_t *);
 void update_bgstars(struct bgstar_t bgstars[], int stars_count, struct ship_t *, const struct camera_t *);
-struct planet_t create_star(void);
+struct planet_t *create_star(void);
+void create_system(struct planet_t *);
 struct ship_t create_ship(int radius, int x, int y);
-void update_planets(struct planet_t *planet, struct planet_t *parent, struct ship_t *, const struct camera_t *);
+void update_planets(struct planet_t *, struct ship_t *, const struct camera_t *);
 void project_planet(struct planet_t *, const struct camera_t *);
-void apply_gravity_to_ship(struct planet_t *planet, struct planet_t *parent, struct ship_t *, const struct camera_t *);
+void apply_gravity_to_ship(struct planet_t *, struct ship_t *, const struct camera_t *);
 void update_camera(struct camera_t *, struct ship_t *);
 void update_ship(struct ship_t *ship, struct ship_t *projection, const struct camera_t *);
 void project_ship(struct ship_t *ship, struct ship_t *projection, const struct camera_t *);
@@ -124,12 +132,13 @@ int main(int argc, char *argv[])
         .w = display_mode.w,
         .h = display_mode.h};
 
-    // Create a star
-    struct planet_t sol = create_star();
+    // Create a star and a system
+    struct planet_t *star = create_star();
+    create_system(star);
 
     // Put ship in orbit
     if (SHIP_IN_ORBIT)
-        ship.vx = orbital_velocity(abs((int)sol.position.y - (int)ship.position.y), sol.radius);
+        ship.vx = orbital_velocity(abs((int)star->position.y - (int)ship.position.y), star->radius);
 
     // Create stars background
     int max_bgstars = (int)(display_mode.w * display_mode.h * STARS_PER_SQUARE / STARS_SQUARE);
@@ -158,7 +167,7 @@ int main(int argc, char *argv[])
         update_bgstars(bgstars, bgstars_count, &ship, &camera);
 
         // Updates planets in solar system recursively
-        update_planets(&sol, NULL, &ship, &camera);
+        update_planets(star, &ship, &camera);
 
         // Update camera
         if (CAMERA_ON)
@@ -171,11 +180,11 @@ int main(int argc, char *argv[])
         x_coord = ship.position.x;
         y_coord = ship.position.y;
 
-        // Log coordinates (relative to sol)
+        // Log coordinates (relative to star)
         log_game_console(game_console_entries, X_INDEX, x_coord);
         log_game_console(game_console_entries, Y_INDEX, y_coord);
 
-        // Log velocity (relative to sol)
+        // Log velocity (relative to star)
         log_game_console(game_console_entries, V_INDEX, velocity);
 
         // Update game console
@@ -197,7 +206,7 @@ int main(int argc, char *argv[])
     destroy_game_console(game_console_entries);
 
     // Cleanup resources
-    cleanup_resources(&sol, &ship);
+    cleanup_resources(star, &ship);
 
     // Close SDL
     close_sdl();
@@ -255,9 +264,7 @@ int create_bgstars(struct bgstar_t bgstars[], int max_bgstars, struct ship_t *sh
  */
 void update_bgstars(struct bgstar_t bgstars[], int stars_count, struct ship_t *ship, const struct camera_t *camera)
 {
-    int i;
-
-    for (i = 0; i < stars_count; i++)
+    for (int i = 0; i < stars_count; i++)
     {
         if (CAMERA_ON)
         {
@@ -336,229 +343,143 @@ struct ship_t create_ship(int radius, int x, int y)
 }
 
 /*
- * Create a star with planets and moons (recursive)
+ * Create a star
  */
-struct planet_t create_star(void)
+struct planet_t *create_star(void)
 {
-    // Sol
-    struct planet_t sol;
+    struct planet_t *star = (struct planet_t *)malloc(sizeof(struct planet_t));
 
-    sol.name = "Sol";
-    sol.image = "../assets/images/sol.png";
-    sol.radius = 250;
-    sol.position.x = 0;
-    sol.position.y = 0;
-    sol.vx = 0;
-    sol.vy = 0;
-    sol.dx = 0;
-    sol.dy = 0;
-    SDL_Surface *sol_surface = IMG_Load(sol.image);
-    sol.texture = SDL_CreateTextureFromSurface(renderer, sol_surface);
-    SDL_FreeSurface(sol_surface);
-    sol.rect.x = sol.position.x - sol.radius;
-    sol.rect.y = sol.position.y - sol.radius;
-    sol.rect.w = 2 * sol.radius;
-    sol.rect.h = 2 * sol.radius;
-    sol.color.r = 255;
-    sol.color.g = 255;
-    sol.color.b = 0;
-    sol.moons[0] = NULL;
+    strcpy(star->name, "Star");
+    star->image = "../assets/images/sol.png";
+    star->radius = 250;
+    star->position.x = 0.0;
+    star->position.y = 0.0;
+    star->vx = 0.0;
+    star->vy = 0.0;
+    star->dx = 0.0;
+    star->dy = 0.0;
+    SDL_Surface *surface = IMG_Load(star->image);
+    star->texture = SDL_CreateTextureFromSurface(renderer, surface);
+    SDL_FreeSurface(surface);
+    star->rect.x = star->position.x - star->radius;
+    star->rect.y = star->position.y - star->radius;
+    star->rect.w = 2 * star->radius;
+    star->rect.h = 2 * star->radius;
+    star->color.r = 255;
+    star->color.g = 255;
+    star->color.b = 0;
+    star->planets[0] = NULL;
+    star->parent = NULL;
+    star->level = LEVEL_STAR;
 
-    // Mercury
-    struct planet_t *mercury = NULL;
-    mercury = (struct planet_t *)malloc(sizeof(struct planet_t));
+    return star;
+}
 
-    if (mercury != NULL)
+/*
+ * Create a system (recursive). Takes a pointer to an initialized planet
+ * and populates it with children planets
+ */
+void create_system(struct planet_t *planet)
+{
+    if (planet->level >= LEVEL_MOON)
+        return;
+
+    int max_planets = (planet->level == LEVEL_STAR) ? MAX_PLANETS : MAX_MOONS;
+
+    for (int i = 0; i < max_planets; i++)
     {
-        mercury->name = "Mercury";
-        mercury->image = "../assets/images/mercury.png";
-        mercury->radius = 60;
-        mercury->position.x = sol.position.x;
-        mercury->position.y = sol.position.y - 1500;
-        mercury->vx = orbital_velocity(abs((int)sol.position.y - (int)mercury->position.y), sol.radius); // Initial velocity
-        mercury->vy = 0;
-        mercury->dx = 0;
-        mercury->dy = 0;
-        SDL_Surface *mercury_surface = IMG_Load(mercury->image);
-        mercury->texture = SDL_CreateTextureFromSurface(renderer, mercury_surface);
-        SDL_FreeSurface(mercury_surface);
-        mercury->rect.x = mercury->position.x - mercury->radius;
-        mercury->rect.y = mercury->position.y - mercury->radius;
-        mercury->rect.w = 2 * mercury->radius;
-        mercury->rect.h = 2 * mercury->radius;
-        mercury->color.r = 192;
-        mercury->color.g = 192;
-        mercury->color.b = 192;
-        mercury->moons[0] = NULL;
+        struct planet_t *moon = (struct planet_t *)malloc(sizeof(struct planet_t));
 
-        sol.moons[0] = mercury;
-        sol.moons[1] = NULL;
-    }
-
-    // Venus
-    struct planet_t *venus = NULL;
-    venus = (struct planet_t *)malloc(sizeof(struct planet_t));
-
-    if (venus != NULL)
-    {
-        venus->name = "Venus";
-        venus->image = "../assets/images/venus.png";
-        venus->radius = 100;
-        venus->position.x = sol.position.x;
-        venus->position.y = sol.position.y - 3000;
-        venus->vx = orbital_velocity(abs((int)sol.position.y - (int)venus->position.y), sol.radius); // Initial velocity
-        venus->vy = 0;
-        venus->dx = 0;
-        venus->dy = 0;
-        SDL_Surface *venus_surface = IMG_Load(venus->image);
-        venus->texture = SDL_CreateTextureFromSurface(renderer, venus_surface);
-        SDL_FreeSurface(venus_surface);
-        venus->rect.x = venus->position.x - venus->radius;
-        venus->rect.y = venus->position.y - venus->radius;
-        venus->rect.w = 2 * venus->radius;
-        venus->rect.h = 2 * venus->radius;
-        venus->color.r = 215;
-        venus->color.g = 140;
-        venus->color.b = 0;
-        venus->moons[0] = NULL;
-
-        sol.moons[1] = venus;
-        sol.moons[2] = NULL;
-    }
-
-    // Earth
-    struct planet_t *earth = NULL;
-    earth = (struct planet_t *)malloc(sizeof(struct planet_t));
-
-    if (earth != NULL)
-    {
-        earth->name = "Earth";
-        earth->image = "../assets/images/earth.png";
-        earth->radius = 100;
-        earth->position.x = sol.position.x;
-        earth->position.y = sol.position.y - 4500;
-        earth->vx = orbital_velocity(abs((int)sol.position.y - (int)earth->position.y), sol.radius); // Initial velocity
-        earth->vy = 0;
-        earth->dx = 0;
-        earth->dy = 0;
-        SDL_Surface *earth_surface = IMG_Load(earth->image);
-        earth->texture = SDL_CreateTextureFromSurface(renderer, earth_surface);
-        SDL_FreeSurface(earth_surface);
-        earth->rect.x = earth->position.x - earth->radius;
-        earth->rect.y = earth->position.y - earth->radius;
-        earth->rect.w = 2 * earth->radius;
-        earth->rect.h = 2 * earth->radius;
-        earth->color.r = 135;
-        earth->color.g = 206;
-        earth->color.b = 235;
-        earth->moons[0] = NULL;
-
-        sol.moons[2] = earth;
-        sol.moons[3] = NULL;
-
-        // Moon
-        struct planet_t *moon = NULL;
-        moon = (struct planet_t *)malloc(sizeof(struct planet_t));
-
-        if (moon != NULL)
+        if (planet->level == LEVEL_STAR)
         {
-            moon->name = "Moon";
+            char *name = "Planet";
+            sprintf(moon->name, "%s%d", name, i);
+            moon->image = "../assets/images/earth.png";
+            moon->radius = 100;
+            moon->color.r = 135;
+            moon->color.g = 206;
+            moon->color.b = 235;
+            moon->level = LEVEL_PLANET;
+        }
+        else if (planet->level == LEVEL_PLANET)
+        {
+            char *name = "Moon";
+            sprintf(moon->name, "%s%d", name, i);
             moon->image = "../assets/images/moon.png";
             moon->radius = 50;
-            moon->position.x = earth->position.x;
-            moon->position.y = earth->position.y - 1200;
-            moon->vx = orbital_velocity(abs((int)earth->position.y - (int)moon->position.y), earth->radius); // Initial velocity
-            moon->vy = 0;
-            moon->dx = 0;
-            moon->dy = 0;
-            SDL_Surface *moon_surface = IMG_Load(moon->image);
-            moon->texture = SDL_CreateTextureFromSurface(renderer, moon_surface);
-            SDL_FreeSurface(moon_surface);
-            moon->rect.x = moon->position.x - moon->radius;
-            moon->rect.y = moon->position.y - moon->radius;
-            moon->rect.w = 2 * moon->radius;
-            moon->rect.h = 2 * moon->radius;
             moon->color.r = 220;
             moon->color.g = 220;
             moon->color.b = 220;
-            moon->moons[0] = NULL;
-
-            earth->moons[0] = moon;
-            earth->moons[1] = NULL;
+            moon->level = LEVEL_MOON;
         }
+
+        moon->position.y = planet->position.y - ((i + 1) * 1000);
+        moon->position.x = 0.0;
+        moon->vx = orbital_velocity(abs((int)planet->position.y - (int)moon->position.y), planet->radius); // Initial velocity
+        moon->vy = 0.0;
+        moon->dx = 0.0;
+        moon->dy = 0.0;
+        SDL_Surface *surface = IMG_Load(moon->image);
+        moon->texture = SDL_CreateTextureFromSurface(renderer, surface);
+        SDL_FreeSurface(surface);
+        moon->rect.x = moon->position.x - moon->radius;
+        moon->rect.y = moon->position.y - moon->radius;
+        moon->rect.w = 2 * moon->radius;
+        moon->rect.h = 2 * moon->radius;
+        moon->planets[0] = NULL;
+        moon->parent = planet;
+
+        planet->planets[i] = moon;
+        planet->planets[i + 1] = NULL;
+
+        create_system(moon);
     }
 
-    // Mars
-    struct planet_t *mars = NULL;
-    mars = (struct planet_t *)malloc(sizeof(struct planet_t));
+    // // Mercury
+    // mercury->radius = 60;
+    // mercury->position.y = star.position.y - 1500;
+    // mercury->color.r = 192;
+    // mercury->color.g = 192;
+    // mercury->color.b = 192;
 
-    if (mars != NULL)
-    {
-        mars->name = "Mars";
-        mars->image = "../assets/images/mars.png";
-        mars->radius = 70;
-        mars->position.x = sol.position.x;
-        mars->position.y = sol.position.y - 6000;
-        mars->vx = orbital_velocity(abs((int)sol.position.y - (int)mars->position.y), sol.radius); // Initial velocity
-        mars->vy = 0;
-        mars->dx = 0;
-        mars->dy = 0;
-        SDL_Surface *mars_surface = IMG_Load(mars->image);
-        mars->texture = SDL_CreateTextureFromSurface(renderer, mars_surface);
-        SDL_FreeSurface(mars_surface);
-        mars->rect.x = mars->position.x - mars->radius;
-        mars->rect.y = mars->position.y - mars->radius;
-        mars->rect.w = 2 * mars->radius;
-        mars->rect.h = 2 * mars->radius;
-        mars->color.r = 255;
-        mars->color.g = 69;
-        mars->color.b = 0;
-        mars->moons[0] = NULL;
+    // // Venus
+    // venus->radius = 100;
+    // venus->position.y = star.position.y - 3000;
+    // venus->color.r = 215;
+    // venus->color.g = 140;
+    // venus->color.b = 0;
 
-        sol.moons[3] = mars;
-        sol.moons[4] = NULL;
-    }
+    // // Earth
+    // earth->radius = 100;
+    // earth->position.y = star.position.y - 4500;
+    // earth->color.r = 135;
+    // earth->color.g = 206;
+    // earth->color.b = 235;
 
-    // Jupiter
-    struct planet_t *jupiter = NULL;
-    jupiter = (struct planet_t *)malloc(sizeof(struct planet_t));
+    // // Moon
+    // moon->position.y = earth->position.y - 1200;
 
-    if (jupiter != NULL)
-    {
-        jupiter->name = "Jupiter";
-        jupiter->image = "../assets/images/jupiter.png";
-        jupiter->radius = 160;
-        jupiter->position.x = sol.position.x;
-        jupiter->position.y = sol.position.y - 7800;
-        jupiter->vx = orbital_velocity(abs((int)sol.position.y - (int)jupiter->position.y), sol.radius); // Initial velocity
-        jupiter->vy = 0;
-        jupiter->dx = 0;
-        jupiter->dy = 0;
-        SDL_Surface *jupiter_surface = IMG_Load(jupiter->image);
-        jupiter->texture = SDL_CreateTextureFromSurface(renderer, jupiter_surface);
-        SDL_FreeSurface(jupiter_surface);
-        jupiter->rect.x = jupiter->position.x - jupiter->radius;
-        jupiter->rect.y = jupiter->position.y - jupiter->radius;
-        jupiter->rect.w = 2 * jupiter->radius;
-        jupiter->rect.h = 2 * jupiter->radius;
-        jupiter->color.r = 244;
-        jupiter->color.g = 164;
-        jupiter->color.b = 96;
-        jupiter->moons[0] = NULL;
+    // // Mars
+    // mars->radius = 70;
+    // mars->position.y = star.position.y - 6000;
+    // mars->color.r = 255;
+    // mars->color.g = 69;
+    // mars->color.b = 0;
 
-        sol.moons[4] = jupiter;
-        sol.moons[5] = NULL;
-    }
-
-    return sol;
+    // // Jupiter
+    // jupiter->radius = 160;
+    // jupiter->position.y = star.position.y - 7800;
+    // jupiter->color.r = 244;
+    // jupiter->color.g = 164;
+    // jupiter->color.b = 96;
 }
 
 /*
  * Update planets positions and draw planets (recursive)
  */
-void update_planets(struct planet_t *planet, struct planet_t *parent, struct ship_t *ship, const struct camera_t *camera)
+void update_planets(struct planet_t *planet, struct ship_t *ship, const struct camera_t *camera)
 {
-    int is_star = parent == NULL;
+    int is_star = planet->parent == NULL;
     float distance_star = 0.0;
 
     if (!is_star)
@@ -567,22 +488,22 @@ void update_planets(struct planet_t *planet, struct planet_t *parent, struct shi
         float delta_y = 0.0;
         float distance;
         float g_planet = G_CONSTANT;
-        float dx = parent->dx;
-        float dy = parent->dy;
+        float dx = planet->parent->dx;
+        float dy = planet->parent->dy;
 
         // Update planet position
-        planet->position.x += parent->dx;
-        planet->position.y += parent->dy;
+        planet->position.x += planet->parent->dx;
+        planet->position.y += planet->parent->dy;
 
         // Find distance from parent
-        delta_x = parent->position.x - planet->position.x;
-        delta_y = parent->position.y - planet->position.y;
+        delta_x = planet->parent->position.x - planet->position.x;
+        delta_y = planet->parent->position.y - planet->position.y;
         distance = sqrt(delta_x * delta_x + delta_y * delta_y);
 
         // Determine velocity and position shift
-        if (distance > (parent->radius + planet->radius))
+        if (distance > (planet->parent->radius + planet->radius))
         {
-            g_planet = G_CONSTANT * (float)(parent->radius * parent->radius) / (distance * distance);
+            g_planet = G_CONSTANT * (float)(planet->parent->radius * planet->parent->radius) / (distance * distance);
 
             planet->vx += g_planet * delta_x / distance;
             planet->vy += g_planet * delta_y / distance;
@@ -612,12 +533,12 @@ void update_planets(struct planet_t *planet, struct planet_t *parent, struct shi
     // Don't update if it's a star and ship is outside STAR_CUTOFF
     if (!is_star || (is_star && distance_star < STAR_CUTOFF * planet->radius))
     {
-        int i = 0;
+        int max_planets = (planet->level == LEVEL_STAR) ? MAX_PLANETS : MAX_MOONS;
 
-        // Update moons
-        for (i = 0; i < MAX_MOONS && planet->moons[i] != NULL; i++)
+        // Update planets
+        for (int i = 0; i < max_planets && planet->planets[i] != NULL; i++)
         {
-            update_planets(planet->moons[i], planet, ship, camera);
+            update_planets(planet->planets[i], ship, camera);
         }
     }
 
@@ -635,7 +556,7 @@ void update_planets(struct planet_t *planet, struct planet_t *parent, struct shi
         project_planet(planet, camera);
 
     // Update ship speed due to gravity
-    apply_gravity_to_ship(planet, parent, ship, camera);
+    apply_gravity_to_ship(planet, ship, camera);
 }
 
 /*
@@ -749,13 +670,13 @@ void project_planet(struct planet_t *planet, const struct camera_t *camera)
 /*
  * Apply planet gravity to ship and update speed and velocity
  */
-void apply_gravity_to_ship(struct planet_t *planet, struct planet_t *parent, struct ship_t *ship, const struct camera_t *camera)
+void apply_gravity_to_ship(struct planet_t *planet, struct ship_t *ship, const struct camera_t *camera)
 {
     float delta_x = 0.0;
     float delta_y = 0.0;
     float distance;
     float g_planet = 0;
-    int is_star = parent == NULL;
+    int is_star = planet->parent == NULL;
     int collision_point = planet->radius;
 
     delta_x = planet->position.x - ship->position.x;
@@ -777,8 +698,8 @@ void apply_gravity_to_ship(struct planet_t *planet, struct planet_t *parent, str
         {
             ship->vx = planet->vx;
             ship->vy = planet->vy;
-            ship->vx += parent->vx;
-            ship->vy += parent->vy;
+            ship->vx += planet->parent->vx;
+            ship->vy += planet->parent->vy;
         }
 
         // Find landing angle
