@@ -33,7 +33,7 @@ struct planet_t
     SDL_Rect rect;
     SDL_Rect projection;
     SDL_Color color;
-    struct planet_t *planets[MAX_PLANETS];
+    struct planet_t *planets[MAX_PLANETS_MOONS];
     struct planet_t *parent;
     int level;
 };

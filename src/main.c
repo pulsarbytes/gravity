@@ -41,7 +41,7 @@
 #define SHIP_IN_ORBIT 0
 #define STAR_CUTOFF 60
 #define PLANET_CUTOFF 10
-#define PLANET_DISTANCE 1200
+#define PLANET_DISTANCE 500
 #define MOON_DISTANCE 200
 #define LANDING_CUTOFF 3
 #define SPEED_LIMIT 300
@@ -395,15 +395,40 @@ void create_system(struct planet_t *planet)
 
     int max_planets = (planet->level == LEVEL_STAR) ? MAX_PLANETS : MAX_MOONS;
 
+    // Count actual planets to be created, since some may be skipped if too close to star or planets
+    int j = 0;
+
     for (int i = 0; i < max_planets; i++)
     {
-        // Do not add planets if they are too close to star
-        // To-do
+        int planet_distance_star;
+        int moon_distance_planet;
+        int radius;
 
-        // Do not add moons if they end up closer to star or to other planets
+        // Don't add planets if they end up too close to star or to other planets
+        if (planet->level == LEVEL_STAR)
+        {
+            // Check star distance
+            planet_distance_star = (i + 1) * PLANET_DISTANCE; // To-do: variable planet distance
+            radius = 100;
+
+            if (planet_distance_star < (3 * planet->radius) + radius) // To-do: add constant
+                continue;
+
+            // Check previous planet distance
+            if (j > 0)
+            {
+                float previous_planet_distance_star = abs(planet->position.y - (planet->planets[j - 1])->position.y);
+                float planet_distance_planet = abs(planet_distance_star - previous_planet_distance_star);
+
+                if (planet_distance_planet < (4 * radius)) // To-do: add constant
+                    continue;
+            }
+        }
+
+        // Don't add moons if they end up too close to star or to other planets
         if (planet->level == LEVEL_PLANET)
         {
-            int moon_distance_planet = (i + 1) * MOON_DISTANCE;
+            moon_distance_planet = (i + 1) * MOON_DISTANCE; // To-do: variable moon distance
             int planet_distance_star = abs(planet->position.y - planet->parent->position.y);
 
             // Check star distance
@@ -411,66 +436,71 @@ void create_system(struct planet_t *planet)
                 continue;
 
             // Check previous planet distance
-            if (i > 0)
+            if (j > 0)
             {
-                if (moon_distance_planet > (PLANET_DISTANCE / 2))
+                if (moon_distance_planet > (PLANET_DISTANCE / 2)) // To-do: find actual distance from previous planet
                     continue;
             }
 
             // Check next planet distance
-            if (i < max_planets - 1)
+            if (j < max_planets - 1)
             {
-                if (moon_distance_planet > (PLANET_DISTANCE / 2))
+                if (moon_distance_planet > (PLANET_DISTANCE / 2)) // To-do: find actual distance from next planet
                     continue;
             }
+
+            radius = 50;
         }
 
-        struct planet_t *moon = (struct planet_t *)malloc(sizeof(struct planet_t));
+        struct planet_t *_planet = (struct planet_t *)malloc(sizeof(struct planet_t));
 
         if (planet->level == LEVEL_STAR)
         {
             char *name = "Planet";
-            sprintf(moon->name, "%s%d", name, i);
-            moon->image = "../assets/images/earth.png";
-            moon->radius = 100;
-            moon->position.y = (planet->position.y) - ((i + 1) * PLANET_DISTANCE); // To-do: variable planet distance
-            moon->color.r = 135;
-            moon->color.g = 206;
-            moon->color.b = 235;
-            moon->level = LEVEL_PLANET;
+            sprintf(_planet->name, "%s%d", name, i);
+            _planet->image = "../assets/images/earth.png";
+            _planet->position.y = (planet->position.y) - planet_distance_star;
+            _planet->color.r = 135;
+            _planet->color.g = 206;
+            _planet->color.b = 235;
+            _planet->level = LEVEL_PLANET;
         }
         else if (planet->level == LEVEL_PLANET)
         {
             char *name = "Moon";
-            sprintf(moon->name, "%s%d", name, i);
-            moon->image = "../assets/images/moon.png";
-            moon->radius = 50;
-            moon->position.y = planet->position.y - ((i + 1) * MOON_DISTANCE); // To-do: variable moon distance
-            moon->color.r = 220;
-            moon->color.g = 220;
-            moon->color.b = 220;
-            moon->level = LEVEL_MOON;
+            sprintf(_planet->name, "%s%d", name, i);
+            _planet->image = "../assets/images/moon.png";
+            _planet->position.y = planet->position.y - moon_distance_planet;
+            _planet->color.r = 220;
+            _planet->color.g = 220;
+            _planet->color.b = 220;
+            _planet->level = LEVEL_MOON;
         }
 
-        moon->position.x = 0.0;
-        moon->vx = orbital_velocity(abs((int)planet->position.y - (int)moon->position.y), planet->radius); // Initial velocity
-        moon->vy = 0.0;
-        moon->dx = 0.0;
-        moon->dy = 0.0;
-        SDL_Surface *surface = IMG_Load(moon->image);
-        moon->texture = SDL_CreateTextureFromSurface(renderer, surface);
+        _planet->radius = radius;
+        _planet->position.x = 0.0;
+        _planet->vx = orbital_velocity(abs((int)planet->position.y - (int)_planet->position.y), planet->radius); // Initial velocity
+        _planet->vy = 0.0;
+        _planet->dx = 0.0;
+        _planet->dy = 0.0;
+        SDL_Surface *surface = IMG_Load(_planet->image);
+        _planet->texture = SDL_CreateTextureFromSurface(renderer, surface);
         SDL_FreeSurface(surface);
-        moon->rect.x = moon->position.x - moon->radius;
-        moon->rect.y = moon->position.y - moon->radius;
-        moon->rect.w = 2 * moon->radius;
-        moon->rect.h = 2 * moon->radius;
-        moon->planets[0] = NULL;
-        moon->parent = planet;
+        _planet->rect.x = _planet->position.x - _planet->radius;
+        _planet->rect.y = _planet->position.y - _planet->radius;
+        _planet->rect.w = 2 * _planet->radius;
+        _planet->rect.h = 2 * _planet->radius;
+        _planet->planets[0] = NULL;
+        _planet->parent = planet;
 
-        planet->planets[i] = moon;
-        planet->planets[i + 1] = NULL;
+        planet->planets[j] = _planet;
+        planet->planets[j + 1] = NULL;
 
-        create_system(moon);
+        printf("\n%s", _planet->name);
+
+        j++;
+
+        create_system(_planet);
     }
 }
 
