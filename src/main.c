@@ -90,7 +90,7 @@ int main(int argc, char *argv[])
 {
     int quit = 0;
 
-    // Global coordinates
+    // Global ship coordinates
     float x_coord = 0;
     float y_coord = 0;
 
@@ -118,7 +118,7 @@ int main(int argc, char *argv[])
     struct planet_t *star = create_star();
     create_system(star);
 
-    // Put ship in orbit
+    // Put ship in orbit around star
     if (SHIP_IN_ORBIT)
         ship.vx = orbital_velocity(abs((int)star->position.y - (int)ship.position.y), star->radius);
 
@@ -291,7 +291,6 @@ void update_bgstars(struct bgstar_t bgstars[], int stars_count, struct ship_t *s
  */
 void update_camera(struct camera_t *camera, struct ship_t *ship)
 {
-    // Update camera position
     camera->x = ship->position.x - camera->w / 2;
     camera->y = ship->position.y - camera->h / 2;
 }
@@ -792,6 +791,9 @@ void apply_gravity_to_ship(struct planet_t *planet, struct ship_t *ship, const s
         ship->vy += g_planet * delta_y / distance;
     }
 
+    // Update velocity
+    velocity = sqrt((ship->vx * ship->vx) + (ship->vy * ship->vy));
+
     // Enforce speed limit if within STAR_CUTOFF
     if (is_star && distance < STAR_CUTOFF * planet->radius)
     {
@@ -799,11 +801,11 @@ void apply_gravity_to_ship(struct planet_t *planet, struct ship_t *ship, const s
         {
             ship->vx = SPEED_LIMIT * ship->vx / velocity;
             ship->vy = SPEED_LIMIT * ship->vy / velocity;
+
+            // Update velocity
+            velocity = sqrt((ship->vx * ship->vx) + (ship->vy * ship->vy));
         }
     }
-
-    // Update velocity
-    velocity = sqrt((ship->vx * ship->vx) + (ship->vy * ship->vy));
 }
 
 /*
@@ -989,4 +991,8 @@ void project_ship(struct ship_t *ship, struct ship_t *projection, const struct c
     // Draw projection thrust
     if (thrust)
         SDL_RenderCopyEx(renderer, projection->texture, &projection->thrust_img_rect, &projection->rect, projection->angle, &projection->rotation_pt, SDL_FLIP_NONE);
+
+    // Draw projection reverse
+    if (reverse)
+        SDL_RenderCopyEx(renderer, projection->texture, &projection->reverse_img_rect, &projection->rect, projection->angle, &projection->rotation_pt, SDL_FLIP_NONE);
 }
