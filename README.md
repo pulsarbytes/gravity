@@ -42,10 +42,14 @@ Alternatively, a Makefile is provided as a convenience.
 
 ## Keyboard controls
 
--   `Space` Thrust
--   `Right arrow` Rotate right
--   `Left arrow` Rotate left
--   `Tab` Toggle console
+| Key     | Action         |
+| ------- | -------------- |
+| `Space` | Thrust         |
+| `Right` | Rotate right   |
+| `Left`  | Rotate left    |
+| `K`     | Toggle console |
+| `C`     | Toggle camera  |
+| `Esc`   | Exit program   |
 
 ## Console contents
 
