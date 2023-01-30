@@ -1,7 +1,7 @@
 /*
  * Gravity - A basic 2d game engine in C that models gravity and orbital motion
  *
- * v1.0.0
+ * v1.0.1
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 only,
@@ -30,28 +30,6 @@
 
 #include "../include/common.h"
 #include "../include/structs.h"
-
-#define FPS 60
-#define STARS_SQUARE 10000
-#define STARS_PER_SQUARE 5
-#define SHIP_RADIUS 17
-#define SHIP_PROJECTION_RADIUS 10
-#define SHIP_STARTING_X 0    // 0 is star center, negative is left
-#define SHIP_STARTING_Y -700 // 0 is star center, negative is up
-#define SHIP_IN_ORBIT 0
-#define STAR_CUTOFF 60
-#define PLANET_CUTOFF 10
-#define PLANET_DISTANCE 500
-#define MOON_DISTANCE 200
-#define LANDING_CUTOFF 3
-#define SPEED_LIMIT 300
-#define APPROACH_LIMIT 100
-#define PROJECTION_OFFSET 10
-#define CAMERA_ON 1
-#define CONSOLE_ON 0
-#ifndef M_PI
-#define M_PI 3.14159265358979323846
-#endif
 
 enum
 {
@@ -456,7 +434,7 @@ void create_system(struct planet_t *planet)
 
         if (planet->level == LEVEL_STAR)
         {
-            char *name = "Planet";
+            char *name = "P";
             sprintf(_planet->name, "%s%d", name, i);
             _planet->image = "../assets/images/earth.png";
             _planet->position.y = (planet->position.y) - planet_distance_star;
@@ -467,8 +445,10 @@ void create_system(struct planet_t *planet)
         }
         else if (planet->level == LEVEL_PLANET)
         {
-            char *name = "Moon";
-            sprintf(_planet->name, "%s%d", name, i);
+            char parent_name[MAX_PLANET_NAME / 2];
+            strncpy(parent_name, planet->name, sizeof(parent_name));
+            char *name = "M";
+            sprintf(_planet->name, "%s %s%d", parent_name, name, i);
             _planet->image = "../assets/images/moon.png";
             _planet->position.y = planet->position.y - moon_distance_planet;
             _planet->color.r = 220;
@@ -496,8 +476,6 @@ void create_system(struct planet_t *planet)
         planet->planets[j] = _planet;
         planet->planets[j + 1] = NULL;
 
-        printf("\n%s", _planet->name);
-
         j++;
 
         create_system(_planet);
@@ -509,7 +487,7 @@ void create_system(struct planet_t *planet)
  */
 void update_planets(struct planet_t *planet, struct ship_t *ship, const struct camera_t *camera)
 {
-    int is_star = planet->parent == NULL;
+    int is_star = planet->level == LEVEL_STAR;
     float distance_star = 0.0;
 
     if (!is_star)
@@ -706,7 +684,7 @@ void apply_gravity_to_ship(struct planet_t *planet, struct ship_t *ship, const s
     float delta_y = 0.0;
     float distance;
     float g_planet = 0;
-    int is_star = planet->parent == NULL;
+    int is_star = planet->level == LEVEL_STAR;
     int collision_point = planet->radius;
 
     delta_x = planet->position.x - ship->position.x;
