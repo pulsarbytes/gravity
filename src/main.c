@@ -107,19 +107,24 @@ int main(int argc, char *argv[])
         .w = display_mode.w,
         .h = display_mode.h};
 
-    // Create a star and a system
-    struct planet_t *star = create_star();
-    create_system(star);
-
-    // Put ship in orbit around star
-    if (SHIP_IN_ORBIT)
-        ship.vx = orbital_velocity(abs((int)star->position.y - (int)ship.position.y), star->radius);
-
     // Create stars background
     int max_bgstars = (int)(display_mode.w * display_mode.h * STARS_PER_SQUARE / STARS_SQUARE);
     max_bgstars *= 1.3; // Add 30% more space for safety
     struct bgstar_t bgstars[max_bgstars];
     int bgstars_count = create_bgstars(bgstars, max_bgstars, &ship);
+
+    // Create a star and a system
+    struct planet_t *star = NULL;
+
+    if (!EMPTY_SPACE)
+    {
+        star = create_star();
+        create_system(star);
+
+        // Put ship in orbit around a star
+        if (SHIP_IN_ORBIT)
+            ship.vx = orbital_velocity(abs((int)star->position.y - (int)ship.position.y), star->radius);
+    }
 
     // Set time keeping variables
     unsigned int start_time, end_time;
@@ -141,8 +146,9 @@ int main(int argc, char *argv[])
         // Draw background stars
         update_bgstars(bgstars, bgstars_count, &ship, &camera);
 
-        // Updates planets in solar system recursively
-        update_planets(star, &ship, &camera);
+        // Updates planets in star recursively
+        if (!EMPTY_SPACE)
+            update_planets(star, &ship, &camera);
 
         // Update camera
         if (camera_on)
@@ -157,11 +163,11 @@ int main(int argc, char *argv[])
 
         if (CONSOLE_ON)
         {
-            // Log coordinates (relative to star)
+            // Log coordinates (relative to 0,0)
             log_game_console(game_console_entries, X_INDEX, x_coord);
             log_game_console(game_console_entries, Y_INDEX, y_coord);
 
-            // Log velocity (relative to star)
+            // Log velocity (relative to 0,0)
             log_game_console(game_console_entries, V_INDEX, velocity);
 
             // Update game console
@@ -239,6 +245,9 @@ int create_bgstars(struct bgstar_t bgstars[], int max_bgstars, struct ship_t *sh
  */
 void update_bgstars(struct bgstar_t bgstars[], int stars_count, struct ship_t *ship, const struct camera_t *camera)
 {
+    // Update velocity
+    velocity = sqrt((ship->vx * ship->vx) + (ship->vy * ship->vy));
+
     for (int i = 0; i < stars_count; i++)
     {
         if (camera_on)

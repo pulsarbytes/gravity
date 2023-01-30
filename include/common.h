@@ -12,6 +12,7 @@
 #define COSMIC_CONSTANT 7.75
 #define G_CONSTANT 5
 
+#define EMPTY_SPACE 1
 #define STARS_SQUARE 10000
 #define STARS_PER_SQUARE 5
 #define STAR_CUTOFF 60
