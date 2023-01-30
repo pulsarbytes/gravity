@@ -69,7 +69,6 @@ void close_sdl(void);
 void poll_events(int *quit);
 void log_game_console(struct game_console_entry entries[], int index, float value);
 void update_game_console(struct game_console_entry entries[]);
-void destroy_game_console(struct game_console_entry entries[]);
 void log_fps(unsigned int time_diff);
 void cleanup_resources(struct planet_t *, struct ship_t *);
 float orbital_velocity(float height, int radius);
@@ -184,12 +183,6 @@ int main(int argc, char *argv[])
 
         // Log FPS
         log_fps(end_time - start_time);
-    }
-
-    if (CONSOLE_ON)
-    {
-        // Destroy game console
-        destroy_game_console(game_console_entries);
     }
 
     // Cleanup resources
@@ -785,7 +778,7 @@ void apply_gravity_to_ship(struct planet_t *planet, struct ship_t *ship, const s
     }
 
     // Enforce speed limit if within STAR_CUTOFF
-    if (!is_star || (is_star && distance < STAR_CUTOFF * planet->radius))
+    if (is_star && distance < STAR_CUTOFF * planet->radius)
     {
         if (velocity > SPEED_LIMIT)
         {

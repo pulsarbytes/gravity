@@ -68,17 +68,3 @@ void update_game_console(struct game_console_entry entries[])
         SDL_DestroyTexture(entries[i].texture);
     }
 }
-
-/*
- * Destroy game console, free up resources
- */
-void destroy_game_console(struct game_console_entry entries[])
-{
-    int i;
-
-    for (i = 0; i < LOG_COUNT; i++)
-    {
-        SDL_FreeSurface(entries[i].surface);
-        SDL_DestroyTexture(entries[i].texture);
-    }
-}
