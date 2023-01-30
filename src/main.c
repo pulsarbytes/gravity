@@ -59,6 +59,7 @@ int left = OFF;
 int right = OFF;
 int thrust = OFF;
 int console = ON;
+int camera_on = CAMERA_ON;
 
 // Array for game console entries
 struct game_console_entry game_console_entries[LOG_COUNT];
@@ -150,7 +151,7 @@ int main(int argc, char *argv[])
         update_planets(star, &ship, &camera);
 
         // Update camera
-        if (CAMERA_ON)
+        if (camera_on)
             update_camera(&camera, &ship);
 
         // Update ship
@@ -246,7 +247,7 @@ void update_bgstars(struct bgstar_t bgstars[], int stars_count, struct ship_t *s
 {
     for (int i = 0; i < stars_count; i++)
     {
-        if (CAMERA_ON)
+        if (camera_on)
         {
             bgstars[i].position.x -= 0.2 * ship->vx / FPS;
             bgstars[i].position.y -= 0.2 * ship->vy / FPS;
@@ -822,7 +823,7 @@ void update_ship(struct ship_t *ship, struct ship_t *ship_projection, const stru
     ship->position.x += (float)ship->vx / FPS;
     ship->position.y += (float)ship->vy / FPS;
 
-    if (CAMERA_ON)
+    if (camera_on)
     {
         // Static rect position at center of screen fixes flickering caused by float-to-int inaccuracies
         ship->rect.x = (camera->w / 2) - ship->radius;
@@ -836,7 +837,7 @@ void update_ship(struct ship_t *ship, struct ship_t *ship_projection, const stru
     }
 
     // Draw ship if in camera
-    if (CAMERA_ON || (!CAMERA_ON && (ship->position.x <= camera->x + camera->w && ship->position.x > camera->x &&
+    if (camera_on || (!camera_on && (ship->position.x <= camera->x + camera->w && ship->position.x > camera->x &&
                                      ship->position.y <= camera->y + camera->h && ship->position.y > camera->y)))
     {
         SDL_RenderCopyEx(renderer, ship->texture, &ship->main_img_rect, &ship->rect, ship->angle, &ship->rotation_pt, SDL_FLIP_NONE);

@@ -10,6 +10,7 @@ extern int left;
 extern int right;
 extern int thrust;
 extern int console;
+extern int camera_on;
 
 /*
  * Poll SDL events
@@ -41,6 +42,9 @@ void poll_events(int *quit)
                 break;
             case SDL_SCANCODE_K:
                 console = console ? OFF : ON;
+                break;
+            case SDL_SCANCODE_C:
+                camera_on = camera_on ? OFF : ON;
                 break;
             default:
                 break;
