@@ -10,8 +10,6 @@
 #include "../include/common.h"
 #include "../include/structs.h"
 
-#define COSMIC_CONSTANT 7.75
-
 /*
  * Clean up planets (recursive)
  */
