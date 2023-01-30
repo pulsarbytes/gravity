@@ -249,8 +249,17 @@ void update_bgstars(struct bgstar_t bgstars[], int stars_count, struct ship_t *s
     {
         if (camera_on)
         {
-            bgstars[i].position.x -= 0.2 * ship->vx / FPS;
-            bgstars[i].position.y -= 0.2 * ship->vy / FPS;
+            // Don't move background stars faster if velocity > speed limit
+            if (velocity > SPEED_LIMIT)
+            {
+                bgstars[i].position.x -= 0.2 * (SPEED_LIMIT * ship->vx / velocity) / FPS;
+                bgstars[i].position.y -= 0.2 * (SPEED_LIMIT * ship->vy / velocity) / FPS;
+            }
+            else
+            {
+                bgstars[i].position.x -= 0.2 * ship->vx / FPS;
+                bgstars[i].position.y -= 0.2 * ship->vy / FPS;
+            }
 
             bgstars[i].rect.x = (int)(bgstars[i].position.x + (camera->w / 2));
             bgstars[i].rect.y = (int)(bgstars[i].position.y + (camera->h / 2));
@@ -330,7 +339,7 @@ struct planet_t *create_star(void)
 {
     struct planet_t *star = (struct planet_t *)malloc(sizeof(struct planet_t));
 
-    strcpy(star->name, "Star");
+    strcpy(star->name, "Sol");
     star->image = "../assets/images/sol.png";
     star->radius = 250;
     star->position.x = 0.0;
