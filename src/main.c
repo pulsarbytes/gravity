@@ -31,13 +31,6 @@
 #include "../include/common.h"
 #include "../include/structs.h"
 
-enum
-{
-    LEVEL_STAR = 1,
-    LEVEL_PLANET,
-    LEVEL_MOON
-};
-
 static enum {
     STAGE_OFF = -1, // Not landed
     STAGE_0         // Landed
@@ -81,10 +74,11 @@ void create_system(struct planet_t *);
 struct ship_t create_ship(int radius, int x, int y);
 void update_planets(struct planet_t *, struct ship_t *, const struct camera_t *);
 void project_planet(struct planet_t *, const struct camera_t *);
+void update_projection_coordinates(void *, int entity_type, const struct camera_t *);
 void apply_gravity_to_ship(struct planet_t *, struct ship_t *, const struct camera_t *);
 void update_camera(struct camera_t *, struct ship_t *);
-void update_ship(struct ship_t *ship, const struct camera_t *);
-void project_ship(struct ship_t *ship, const struct camera_t *);
+void update_ship(struct ship_t *, const struct camera_t *);
+void project_ship(struct ship_t *, const struct camera_t *);
 
 int main(int argc, char *argv[])
 {
@@ -103,7 +97,7 @@ int main(int argc, char *argv[])
 
     // Create ship and ship projection
     struct ship_t ship = create_ship(SHIP_RADIUS, SHIP_STARTING_X, SHIP_STARTING_Y);
-    struct ship_t ship_projection = create_ship(SHIP_PROJECTION_RADIUS, 0, 0);
+    struct ship_t ship_projection = create_ship(PROJECTION_RADIUS, 0, 0);
     ship.projection = &ship_projection;
 
     // Create camera, sync initial position with ship
@@ -578,107 +572,203 @@ void update_planets(struct planet_t *planet, struct ship_t *ship, const struct c
  */
 void project_planet(struct planet_t *planet, const struct camera_t *camera)
 {
+    update_projection_coordinates(planet, ENTITY_PLANET, camera);
+
+    planet->projection.w = 2 * PROJECTION_RADIUS;
+    planet->projection.h = 2 * PROJECTION_RADIUS;
+
+    SDL_SetRenderDrawColor(renderer, planet->color.r, planet->color.g, planet->color.b, 255);
+    SDL_RenderFillRect(renderer, &planet->projection);
+}
+
+/*
+ * Updates coordinates for a projection
+ */
+void update_projection_coordinates(void *ptr, int entity_type, const struct camera_t *camera)
+{
+    struct planet_t *planet = NULL;
+    struct ship_t *ship = NULL;
+
+    switch (entity_type)
+    {
+    case ENTITY_PLANET:
+        planet = (struct planet_t *)ptr;
+        break;
+    case ENTITY_SHIP:
+        ship = (struct ship_t *)ptr;
+        break;
+    }
+
     float delta_x, delta_y, point;
 
     // Find screen quadrant for planet exit from screen; 0, 0 is screen center, negative y is up
-    delta_x = planet->position.x - (camera->x + (camera->w / 2));
-    delta_y = planet->position.y - (camera->y + (camera->h / 2));
+    if (planet)
+    {
+        delta_x = planet->position.x - (camera->x + (camera->w / 2));
+        delta_y = planet->position.y - (camera->y + (camera->h / 2));
+    }
+    else if (ship)
+    {
+        delta_x = ship->position.x - (camera->x + (camera->w / 2));
+        delta_y = ship->position.y - (camera->y + (camera->h / 2));
+    }
 
     // 1st quadrant (clockwise)
     if (delta_x >= 0 && delta_y < 0)
     {
-        point = (int)(((camera->h / 2) - PROJECTION_OFFSET) * delta_x / (-delta_y));
+        point = (int)(((camera->h / 2) - PROJECTION_RADIUS) * delta_x / (-delta_y));
 
         // Top
-        if (point <= (camera->w / 2) - PROJECTION_OFFSET)
+        if (point <= (camera->w / 2) - PROJECTION_RADIUS)
         {
-            planet->projection.x = (camera->w / 2) + point;
-            planet->projection.y = PROJECTION_OFFSET;
+            if (planet)
+            {
+                planet->projection.x = (camera->w / 2) + point - PROJECTION_RADIUS;
+                planet->projection.y = 0;
+            }
+            else if (ship)
+            {
+                ship->projection->rect.x = (camera->w / 2) + point - PROJECTION_RADIUS;
+                ship->projection->rect.y = 0;
+            }
         }
         // Right
         else
         {
             if (delta_x > 0)
-                point = (int)(((camera->h / 2) - PROJECTION_OFFSET) - ((camera->w / 2) - PROJECTION_OFFSET) * (-delta_y) / delta_x);
+                point = (int)(((camera->h / 2) - PROJECTION_RADIUS) - ((camera->w / 2) - PROJECTION_RADIUS) * (-delta_y) / delta_x);
             else
-                point = (int)(((camera->h / 2) - PROJECTION_OFFSET) - ((camera->w / 2) - PROJECTION_OFFSET));
+                point = (int)(((camera->h / 2) - PROJECTION_RADIUS) - ((camera->w / 2) - PROJECTION_RADIUS));
 
-            planet->projection.x = camera->w - PROJECTION_OFFSET;
-            planet->projection.y = point + PROJECTION_OFFSET;
+            if (planet)
+            {
+                planet->projection.x = camera->w - (2 * PROJECTION_RADIUS);
+                planet->projection.y = point;
+            }
+            else if (ship)
+            {
+                ship->projection->rect.x = camera->w - (2 * PROJECTION_RADIUS);
+                ship->projection->rect.y = point;
+            }
         }
     }
     // 2nd quadrant
     else if (delta_x >= 0 && delta_y >= 0)
     {
         if (delta_x > 0)
-            point = (int)(((camera->w / 2) - PROJECTION_OFFSET) * delta_y / delta_x);
+            point = (int)(((camera->w / 2) - PROJECTION_RADIUS) * delta_y / delta_x);
         else
-            point = (int)((camera->w / 2) - PROJECTION_OFFSET);
+            point = (int)((camera->w / 2) - PROJECTION_RADIUS);
 
         // Right
-        if (point <= (camera->h / 2) - PROJECTION_OFFSET)
+        if (point <= (camera->h / 2) - PROJECTION_RADIUS)
         {
-            planet->projection.x = camera->w - PROJECTION_OFFSET;
-            planet->projection.y = (camera->h / 2) + point;
+            if (planet)
+            {
+                planet->projection.x = camera->w - (2 * PROJECTION_RADIUS);
+                planet->projection.y = (camera->h / 2) + point - PROJECTION_RADIUS;
+            }
+            else if (ship)
+            {
+                ship->projection->rect.x = camera->w - (2 * PROJECTION_RADIUS);
+                ship->projection->rect.y = (camera->h / 2) + point - PROJECTION_RADIUS;
+            }
         }
         // Bottom
         else
         {
             if (delta_y > 0)
-                point = (int)(((camera->h / 2) - PROJECTION_OFFSET) * delta_x / delta_y);
+                point = (int)(((camera->h / 2) - PROJECTION_RADIUS) * delta_x / delta_y);
             else
-                point = (int)(((camera->h / 2) - PROJECTION_OFFSET));
+                point = (int)(((camera->h / 2) - PROJECTION_RADIUS));
 
-            planet->projection.x = (camera->w / 2) + point;
-            planet->projection.y = camera->h - PROJECTION_OFFSET;
+            if (planet)
+            {
+                planet->projection.x = (camera->w / 2) + point - PROJECTION_RADIUS;
+                planet->projection.y = camera->h - (2 * PROJECTION_RADIUS);
+            }
+            else if (ship)
+            {
+                ship->projection->rect.x = (camera->w / 2) + point - PROJECTION_RADIUS;
+                ship->projection->rect.y = camera->h - (2 * PROJECTION_RADIUS);
+            }
         }
     }
     // 3rd quadrant
     else if (delta_x < 0 && delta_y >= 0)
     {
         if (delta_y > 0)
-            point = (int)(((camera->h / 2) - PROJECTION_OFFSET) * (-delta_x) / delta_y);
+            point = (int)(((camera->h / 2) - PROJECTION_RADIUS) * (-delta_x) / delta_y);
         else
-            point = (int)(((camera->h / 2) - PROJECTION_OFFSET));
+            point = (int)(((camera->h / 2) - PROJECTION_RADIUS));
 
         // Bottom
-        if (point <= (camera->w / 2) - PROJECTION_OFFSET)
+        if (point <= (camera->w / 2) - PROJECTION_RADIUS)
         {
-            planet->projection.x = (camera->w / 2) - point;
-            planet->projection.y = camera->h - PROJECTION_OFFSET;
+            if (planet)
+            {
+                planet->projection.x = (camera->w / 2) - point - PROJECTION_RADIUS;
+                planet->projection.y = camera->h - (2 * PROJECTION_RADIUS);
+            }
+            else if (ship)
+            {
+                ship->projection->rect.x = (camera->w / 2) - point - PROJECTION_RADIUS;
+                ship->projection->rect.y = camera->h - (2 * PROJECTION_RADIUS);
+            }
         }
         // Left
         else
         {
-            point = (int)(((camera->h / 2) - PROJECTION_OFFSET) - ((camera->w / 2) - PROJECTION_OFFSET) * delta_y / (-delta_x));
-            planet->projection.x = PROJECTION_OFFSET;
-            planet->projection.y = camera->h - point - PROJECTION_OFFSET;
+            point = (int)(((camera->h / 2) - PROJECTION_RADIUS) - ((camera->w / 2) - PROJECTION_RADIUS) * delta_y / (-delta_x));
+
+            if (planet)
+            {
+                planet->projection.x = 0;
+                planet->projection.y = camera->h - point - (2 * PROJECTION_RADIUS);
+            }
+            else if (ship)
+            {
+                ship->projection->rect.x = 0;
+                ship->projection->rect.y = camera->h - point - (2 * PROJECTION_RADIUS);
+            }
         }
     }
     // 4th quadrant
     else if (delta_x < 0 && delta_y < 0)
     {
-        point = (int)(((camera->w / 2) - PROJECTION_OFFSET) * (-delta_y) / (-delta_x));
+        point = (int)(((camera->w / 2) - PROJECTION_RADIUS) * (-delta_y) / (-delta_x));
 
         // Left
-        if (point <= (camera->h / 2) - PROJECTION_OFFSET)
+        if (point <= (camera->h / 2) - PROJECTION_RADIUS)
         {
-            planet->projection.x = PROJECTION_OFFSET;
-            planet->projection.y = (camera->h / 2) - point;
+            if (planet)
+            {
+                planet->projection.x = 0;
+                planet->projection.y = (camera->h / 2) - point - PROJECTION_RADIUS;
+            }
+            else if (ship)
+            {
+                ship->projection->rect.x = 0;
+                ship->projection->rect.y = (camera->h / 2) - point - PROJECTION_RADIUS;
+            }
         }
         // Top
         else
         {
-            point = (int)(((camera->w / 2) - PROJECTION_OFFSET) - ((camera->h / 2) - PROJECTION_OFFSET) * (-delta_x) / (-delta_y));
-            planet->projection.x = point + PROJECTION_OFFSET;
-            planet->projection.y = PROJECTION_OFFSET;
+            point = (int)(((camera->w / 2) - PROJECTION_RADIUS) - ((camera->h / 2) - PROJECTION_RADIUS) * (-delta_x) / (-delta_y));
+
+            if (planet)
+            {
+                planet->projection.x = point;
+                planet->projection.y = 0;
+            }
+            else if (ship)
+            {
+                ship->projection->rect.x = point;
+                ship->projection->rect.y = 0;
+            }
         }
     }
-
-    planet->projection.w = 5;
-    planet->projection.h = 5;
-    SDL_SetRenderDrawColor(renderer, planet->color.r, planet->color.g, planet->color.b, 255);
-    SDL_RenderFillRect(renderer, &planet->projection);
 }
 
 /*
@@ -884,105 +974,10 @@ void update_ship(struct ship_t *ship, const struct camera_t *camera)
  */
 void project_ship(struct ship_t *ship, const struct camera_t *camera)
 {
-    float delta_x, delta_y, point;
-
-    // Find screen quadrant for ship exit from screen; 0, 0 is screen center, negative y is up
-    delta_x = ship->position.x - (camera->x + (camera->w / 2));
-    delta_y = ship->position.y - (camera->y + (camera->h / 2));
+    update_projection_coordinates(ship, ENTITY_SHIP, camera);
 
     // Mirror ship angle
     ship->projection->angle = ship->angle;
-
-    // 1st quadrant (clockwise)
-    if (delta_x >= 0 && delta_y < 0)
-    {
-        point = (int)(((camera->h / 2) - PROJECTION_OFFSET) * delta_x / (-delta_y));
-
-        // Top
-        if (point <= (camera->w / 2) - PROJECTION_OFFSET)
-        {
-            ship->projection->rect.x = (camera->w / 2) + point - PROJECTION_OFFSET;
-            ship->projection->rect.y = 0;
-        }
-        // Right
-        else
-        {
-            if (delta_x > 0)
-                point = (int)(((camera->h / 2) - PROJECTION_OFFSET) - ((camera->w / 2) - PROJECTION_OFFSET) * (-delta_y) / delta_x);
-            else
-                point = (int)(((camera->h / 2) - PROJECTION_OFFSET) - ((camera->w / 2) - PROJECTION_OFFSET));
-
-            ship->projection->rect.x = camera->w - (2 * PROJECTION_OFFSET);
-            ship->projection->rect.y = point;
-        }
-    }
-    // 2nd quadrant
-    else if (delta_x >= 0 && delta_y >= 0)
-    {
-        if (delta_x > 0)
-            point = (int)(((camera->w / 2) - PROJECTION_OFFSET) * delta_y / delta_x);
-        else
-            point = (int)(((camera->w / 2) - PROJECTION_OFFSET));
-
-        // Right
-        if (point <= (camera->h / 2) - PROJECTION_OFFSET)
-        {
-            ship->projection->rect.x = camera->w - (2 * PROJECTION_OFFSET);
-            ship->projection->rect.y = (camera->h / 2) + point - PROJECTION_OFFSET;
-        }
-        // Bottom
-        else
-        {
-            if (delta_y > 0)
-                point = (int)(((camera->h / 2) - PROJECTION_OFFSET) * delta_x / delta_y);
-            else
-                point = (int)(((camera->h / 2) - PROJECTION_OFFSET));
-
-            ship->projection->rect.x = (camera->w / 2) + point - PROJECTION_OFFSET;
-            ship->projection->rect.y = camera->h - (2 * PROJECTION_OFFSET);
-        }
-    }
-    // 3rd quadrant
-    else if (delta_x < 0 && delta_y >= 0)
-    {
-        if (delta_y > 0)
-            point = (int)(((camera->h / 2) - PROJECTION_OFFSET) * (-delta_x) / delta_y);
-        else
-            point = (int)(((camera->h / 2) - PROJECTION_OFFSET));
-
-        // Bottom
-        if (point <= (camera->w / 2) - PROJECTION_OFFSET)
-        {
-            ship->projection->rect.x = (camera->w / 2) - point - PROJECTION_OFFSET;
-            ship->projection->rect.y = camera->h - (2 * PROJECTION_OFFSET);
-        }
-        // Left
-        else
-        {
-            point = (int)(((camera->h / 2) - PROJECTION_OFFSET) - ((camera->w / 2) - PROJECTION_OFFSET) * delta_y / (-delta_x));
-            ship->projection->rect.x = 0;
-            ship->projection->rect.y = camera->h - point - (2 * PROJECTION_OFFSET);
-        }
-    }
-    // 4th quadrant
-    else if (delta_x < 0 && delta_y < 0)
-    {
-        point = (int)(((camera->w / 2) - PROJECTION_OFFSET) * (-delta_y) / (-delta_x));
-
-        // Left
-        if (point <= (camera->h / 2) - PROJECTION_OFFSET)
-        {
-            ship->projection->rect.x = 0;
-            ship->projection->rect.y = (camera->h / 2) - point - PROJECTION_OFFSET;
-        }
-        // Top
-        else
-        {
-            point = (int)(((camera->w / 2) - PROJECTION_OFFSET) - ((camera->h / 2) - PROJECTION_OFFSET) * (-delta_x) / (-delta_y));
-            ship->projection->rect.x = point;
-            ship->projection->rect.y = 0;
-        }
-    }
 
     // Draw ship projection
     SDL_RenderCopyEx(renderer, ship->projection->texture, &ship->projection->main_img_rect, &ship->projection->rect, ship->projection->angle, &ship->projection->rotation_pt, SDL_FLIP_NONE);

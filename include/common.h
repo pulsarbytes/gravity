@@ -7,7 +7,7 @@
 
 #define CONSOLE_ON 1
 #define FONT_SIZE 14
-#define PROJECTION_OFFSET 10
+#define PROJECTION_RADIUS 10
 
 #define COSMIC_CONSTANT 7.75
 #define G_CONSTANT 5
@@ -27,7 +27,6 @@
 #define MOON_DISTANCE 250
 
 #define SHIP_RADIUS 17
-#define SHIP_PROJECTION_RADIUS 10
 #define SHIP_STARTING_X 0    // 0 is star center, negative is left
 #define SHIP_STARTING_Y -700 // 0 is star center, negative is up
 #define SHIP_IN_ORBIT 0
@@ -58,6 +57,19 @@ enum
     DISTANCE_INDEX,
     G_INDEX,
     LOG_COUNT // number of elements in enumeration
+};
+
+enum
+{
+    LEVEL_STAR = 1,
+    LEVEL_PLANET,
+    LEVEL_MOON
+};
+
+enum
+{
+    ENTITY_SHIP,
+    ENTITY_PLANET
 };
 
 #endif /* COMMON_H */
