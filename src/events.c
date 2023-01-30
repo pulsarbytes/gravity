@@ -39,6 +39,9 @@ void poll_events(int *quit)
             case SDL_SCANCODE_SPACE:
                 thrust = ON;
                 break;
+            case SDL_SCANCODE_K:
+                console = console ? OFF : ON;
+                break;
             default:
                 break;
             }
@@ -56,9 +59,6 @@ void poll_events(int *quit)
                 break;
             case SDL_SCANCODE_SPACE:
                 thrust = OFF;
-                break;
-            case SDL_SCANCODE_TAB:
-                console = console ? OFF : ON;
                 break;
             case SDL_SCANCODE_ESCAPE:
                 *quit = 1;
