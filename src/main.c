@@ -58,6 +58,7 @@ const float g_thrust = 1 * G_CONSTANT;
 int left = OFF;
 int right = OFF;
 int thrust = OFF;
+int reverse = OFF;
 int console = ON;
 int camera_on = CAMERA_ON;
 
@@ -324,6 +325,10 @@ struct ship_t create_ship(int radius, int x, int y)
     ship.thrust_img_rect.y = 0;   // start clipping at y of texture
     ship.thrust_img_rect.w = 162;
     ship.thrust_img_rect.h = 162;
+    ship.reverse_img_rect.x = 428; // start clipping at x of texture
+    ship.reverse_img_rect.y = 0;   // start clipping at y of texture
+    ship.reverse_img_rect.w = 162;
+    ship.reverse_img_rect.h = 162;
 
     // Point around which ship will be rotated (relative to destination rect)
     ship.rotation_pt.x = ship.radius;
@@ -818,7 +823,7 @@ void update_ship(struct ship_t *ship, struct ship_t *ship_projection, const stru
     if (ship->angle > 360)
         ship->angle -= 360;
 
-    // Apply ship thrust
+    // Apply thrust
     if (thrust)
     {
         landing_stage = STAGE_OFF;
@@ -826,6 +831,15 @@ void update_ship(struct ship_t *ship, struct ship_t *ship_projection, const stru
 
         ship->vx += g_thrust * sin(radians);
         ship->vy -= g_thrust * cos(radians);
+    }
+
+    // Apply reverse
+    if (reverse)
+    {
+        radians = M_PI * ship->angle / 180;
+
+        ship->vx -= g_thrust * sin(radians);
+        ship->vy += g_thrust * cos(radians);
     }
 
     // Update ship position
@@ -858,6 +872,10 @@ void update_ship(struct ship_t *ship, struct ship_t *ship_projection, const stru
     // Draw ship thrust
     if (thrust)
         SDL_RenderCopyEx(renderer, ship->texture, &ship->thrust_img_rect, &ship->rect, ship->angle, &ship->rotation_pt, SDL_FLIP_NONE);
+
+    // Draw reverse thrust
+    if (reverse)
+        SDL_RenderCopyEx(renderer, ship->texture, &ship->reverse_img_rect, &ship->rect, ship->angle, &ship->rotation_pt, SDL_FLIP_NONE);
 }
 
 /*

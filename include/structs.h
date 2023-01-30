@@ -51,6 +51,7 @@ struct ship_t
     SDL_Rect rect;
     SDL_Rect main_img_rect;
     SDL_Rect thrust_img_rect;
+    SDL_Rect reverse_img_rect;
     SDL_Point rotation_pt;
 };
 

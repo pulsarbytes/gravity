@@ -14,9 +14,9 @@
 
 #define STARS_SQUARE 10000
 #define STARS_PER_SQUARE 5
-#define STAR_CUTOFF 100
+#define STAR_CUTOFF 60
 
-#define MAX_PLANETS 12
+#define MAX_PLANETS 10
 #define MAX_MOONS 8
 #define MAX(x, y) ((x) > (y) ? (x) : (y))
 #define MAX_PLANETS_MOONS MAX(MAX_PLANETS, MAX_MOONS)

@@ -45,6 +45,7 @@ Alternatively, a Makefile is provided as a convenience.
 | Key     | Action         |
 | ------- | -------------- |
 | `Space` | Thrust         |
+| `Down`  | Reverse thrust |
 | `Right` | Rotate right   |
 | `Left`  | Rotate left    |
 | `K`     | Toggle console |

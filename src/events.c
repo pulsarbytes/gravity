@@ -9,6 +9,7 @@
 extern int left;
 extern int right;
 extern int thrust;
+extern int reverse;
 extern int console;
 extern int camera_on;
 
@@ -38,7 +39,12 @@ void poll_events(int *quit)
                 right = ON;
                 break;
             case SDL_SCANCODE_SPACE:
+                reverse = OFF;
                 thrust = ON;
+                break;
+            case SDL_SCANCODE_DOWN:
+                thrust = OFF;
+                reverse = ON;
                 break;
             case SDL_SCANCODE_K:
                 console = console ? OFF : ON;
@@ -63,6 +69,9 @@ void poll_events(int *quit)
                 break;
             case SDL_SCANCODE_SPACE:
                 thrust = OFF;
+                break;
+            case SDL_SCANCODE_DOWN:
+                reverse = OFF;
                 break;
             case SDL_SCANCODE_ESCAPE:
                 *quit = 1;
