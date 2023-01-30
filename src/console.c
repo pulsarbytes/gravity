@@ -65,6 +65,7 @@ void update_game_console(struct game_console_entry entries[])
         entries[i].rect.w = 100;
         entries[i].rect.h = 15;
         SDL_RenderCopy(renderer, entries[i].texture, NULL, &entries[i].rect);
+        SDL_DestroyTexture(entries[i].texture);
     }
 }
 
@@ -77,6 +78,7 @@ void destroy_game_console(struct game_console_entry entries[])
 
     for (i = 0; i < LOG_COUNT; i++)
     {
+        SDL_FreeSurface(entries[i].surface);
         SDL_DestroyTexture(entries[i].texture);
     }
 }
