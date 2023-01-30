@@ -21,7 +21,7 @@ struct position_t
 // Struct for a planet
 struct planet_t
 {
-    char name[50];
+    char name[MAX_PLANET_NAME];
     char *image;
     int radius;
     struct position_t position;
