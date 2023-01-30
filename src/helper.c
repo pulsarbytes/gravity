@@ -41,6 +41,7 @@ void cleanup_resources(struct planet_t *planet, struct ship_t *ship)
     cleanup_planets(planet);
 
     // Cleanup ship
+    SDL_DestroyTexture(ship->projection->texture);
     SDL_DestroyTexture(ship->texture);
 }
 
