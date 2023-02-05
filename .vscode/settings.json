@@ -1,5 +1,7 @@
 {
     "files.associations": {
-        "sdl_ttf.h": "c"
+        "sdl_ttf.h": "c",
+        "structs.h": "c",
+        "type_traits": "c"
     }
 }

@@ -1,5 +1,5 @@
 /*
- * sdl.c - Functions for initializing and closing SDL
+ * sdl.c - Functions for initializing and closing SDL.
  */
 
 #include <SDL2/SDL.h>
@@ -14,7 +14,7 @@ extern TTF_Font *font;
 extern SDL_Color text_color;
 
 /*
- * Initialize SDL
+ * Initialize SDL.
  */
 int init_sdl()
 {
@@ -96,7 +96,7 @@ int init_sdl()
 }
 
 /*
- * Clean up SDL resources
+ * Clean up SDL resources.
  */
 void close_sdl(void)
 {

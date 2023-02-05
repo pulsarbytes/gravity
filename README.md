@@ -1,6 +1,6 @@
 # Gravity
 
-A basic 2d game engine that models gravity and orbital motion.
+An infinite procedural 2d universe that models gravity and orbital motion.
 
 ## Prerequisites
 
@@ -30,26 +30,22 @@ apt install libsdl2-dev libsdl2-gfx-dev libsdl2-image-dev libsdl2-mixer-dev libs
 
 ## How to build
 
-### Visual Studio Code
-
-Use Visual Studio Code to make use of the included configuration and build files.
-
-Install the extension [C/C++ by Microsoft](https://marketplace.visualstudio.com/items?itemName=ms-vscode.cpptools) to enable features such as IntelliSense and debugging.
-
-### Makefile
-
-Alternatively, a Makefile is provided as a convenience.
+```
+make
+```
 
 ## Keyboard controls
 
 | Key     | Action         |
 | ------- | -------------- |
-| `Space` | Thrust         |
+| `Up`    | Thrust         |
 | `Down`  | Reverse thrust |
 | `Right` | Rotate right   |
 | `Left`  | Rotate left    |
-| `K`     | Toggle console |
 | `C`     | Toggle camera  |
+| `K`     | Toggle console |
+| `P`     | Pause game     |
+| `S`     | Stop ship      |
 | `Esc`   | Exit program   |
 
 ## Console contents
@@ -58,10 +54,6 @@ Alternatively, a Makefile is provided as a convenience.
 -   `2nd line` X axis distance from Sun
 -   `3rd line` Y axis distance from Sun
 -   `4th line` Velocity vector
-
-## Common issues
-
-See [BUGS](BUGS.md).
 
 ## Licence
 

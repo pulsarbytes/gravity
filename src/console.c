@@ -1,5 +1,5 @@
 /*
- * console.c - Function definitions for game console
+ * console.c - Function definitions for game console.
  */
 
 #include <stdio.h>
@@ -19,7 +19,7 @@ extern SDL_Color text_color;
 void log_game_console(struct game_console_entry entries[], int index, float value);
 
 /*
- * Calculate and log FPS to game console
+ * Calculate and log FPS to game console.
  */
 void log_fps(unsigned int time_diff)
 {
@@ -38,7 +38,7 @@ void log_fps(unsigned int time_diff)
 }
 
 /*
- * Save data to game_console_entries array
+ * Save data to game_console_entries array.
  */
 void log_game_console(struct game_console_entry entries[], int index, float value)
 {
@@ -49,7 +49,7 @@ void log_game_console(struct game_console_entry entries[], int index, float valu
 }
 
 /*
- * Update game console
+ * Update game console.
  */
 void update_game_console(struct game_console_entry entries[])
 {
@@ -66,5 +66,6 @@ void update_game_console(struct game_console_entry entries[])
         entries[i].rect.h = 15;
         SDL_RenderCopy(renderer, entries[i].texture, NULL, &entries[i].rect);
         SDL_DestroyTexture(entries[i].texture);
+        entries[i].texture = NULL;
     }
 }

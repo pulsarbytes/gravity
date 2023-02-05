@@ -11,5 +11,8 @@
 !.vscode/extensions.json
 
 # Other files
-*.txt
 *~
+notes.c
+TODO.md
+BUGS.md
+ChangeLog.md

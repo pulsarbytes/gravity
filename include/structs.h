@@ -18,12 +18,25 @@ struct position_t
     float y;
 };
 
+// Struct for a vector
+struct vector_t
+{
+    float x;
+    float y;
+    float magnitude;
+    float angle; // radians between the positive x-axis and the line connecting the origin to the point (vx, vy)
+};
+
 // Struct for a planet
 struct planet_t
 {
     char name[MAX_PLANET_NAME];
     char *image;
-    int radius;
+    int class;
+    float radius;     // game scale
+    float radius_raw; // range scale
+    float cutoff;     // game scale
+    float cutoff_raw; // range scale
     struct position_t position;
     float vx;
     float vy;
@@ -36,6 +49,15 @@ struct planet_t
     struct planet_t *planets[MAX_PLANETS_MOONS];
     struct planet_t *parent;
     int level;
+};
+
+// Struct for a star entry in stars hash table
+struct star_entry
+{
+    float x;
+    float y;
+    struct planet_t *star;
+    struct star_entry *next;
 };
 
 // Struct for a ship
