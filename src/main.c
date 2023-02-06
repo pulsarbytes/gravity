@@ -32,11 +32,6 @@
 #include "../include/structs.h"
 #include "../lib/pcg-c-basic-0.9/pcg_basic.h"
 
-static enum {
-    STAGE_OFF = -1, // Not landed
-    STAGE_0         // Landed
-} landing_stage = STAGE_OFF;
-
 // External variable definitions
 SDL_Window *window = NULL;
 SDL_DisplayMode display_mode;
@@ -48,7 +43,8 @@ const float g_launch = 0.7 * G_CONSTANT;
 const float g_thrust = 1 * G_CONSTANT;
 static int start = 1;
 float game_scale = GAME_SCALE;
-float range_scale = 1 / GAME_SCALE;
+int speed_limit = BASE_SPEED_LIMIT;
+int landing_stage = STAGE_OFF;
 struct vector_t velocity;
 
 // Keep track of keyboard inputs
@@ -66,7 +62,7 @@ int map_on = OFF;
 int zoom_in = OFF;
 int zoom_out = OFF;
 
-// Keep track of current nearest axis coordinates (region scale)
+// Keep track of current nearest axis coordinates
 static float cross_x;
 static float cross_y;
 
@@ -109,6 +105,7 @@ void update_velocity(struct ship_t *ship);
 float nearest_star_distance(int x, int y);
 int get_star_class(float n);
 int get_planet_class(float n);
+void zoom_star(struct planet_t *planet, float scale, float step);
 
 int main(int argc, char *argv[])
 {
@@ -127,12 +124,12 @@ int main(int argc, char *argv[])
     struct bgstar_t bgstars[max_bgstars];
     int bgstars_count = create_bgstars(bgstars, max_bgstars);
 
-    // Global coordinates; keep track of where we are (range scale)
+    // Global coordinates; keep track of where we are
     float x_offset = STARTING_X;
     float y_offset = STARTING_Y;
 
     // Create ship and ship projection
-    struct ship_t ship = create_ship(SHIP_RADIUS, x_offset * game_scale, y_offset * game_scale);
+    struct ship_t ship = create_ship(SHIP_RADIUS, x_offset, y_offset);
     struct ship_t ship_projection = create_ship(SHIP_PROJECTION_RADIUS, 0.0, 0.0);
     ship.projection = &ship_projection;
 
@@ -146,8 +143,8 @@ int main(int argc, char *argv[])
         {
             struct planet_t *star = get_star(STARTING_X, STARTING_Y);
 
-            ship.position.x = STARTING_X * game_scale;
-            ship.position.y = STARTING_Y * game_scale - 7 * (star->radius);
+            ship.position.x = STARTING_X;
+            ship.position.y = STARTING_Y - 7 * (star->radius);
             calc_orbital_velocity(7 * star->radius, 0, star->radius, &ship.vx, &ship.vy);
         }
     }
@@ -160,13 +157,13 @@ int main(int argc, char *argv[])
         .h = display_mode.h};
 
     // Initialize sections crossings
-    cross_x = ship.position.x * range_scale;
-    cross_y = ship.position.y * range_scale;
+    cross_x = ship.position.x;
+    cross_y = ship.position.y;
 
     // Set time keeping variables
     unsigned int start_time, end_time;
 
-    // Animation loop
+    // Main loop
     while (!quit)
     {
         start_time = SDL_GetTicks();
@@ -216,21 +213,34 @@ int main(int argc, char *argv[])
 
         if (zoom_in)
         {
-            // Destroy ship
+            if (game_scale + 0.01 <= 1.0)
+            {
+                // Zoom stars
+                for (int s = 0; s < MAX_STARS; s++)
+                {
+                    if (stars[s] != NULL && stars[s]->star != NULL)
+                        zoom_star(stars[s]->star, game_scale, 0.01);
+                }
 
-            // Destroy stars
-
-            // Set game_scale
-
-            // Set range_scale
-
-            // Create ship
-
-            // Create stars
+                // Reset scale
+                game_scale += 0.01;
+            }
         }
 
         if (zoom_out)
         {
+            if (game_scale - 0.01 >= 0.01)
+            {
+                // Zoom stars
+                for (int s = 0; s < MAX_STARS; s++)
+                {
+                    if (stars[s] != NULL && stars[s]->star != NULL)
+                        zoom_star(stars[s]->star, game_scale, -0.01);
+                }
+
+                // Reset scale
+                game_scale -= 0.01;
+            }
         }
 
         if (camera_on)
@@ -239,11 +249,14 @@ int main(int argc, char *argv[])
             generate_stars(x_offset, y_offset);
         }
 
-        // Update system
-        for (int i = 0; i < MAX_STARS; i++)
+        if (!zoom_in && !zoom_out)
         {
-            if (stars[i] != NULL)
-                update_system(stars[i]->star, &ship, &camera);
+            // Update system
+            for (int i = 0; i < MAX_STARS; i++)
+            {
+                if (stars[i] != NULL)
+                    update_system(stars[i]->star, &ship, &camera);
+            }
         }
 
         if (!map_on)
@@ -257,30 +270,24 @@ int main(int argc, char *argv[])
             ship.vy = 0;
             ship.angle = 0;
 
+            float rate = MAP_SPEED_MIN + (MAP_SPEED_MAX - MAP_SPEED_MIN) * (camera.w / 1000) / game_scale;
+
             if (right)
-            {
-                ship.position.x += MAP_SPEED * game_scale;
-            }
+                ship.position.x += rate;
 
             if (left)
-            {
-                ship.position.x -= MAP_SPEED * game_scale;
-            }
+                ship.position.x -= rate;
 
             if (up)
-            {
-                ship.position.y -= MAP_SPEED * game_scale;
-            }
+                ship.position.y -= rate;
 
             if (down)
-            {
-                ship.position.y += MAP_SPEED * game_scale;
-            }
+                ship.position.y += rate;
         }
 
         // Update coordinates
-        x_offset = ship.position.x * range_scale;
-        y_offset = ship.position.y * range_scale;
+        x_offset = ship.position.x;
+        y_offset = ship.position.y;
 
         // Update camera
         if (camera_on)
@@ -294,6 +301,9 @@ int main(int argc, char *argv[])
             // Log coordinates (relative to (0,0))
             log_game_console(game_console_entries, X_INDEX, x_offset);
             log_game_console(game_console_entries, Y_INDEX, y_offset);
+
+            // Log game scale
+            log_game_console(game_console_entries, SCALE_INDEX, game_scale);
 
             // Update game console
             if (console)
@@ -321,10 +331,8 @@ int main(int argc, char *argv[])
 }
 
 /*
- * Probe region for stars and creates them procedurally.
- * The region is an independent grid with intervals of size SECTION_SIZE.
- * This grid scale is different from the game scale that is actually displayed.
- * x, y are region scale.
+ * Probe region for stars and create them procedurally.
+ * The region has intervals of size SECTION_SIZE.
  */
 void generate_stars(float x, float y)
 {
@@ -454,7 +462,8 @@ int create_bgstars(struct bgstar_t bgstars[], int max_bgstars)
                     star.rect.h = 1;
                 }
 
-                star.opacity = (rand() % 186) + 10; // Skip 0-9 and go up to 185
+                // Get a color between 10 - 165 and increase exponentially with game_scale
+                star.opacity = ((rand() % 166) + 10); // * (1 - pow(1 - game_scale, 2));
                 bgstars[i++] = star;
             }
 
@@ -487,26 +496,33 @@ void update_bgstars(struct bgstar_t bgstars[], int stars_count, struct ship_t *s
                 bgstars[i].position.y -= 0.2 * ship->vy / FPS;
             }
 
-            bgstars[i].rect.x = (int)(bgstars[i].position.x + (camera->w / 2));
-            bgstars[i].rect.y = (int)(bgstars[i].position.y + (camera->h / 2));
-
-            // Right boundary
-            if (bgstars[i].position.x > ship->position.x - camera->x)
-                bgstars[i].position.x -= camera->w;
-            // Left boundary
-            else if (bgstars[i].position.x < camera->x - ship->position.x)
+            // Normalize within camera boundaries
+            if (bgstars[i].position.x > camera->w)
+            {
+                bgstars[i].position.x = fmod(bgstars[i].position.x, camera->w);
+            }
+            if (bgstars[i].position.x < 0)
+            {
                 bgstars[i].position.x += camera->w;
-
-            // Top boundary
-            if (bgstars[i].position.y > ship->position.y - camera->y)
-                bgstars[i].position.y -= camera->h;
-            // Bottom boundary
-            else if (bgstars[i].position.y < camera->y - ship->position.y)
+            }
+            if (bgstars[i].position.y > camera->h)
+            {
+                bgstars[i].position.y = fmod(bgstars[i].position.y, camera->h);
+            }
+            if (bgstars[i].position.y < 0)
+            {
                 bgstars[i].position.y += camera->h;
+            }
+
+            bgstars[i].rect.x = (int)(bgstars[i].position.x);
+            bgstars[i].rect.y = (int)(bgstars[i].position.y);
         }
 
+        // Update opacity with game_scale
+        float opacity = (double)bgstars[i].opacity * (1 - pow(1 - game_scale, 2));
+
         SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
-        SDL_SetRenderDrawColor(renderer, 255, 255, 255, bgstars[i].opacity);
+        SDL_SetRenderDrawColor(renderer, 255, 255, 255, (unsigned short)opacity);
         SDL_RenderFillRect(renderer, &bgstars[i].rect);
     }
 }
@@ -516,8 +532,8 @@ void update_bgstars(struct bgstar_t bgstars[], int stars_count, struct ship_t *s
  */
 void update_camera(struct camera_t *camera, struct ship_t *ship)
 {
-    camera->x = ship->position.x - camera->w / 2;
-    camera->y = ship->position.y - camera->h / 2;
+    camera->x = ship->position.x - (camera->w / 2) / game_scale;
+    camera->y = ship->position.y - (camera->h / 2) / game_scale;
 }
 
 /*
@@ -537,8 +553,8 @@ struct ship_t create_ship(int radius, int x, int y)
     SDL_Surface *surface = IMG_Load(ship.image);
     ship.texture = SDL_CreateTextureFromSurface(renderer, surface);
     SDL_FreeSurface(surface);
-    ship.rect.x = ship.position.x - ship.radius;
-    ship.rect.y = ship.position.y - ship.radius;
+    ship.rect.x = ship.position.x * game_scale - ship.radius;
+    ship.rect.y = ship.position.y * game_scale - ship.radius;
     ship.rect.w = 2 * ship.radius;
     ship.rect.h = 2 * ship.radius;
     ship.main_img_rect.x = 0; // start clipping at x of texture
@@ -563,7 +579,6 @@ struct ship_t create_ship(int radius, int x, int y)
 
 /*
  * Create a star.
- * x, y are range scale.
  */
 struct planet_t *create_star(float x, float y)
 {
@@ -615,12 +630,10 @@ struct planet_t *create_star(float x, float y)
     sprintf(star->name, "%s-%lu", "S", index);
     star->image = "../assets/images/sol.png";
     star->class = get_star_class(distance);
-    star->radius = radius * game_scale;
-    star->radius_raw = radius;
-    star->cutoff = class * (SECTION_SIZE / 2) * game_scale;
-    star->cutoff_raw = class * (SECTION_SIZE / 2);
-    star->position.x = x * game_scale;
-    star->position.y = y * game_scale;
+    star->radius = radius;
+    star->cutoff = class * (SECTION_SIZE / 2);
+    star->position.x = x;
+    star->position.y = y;
     star->vx = 0.0;
     star->vy = 0.0;
     star->dx = 0.0;
@@ -628,10 +641,10 @@ struct planet_t *create_star(float x, float y)
     SDL_Surface *surface = IMG_Load(star->image);
     star->texture = SDL_CreateTextureFromSurface(renderer, surface);
     SDL_FreeSurface(surface);
-    star->rect.x = star->position.x - star->radius;
-    star->rect.y = star->position.y - star->radius;
-    star->rect.w = 2 * star->radius;
-    star->rect.h = 2 * star->radius;
+    star->rect.x = (star->position.x - star->radius) * game_scale;
+    star->rect.y = (star->position.y - star->radius) * game_scale;
+    star->rect.w = 2 * star->radius * game_scale;
+    star->rect.h = 2 * star->radius * game_scale;
     star->color.r = 255;
     star->color.g = 255;
     star->color.b = 0;
@@ -716,10 +729,8 @@ void create_system(struct planet_t *planet, float x, float y)
         while (i < max_planets && width < planet->cutoff - 2 * planet->radius)
         {
             // Orbit is calculated between surfaces, not centers
-            // We calculate orbit and radius in range scale,
-            // so that the rgn number operations are consistent in all game scales
-            // We also round some expression to get rid of floating-point inaccuracies
-            float _orbit_width = fmod(abs(pcg32_random_r(&rng)), orbit_range_max * planet->radius_raw) + orbit_range_min * planet->radius_raw;
+            // We round some values to get rid of floating-point inaccuracies
+            float _orbit_width = fmod(abs(pcg32_random_r(&rng)), orbit_range_max * planet->radius) + orbit_range_min * planet->radius;
             float orbit_width = 0;
 
             // Increment next orbit
@@ -735,9 +746,9 @@ void create_system(struct planet_t *planet, float x, float y)
             float radius = fmod(orbit_width, radius_max) + PLANET_RADIUS_MIN;
 
             // Add planet
-            if (width + orbit_width * game_scale + 2 * radius * game_scale < planet->cutoff - 2 * planet->radius)
+            if (width + orbit_width + 2 * radius < planet->cutoff - 2 * planet->radius)
             {
-                width += orbit_width * game_scale + 2 * radius * game_scale;
+                width += orbit_width + 2 * radius;
 
                 struct planet_t *_planet = (struct planet_t *)malloc(sizeof(struct planet_t));
 
@@ -749,15 +760,13 @@ void create_system(struct planet_t *planet, float x, float y)
                 _planet->color.g = 206;
                 _planet->color.b = 235;
                 _planet->level = LEVEL_PLANET;
-                _planet->radius = radius * game_scale;
-                _planet->radius_raw = radius;
-                _planet->cutoff = (orbit_width / 2) * game_scale;
-                _planet->cutoff_raw = (orbit_width / 2);
+                _planet->radius = radius;
+                _planet->cutoff = orbit_width / 2;
 
                 // Calculate orbital velocity
                 float angle = fmod(abs(pcg32_random_r(&rng)), 360);
                 float vx, vy;
-                float total_width = width + planet->radius - _planet->radius;
+                float total_width = width + planet->radius - _planet->radius; // center to center
                 calc_orbital_velocity(total_width, angle, planet->radius, &vx, &vy);
 
                 _planet->position.x = planet->position.x + total_width * cos(angle * M_PI / 180);
@@ -769,10 +778,10 @@ void create_system(struct planet_t *planet, float x, float y)
                 SDL_Surface *surface = IMG_Load(_planet->image);
                 _planet->texture = SDL_CreateTextureFromSurface(renderer, surface);
                 SDL_FreeSurface(surface);
-                _planet->rect.x = _planet->position.x - _planet->radius;
-                _planet->rect.y = _planet->position.y - _planet->radius;
-                _planet->rect.w = 2 * _planet->radius;
-                _planet->rect.h = 2 * _planet->radius;
+                _planet->rect.x = (_planet->position.x - _planet->radius) * game_scale;
+                _planet->rect.y = (_planet->position.y - _planet->radius) * game_scale;
+                _planet->rect.w = 2 * _planet->radius * game_scale;
+                _planet->rect.h = 2 * _planet->radius * game_scale;
                 _planet->planets[0] = NULL;
                 _planet->parent = planet;
 
@@ -801,50 +810,50 @@ void create_system(struct planet_t *planet, float x, float y)
             orbit_range_min = PLANET_CLASS_1_ORBIT_MIN;
             orbit_range_max = PLANET_CLASS_1_ORBIT_MAX;
             radius_max = PLANET_CLASS_1_MOON_RADIUS_MAX;
-            planet_cutoff_limit = planet->cutoff_raw / 2;
-            max_planets = (int)planet->cutoff_raw % (max_planets - 4); // 0 - <max - 4>
+            planet_cutoff_limit = planet->cutoff / 2;
+            max_planets = (int)planet->cutoff % (max_planets - 4); // 0 - <max - 4>
             break;
         case PLANET_CLASS_2:
             orbit_range_min = PLANET_CLASS_2_ORBIT_MIN;
             orbit_range_max = PLANET_CLASS_2_ORBIT_MAX;
             radius_max = PLANET_CLASS_2_MOON_RADIUS_MAX;
-            planet_cutoff_limit = planet->cutoff_raw / 2;
-            max_planets = (int)planet->cutoff_raw % (max_planets - 3); // 0 - <max - 3>
+            planet_cutoff_limit = planet->cutoff / 2;
+            max_planets = (int)planet->cutoff % (max_planets - 3); // 0 - <max - 3>
             break;
         case PLANET_CLASS_3:
             orbit_range_min = PLANET_CLASS_3_ORBIT_MIN;
             orbit_range_max = PLANET_CLASS_3_ORBIT_MAX;
             radius_max = PLANET_CLASS_3_MOON_RADIUS_MAX;
-            planet_cutoff_limit = planet->cutoff_raw / 2;
-            max_planets = (int)planet->cutoff_raw % (max_planets - 2); // 0 - <max - 2>
+            planet_cutoff_limit = planet->cutoff / 2;
+            max_planets = (int)planet->cutoff % (max_planets - 2); // 0 - <max - 2>
             break;
         case PLANET_CLASS_4:
             orbit_range_min = PLANET_CLASS_4_ORBIT_MIN;
             orbit_range_max = PLANET_CLASS_4_ORBIT_MAX;
             radius_max = PLANET_CLASS_4_MOON_RADIUS_MAX;
-            planet_cutoff_limit = planet->cutoff_raw / 2;
-            max_planets = (int)planet->cutoff_raw % (max_planets - 2); // 0 - <max - 2>
+            planet_cutoff_limit = planet->cutoff / 2;
+            max_planets = (int)planet->cutoff % (max_planets - 2); // 0 - <max - 2>
             break;
         case PLANET_CLASS_5:
             orbit_range_min = PLANET_CLASS_5_ORBIT_MIN;
             orbit_range_max = PLANET_CLASS_5_ORBIT_MAX;
             radius_max = PLANET_CLASS_5_MOON_RADIUS_MAX;
-            planet_cutoff_limit = planet->cutoff_raw / 3;
-            max_planets = (int)planet->cutoff_raw % (max_planets - 1); // 0 - <max - 1>
+            planet_cutoff_limit = planet->cutoff / 3;
+            max_planets = (int)planet->cutoff % (max_planets - 1); // 0 - <max - 1>
             break;
         case PLANET_CLASS_6:
             orbit_range_min = PLANET_CLASS_6_ORBIT_MIN;
             orbit_range_max = PLANET_CLASS_6_ORBIT_MAX;
             radius_max = PLANET_CLASS_6_MOON_RADIUS_MAX;
-            planet_cutoff_limit = planet->cutoff_raw / 3;
-            max_planets = (int)planet->cutoff_raw % max_planets; // 0 - <max>
+            planet_cutoff_limit = planet->cutoff / 3;
+            max_planets = (int)planet->cutoff % max_planets; // 0 - <max>
             break;
         default:
             orbit_range_min = PLANET_CLASS_1_ORBIT_MIN;
             orbit_range_max = PLANET_CLASS_1_ORBIT_MAX;
             radius_max = PLANET_CLASS_1_MOON_RADIUS_MAX;
-            planet_cutoff_limit = planet->cutoff_raw / 2;
-            max_planets = (int)planet->cutoff_raw % (max_planets - 4); // 0 - <max - 4>
+            planet_cutoff_limit = planet->cutoff / 2;
+            max_planets = (int)planet->cutoff % (max_planets - 4); // 0 - <max - 4>
             break;
         }
 
@@ -854,9 +863,7 @@ void create_system(struct planet_t *planet, float x, float y)
         while (i < max_planets && width < planet->cutoff - 2 * planet->radius)
         {
             // Orbit is calculated between surfaces, not centers
-            // We calculate orbit and radius in range scale,
-            // so that the rgn number operations are consistent in all game scales
-            float _orbit_width = fmod(abs(pcg32_random_r(&rng)), orbit_range_max * planet->radius_raw) + orbit_range_min * planet->radius_raw;
+            float _orbit_width = fmod(abs(pcg32_random_r(&rng)), orbit_range_max * planet->radius) + orbit_range_min * planet->radius;
             float orbit_width = 0;
 
             // The first orbit should not be closer than <planet_cutoff_limit>
@@ -869,12 +876,12 @@ void create_system(struct planet_t *planet, float x, float y)
             }
 
             // A moon can not be larger than class radius_max or 1 / 3 of planet radius
-            float radius = fmod(orbit_width, fmin(radius_max, planet->radius_raw / 3)) + MOON_RADIUS_MIN;
+            float radius = fmod(orbit_width, fmin(radius_max, planet->radius / 3)) + MOON_RADIUS_MIN;
 
             // Add moon
-            if (width + orbit_width * game_scale + 2 * radius * game_scale < planet->cutoff - 2 * planet->radius)
+            if (width + orbit_width + 2 * radius < planet->cutoff - 2 * planet->radius)
             {
-                width += orbit_width * game_scale + 2 * radius * game_scale;
+                width += orbit_width + 2 * radius;
 
                 struct planet_t *_planet = (struct planet_t *)malloc(sizeof(struct planet_t));
 
@@ -886,8 +893,7 @@ void create_system(struct planet_t *planet, float x, float y)
                 _planet->color.g = 220;
                 _planet->color.b = 220;
                 _planet->level = LEVEL_MOON;
-                _planet->radius = radius * game_scale;
-                _planet->radius_raw = radius;
+                _planet->radius = radius;
 
                 // Calculate orbital velocity
                 float angle = fmod(abs(pcg32_random_r(&rng)), 360);
@@ -904,10 +910,10 @@ void create_system(struct planet_t *planet, float x, float y)
                 SDL_Surface *surface = IMG_Load(_planet->image);
                 _planet->texture = SDL_CreateTextureFromSurface(renderer, surface);
                 SDL_FreeSurface(surface);
-                _planet->rect.x = _planet->position.x - _planet->radius;
-                _planet->rect.y = _planet->position.y - _planet->radius;
-                _planet->rect.w = 2 * _planet->radius;
-                _planet->rect.h = 2 * _planet->radius;
+                _planet->rect.x = (_planet->position.x - _planet->radius) * game_scale;
+                _planet->rect.y = (_planet->position.y - _planet->radius) * game_scale;
+                _planet->rect.w = 2 * _planet->radius * game_scale;
+                _planet->rect.h = 2 * _planet->radius * game_scale;
                 _planet->planets[0] = NULL;
                 _planet->parent = planet;
 
@@ -991,11 +997,11 @@ void update_system(struct planet_t *planet, struct ship_t *ship, const struct ca
     }
 
     // Draw star or planet if in camera
-    if (planet->position.x - planet->radius <= camera->x + camera->w && planet->position.x + planet->radius > camera->x &&
-        planet->position.y - planet->radius <= camera->y + camera->h && planet->position.y + planet->radius > camera->y)
+    if (planet->position.x - planet->radius <= camera->x + camera->w / game_scale && planet->position.x + planet->radius > camera->x &&
+        planet->position.y - planet->radius <= camera->y + camera->h / game_scale && planet->position.y + planet->radius > camera->y)
     {
-        planet->rect.x = (int)(planet->position.x - planet->radius - camera->x);
-        planet->rect.y = (int)(planet->position.y - planet->radius - camera->y);
+        planet->rect.x = (int)(planet->position.x - planet->radius - camera->x) * game_scale;
+        planet->rect.y = (int)(planet->position.y - planet->radius - camera->y) * game_scale;
 
         SDL_RenderCopy(renderer, planet->texture, NULL, &planet->rect);
     }
@@ -1012,10 +1018,13 @@ void update_system(struct planet_t *planet, struct ship_t *ship, const struct ca
                 project_planet(planet, camera);
         }
         else
-            project_planet(planet, camera);
+        {
+            if (!zoom_in && !zoom_out)
+                project_planet(planet, camera);
+        }
     }
 
-    if (SHIP_GRAVITY_ON)
+    if (!map_on && SHIP_GRAVITY_ON)
     {
         // Update ship speed due to gravity
         apply_gravity_to_ship(planet, ship, camera);
@@ -1136,10 +1145,12 @@ void apply_gravity_to_ship(struct planet_t *planet, struct ship_t *ship, const s
     // Enforce speed limit if within star cutoff
     if (is_star && distance < planet->cutoff)
     {
-        if (velocity.magnitude > SPEED_LIMIT)
+        speed_limit = BASE_SPEED_LIMIT * planet->class;
+
+        if (velocity.magnitude > speed_limit)
         {
-            ship->vx = SPEED_LIMIT * ship->vx / velocity.magnitude;
-            ship->vy = SPEED_LIMIT * ship->vy / velocity.magnitude;
+            ship->vx = speed_limit * ship->vx / velocity.magnitude;
+            ship->vy = speed_limit * ship->vy / velocity.magnitude;
 
             // Update velocity
             update_velocity(ship);
@@ -1203,19 +1214,21 @@ void update_ship(struct ship_t *ship, const struct camera_t *camera)
     else
     {
         // Dynamic rect position based on ship position
-        ship->rect.x = (int)(ship->position.x - ship->radius - camera->x);
-        ship->rect.y = (int)(ship->position.y - ship->radius - camera->y);
+        ship->rect.x = (int)((ship->position.x - camera->x) * game_scale - ship->radius);
+        ship->rect.y = (int)((ship->position.y - camera->y) * game_scale - ship->radius);
     }
 
     // Draw ship if in camera
-    if (camera_on || (!camera_on && (ship->position.x <= camera->x + camera->w && ship->position.x > camera->x &&
-                                     ship->position.y <= camera->y + camera->h && ship->position.y > camera->y)))
+    if (camera_on || (!camera_on && (ship->position.x <= camera->x + camera->w / game_scale && ship->position.x > camera->x &&
+                                     ship->position.y <= camera->y + camera->h / game_scale && ship->position.y > camera->y)))
     {
         SDL_RenderCopyEx(renderer, ship->texture, &ship->main_img_rect, &ship->rect, ship->angle, &ship->rotation_pt, SDL_FLIP_NONE);
     }
     // Draw ship projection
     else if (PROJECTIONS_ON)
+    {
         project_ship(ship, camera);
+    }
 
     // Draw ship thrust
     if (thrust)

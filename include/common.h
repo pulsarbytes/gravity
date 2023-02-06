@@ -30,15 +30,16 @@
 #define SOLAR_SYSTEMS_ON 1
 #define PROJECTION_RADIUS 5       // Default: 10
 #define SHIP_PROJECTION_RADIUS 10 // Default: 10
-#define MAP_SPEED 500             // Default: 300
-#define GAME_SCALE 1              // Game scale compared to region scale. Default: 1
+#define MAP_SPEED_MAX 35          // Zoom in; Default: 35
+#define MAP_SPEED_MIN 10          // Zoom out; Default: 10
+#define GAME_SCALE 0.15           // Game scale compared to global scale. Default: 1
 
 // Ship
 #define START_IN_ORBIT 0
-#define STARTING_X -40600 // Range scale; Left < 0; Default: -40600
-#define STARTING_Y -80600 // Range scale; Up < 0; Default: -80600
-#define SHIP_RADIUS 17    // Default: 17
-#define SPEED_LIMIT 1000  // Default: 500
+#define STARTING_X -40600    // Left < 0; Default: -40600
+#define STARTING_Y -80600    // Up < 0; Default: -80600
+#define SHIP_RADIUS 17       // Default: 17
+#define BASE_SPEED_LIMIT 300 // Default: 300
 
 // Stars sections
 #define REGION_SIZE 30     // Sections per axis; Even number; Default: 30
@@ -115,6 +116,12 @@
 // Enumerations
 enum
 {
+    STAGE_OFF = -1, // Not landed
+    STAGE_0         // Landed
+};
+
+enum
+{
     FALSE,
     TRUE
 };
@@ -131,8 +138,7 @@ enum
     X_INDEX,
     Y_INDEX,
     V_INDEX,
-    DISTANCE_INDEX,
-    G_INDEX,
+    SCALE_INDEX,
     LOG_COUNT // number of elements in enumeration
 };
 

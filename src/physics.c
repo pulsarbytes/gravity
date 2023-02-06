@@ -25,7 +25,7 @@ void update_velocity(struct ship_t *ship)
 
 /*
  * Calculate orbital velocity for object orbiting
- * at height <h> and angle <a> around object with radius <r>.
+ * at distance <h> and angle <a> around object with radius <r>.
  *
  * Centripetal force:
  * Fc = m * v^2 / h
@@ -48,7 +48,6 @@ void calc_orbital_velocity(float h, float a, float r, float *vx, float *vy)
 /*
  * Transform a float to the nearest SECTION_SIZE point,
  * rounding up or down whichever is nearest.
- * n is region scale.
  */
 float find_nearest_section_axis(float n)
 {

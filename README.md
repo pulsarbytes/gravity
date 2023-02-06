@@ -36,24 +36,33 @@ make
 
 ## Keyboard controls
 
-| Key     | Action         |
-| ------- | -------------- |
-| `Up`    | Thrust         |
-| `Down`  | Reverse thrust |
-| `Right` | Rotate right   |
-| `Left`  | Rotate left    |
-| `C`     | Toggle camera  |
-| `K`     | Toggle console |
-| `P`     | Pause game     |
-| `S`     | Stop ship      |
-| `Esc`   | Exit program   |
+| Mode       | Key     | Action          |
+| ---------- | ------- | --------------- |
+| Navigation |         |                 |
+|            | `Up`    | Thrust          |
+|            | `Down`  | Reverse thrust  |
+|            | `Right` | Rotate right    |
+|            | `Left`  | Rotate left     |
+|            | `S`     | Stop ship       |
+|            | `C`     | Toggle camera   |
+| Map        | `M`     | Toggle Map mode |
+|            | `Up`    | Scroll up       |
+|            | `Down`  | Scroll down     |
+|            | `Right` | Scroll right    |
+|            | `Left`  | Scroll left     |
+|            | `[`     | Zoom out        |
+|            | `]`     | Zoom in         |
+| `K`        |         | Toggle console  |
+| `P`        |         | Pause game      |
+| `Esc`      |         | Exit program    |
 
 ## Console contents
 
 -   `1st line` Frames per second
--   `2nd line` X axis distance from Sun
--   `3rd line` Y axis distance from Sun
--   `4th line` Velocity vector
+-   `2nd line` X offset
+-   `3rd line` Y offset
+-   `4th line` Velocity magnitude
+-   `5th line` Game scale
 
 ## Licence
 

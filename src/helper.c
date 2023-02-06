@@ -16,6 +16,7 @@ extern SDL_Renderer *renderer;
 extern struct star_entry *stars[];
 extern int thrust;
 extern int reverse;
+extern float game_scale;
 
 static void cleanup_planets(struct planet_t *planet);
 static void cleanup_stars(void);
@@ -111,13 +112,16 @@ int star_exists(float x, float y)
 
     while (entry != NULL)
     {
+        if (entry->star == NULL)
+            return false;
+
         if (entry->x == x && entry->y == y)
-            return 1;
+            return true;
 
         entry = entry->next;
     }
 
-    return 0;
+    return false;
 }
 
 /*
@@ -160,6 +164,7 @@ void delete_star(float x, float y)
             SDL_DestroyTexture(entry->star->texture);
             entry->star->texture = NULL;
             free(entry->star);
+            entry->star = NULL;
 
             if (previous == NULL)
                 stars[index] = entry->next;
@@ -183,47 +188,52 @@ void update_projection_coordinates(void *ptr, int entity_type, const struct came
 {
     struct planet_t *planet = NULL;
     struct ship_t *ship = NULL;
+    int projection_radius;
 
     switch (entity_type)
     {
     case ENTITY_PLANET:
         planet = (struct planet_t *)ptr;
+        projection_radius = PROJECTION_RADIUS;
         break;
     case ENTITY_SHIP:
         ship = (struct ship_t *)ptr;
+        projection_radius = SHIP_PROJECTION_RADIUS;
         break;
     }
 
     float delta_x, delta_y, point;
+    int camera_w = camera->w / game_scale;
+    int camera_h = camera->h / game_scale;
 
-    // Find screen quadrant for planet exit from screen; 0, 0 is screen center, negative y is up
+    // Find screen quadrant for object exit from screen; 0, 0 is screen center, negative y is up
     if (planet)
     {
-        delta_x = planet->position.x - (camera->x + (camera->w / 2));
-        delta_y = planet->position.y - (camera->y + (camera->h / 2));
+        delta_x = planet->position.x - camera->x - (camera_w / 2);
+        delta_y = planet->position.y - camera->y - (camera_h / 2);
     }
     else if (ship)
     {
-        delta_x = ship->position.x - (camera->x + (camera->w / 2));
-        delta_y = ship->position.y - (camera->y + (camera->h / 2));
+        delta_x = ship->position.x - camera->x - (camera_w / 2);
+        delta_y = ship->position.y - camera->y - (camera_h / 2);
     }
 
     // 1st quadrant (clockwise)
     if (delta_x >= 0 && delta_y < 0)
     {
-        point = (int)(((camera->h / 2) - PROJECTION_RADIUS) * delta_x / (-delta_y));
+        point = (int)(((camera_h / 2) - projection_radius) * delta_x / (-delta_y));
 
         // Top
-        if (point <= (camera->w / 2) - PROJECTION_RADIUS)
+        if (point <= (camera_w / 2) - projection_radius)
         {
             if (planet)
             {
-                planet->projection.x = (camera->w / 2) + point - PROJECTION_RADIUS;
+                planet->projection.x = ((camera_w / 2) + point) * game_scale - projection_radius;
                 planet->projection.y = 0;
             }
             else if (ship)
             {
-                ship->projection->rect.x = (camera->w / 2) + point - PROJECTION_RADIUS;
+                ship->projection->rect.x = ((camera_w / 2) + point) * game_scale - projection_radius;
                 ship->projection->rect.y = 0;
             }
         }
@@ -231,19 +241,19 @@ void update_projection_coordinates(void *ptr, int entity_type, const struct came
         else
         {
             if (delta_x > 0)
-                point = (int)(((camera->h / 2) - PROJECTION_RADIUS) - ((camera->w / 2) - PROJECTION_RADIUS) * (-delta_y) / delta_x);
+                point = (int)(((camera_h / 2) - projection_radius) - ((camera_w / 2) - projection_radius) * (-delta_y) / delta_x);
             else
-                point = (int)(((camera->h / 2) - PROJECTION_RADIUS) - ((camera->w / 2) - PROJECTION_RADIUS));
+                point = (int)(((camera_h / 2) - projection_radius) - ((camera_w / 2) - projection_radius));
 
             if (planet)
             {
-                planet->projection.x = camera->w - (2 * PROJECTION_RADIUS);
-                planet->projection.y = point;
+                planet->projection.x = camera_w * game_scale - (2 * projection_radius);
+                planet->projection.y = point * game_scale;
             }
             else if (ship)
             {
-                ship->projection->rect.x = camera->w - (2 * PROJECTION_RADIUS);
-                ship->projection->rect.y = point;
+                ship->projection->rect.x = camera_w * game_scale - (2 * projection_radius);
+                ship->projection->rect.y = point * game_scale;
             }
         }
     }
@@ -251,41 +261,41 @@ void update_projection_coordinates(void *ptr, int entity_type, const struct came
     else if (delta_x >= 0 && delta_y >= 0)
     {
         if (delta_x > 0)
-            point = (int)(((camera->w / 2) - PROJECTION_RADIUS) * delta_y / delta_x);
+            point = (int)(((camera_w / 2) - projection_radius) * delta_y / delta_x);
         else
-            point = (int)((camera->w / 2) - PROJECTION_RADIUS);
+            point = (int)((camera_w / 2) - projection_radius);
 
         // Right
-        if (point <= (camera->h / 2) - PROJECTION_RADIUS)
+        if (point <= (camera_h / 2) - projection_radius)
         {
             if (planet)
             {
-                planet->projection.x = camera->w - (2 * PROJECTION_RADIUS);
-                planet->projection.y = (camera->h / 2) + point - PROJECTION_RADIUS;
+                planet->projection.x = camera_w * game_scale - (2 * projection_radius);
+                planet->projection.y = ((camera_h / 2) + point) * game_scale - projection_radius;
             }
             else if (ship)
             {
-                ship->projection->rect.x = camera->w - (2 * PROJECTION_RADIUS);
-                ship->projection->rect.y = (camera->h / 2) + point - PROJECTION_RADIUS;
+                ship->projection->rect.x = camera_w * game_scale - (2 * projection_radius);
+                ship->projection->rect.y = ((camera_h / 2) + point) * game_scale - projection_radius;
             }
         }
         // Bottom
         else
         {
             if (delta_y > 0)
-                point = (int)(((camera->h / 2) - PROJECTION_RADIUS) * delta_x / delta_y);
+                point = (int)(((camera_h / 2) - projection_radius) * delta_x / delta_y);
             else
-                point = (int)(((camera->h / 2) - PROJECTION_RADIUS));
+                point = (int)(((camera_h / 2) - projection_radius));
 
             if (planet)
             {
-                planet->projection.x = (camera->w / 2) + point - PROJECTION_RADIUS;
-                planet->projection.y = camera->h - (2 * PROJECTION_RADIUS);
+                planet->projection.x = ((camera_w / 2) + point) * game_scale - projection_radius;
+                planet->projection.y = camera_h * game_scale - (2 * projection_radius);
             }
             else if (ship)
             {
-                ship->projection->rect.x = (camera->w / 2) + point - PROJECTION_RADIUS;
-                ship->projection->rect.y = camera->h - (2 * PROJECTION_RADIUS);
+                ship->projection->rect.x = ((camera_w / 2) + point) * game_scale - projection_radius;
+                ship->projection->rect.y = camera_h * game_scale - (2 * projection_radius);
             }
         }
     }
@@ -293,73 +303,73 @@ void update_projection_coordinates(void *ptr, int entity_type, const struct came
     else if (delta_x < 0 && delta_y >= 0)
     {
         if (delta_y > 0)
-            point = (int)(((camera->h / 2) - PROJECTION_RADIUS) * (-delta_x) / delta_y);
+            point = (int)(((camera_h / 2) - projection_radius) * (-delta_x) / delta_y);
         else
-            point = (int)(((camera->h / 2) - PROJECTION_RADIUS));
+            point = (int)(((camera_h / 2) - projection_radius));
 
         // Bottom
-        if (point <= (camera->w / 2) - PROJECTION_RADIUS)
+        if (point <= (camera_w / 2) - projection_radius)
         {
             if (planet)
             {
-                planet->projection.x = (camera->w / 2) - point - PROJECTION_RADIUS;
-                planet->projection.y = camera->h - (2 * PROJECTION_RADIUS);
+                planet->projection.x = ((camera_w / 2) - point) * game_scale - projection_radius;
+                planet->projection.y = camera_h * game_scale - (2 * projection_radius);
             }
             else if (ship)
             {
-                ship->projection->rect.x = (camera->w / 2) - point - PROJECTION_RADIUS;
-                ship->projection->rect.y = camera->h - (2 * PROJECTION_RADIUS);
+                ship->projection->rect.x = ((camera_w / 2) - point) * game_scale - projection_radius;
+                ship->projection->rect.y = camera_h * game_scale - (2 * projection_radius);
             }
         }
         // Left
         else
         {
-            point = (int)(((camera->h / 2) - PROJECTION_RADIUS) - ((camera->w / 2) - PROJECTION_RADIUS) * delta_y / (-delta_x));
+            point = (int)(((camera_h / 2) - projection_radius) - ((camera_w / 2) - projection_radius) * delta_y / (-delta_x));
 
             if (planet)
             {
                 planet->projection.x = 0;
-                planet->projection.y = camera->h - point - (2 * PROJECTION_RADIUS);
+                planet->projection.y = (camera_h - point) * game_scale - (2 * projection_radius);
             }
             else if (ship)
             {
                 ship->projection->rect.x = 0;
-                ship->projection->rect.y = camera->h - point - (2 * PROJECTION_RADIUS);
+                ship->projection->rect.y = (camera_h - point) * game_scale - (2 * projection_radius);
             }
         }
     }
     // 4th quadrant
     else if (delta_x < 0 && delta_y < 0)
     {
-        point = (int)(((camera->w / 2) - PROJECTION_RADIUS) * (-delta_y) / (-delta_x));
+        point = (int)(((camera_w / 2) - projection_radius) * (-delta_y) / (-delta_x));
 
         // Left
-        if (point <= (camera->h / 2) - PROJECTION_RADIUS)
+        if (point <= (camera_h / 2) - projection_radius)
         {
             if (planet)
             {
                 planet->projection.x = 0;
-                planet->projection.y = (camera->h / 2) - point - PROJECTION_RADIUS;
+                planet->projection.y = ((camera_h / 2) - point) * game_scale - projection_radius;
             }
             else if (ship)
             {
                 ship->projection->rect.x = 0;
-                ship->projection->rect.y = (camera->h / 2) - point - PROJECTION_RADIUS;
+                ship->projection->rect.y = ((camera_h / 2) - point) * game_scale - projection_radius;
             }
         }
         // Top
         else
         {
-            point = (int)(((camera->w / 2) - PROJECTION_RADIUS) - ((camera->h / 2) - PROJECTION_RADIUS) * (-delta_x) / (-delta_y));
+            point = (int)(((camera_w / 2) - projection_radius) - ((camera_h / 2) - projection_radius) * (-delta_x) / (-delta_y));
 
             if (planet)
             {
-                planet->projection.x = point;
+                planet->projection.x = point * game_scale;
                 planet->projection.y = 0;
             }
             else if (ship)
             {
-                ship->projection->rect.x = point;
+                ship->projection->rect.x = point * game_scale;
                 ship->projection->rect.y = 0;
             }
         }
@@ -404,7 +414,6 @@ void project_planet(struct planet_t *planet, const struct camera_t *camera)
 
 /*
  * Find distance to nearest star.
- * x, y are range scale.
  */
 float nearest_star_distance(int x, int y)
 {
@@ -455,7 +464,7 @@ float nearest_star_distance(int x, int y)
 
 /*
  * Find star class.
- * n is region scale.
+ * n is number of empty sections.
  */
 int get_star_class(float n)
 {
@@ -477,7 +486,7 @@ int get_star_class(float n)
 
 /*
  * Find planet class.
- * n is region scale.
+ * n is orbit width.
  */
 int get_planet_class(float n)
 {
@@ -520,39 +529,23 @@ bool point_in_array(struct position_t p, struct position_t arr[], int len)
 }
 
 /*
- * Prints coordinates of all points around a specific section point.
+ * Zoom in/out a star system (recursive).
  */
-void print_nearest_star_coordinates(float x, float y)
+void zoom_star(struct planet_t *planet, float scale, float step)
 {
-    struct position_t checked_points[169];
-    int num_checked_points = 0;
+    planet->rect.x = (planet->position.x - planet->radius) * game_scale;
+    planet->rect.y = (planet->position.y - planet->radius) * game_scale;
+    planet->rect.w = 2 * planet->radius * game_scale;
+    planet->rect.h = 2 * planet->radius * game_scale;
 
-    // Use a local rng
-    pcg32_random_t rng;
-
-    for (int i = 1; i <= 6; i++)
+    // Zoom children
+    if (planet->level <= LEVEL_PLANET && planet->planets != NULL && planet->planets[0] != NULL)
     {
-        for (float ix = x - i * SECTION_SIZE; ix <= x + i * SECTION_SIZE; ix += SECTION_SIZE)
+        int max_planets = (planet->level == LEVEL_STAR) ? MAX_PLANETS : MAX_MOONS;
+
+        for (int i = 0; i < max_planets && planet->planets[i] != NULL; i++)
         {
-            for (float iy = y - i * SECTION_SIZE; iy <= y + i * SECTION_SIZE; iy += SECTION_SIZE)
-            {
-                if (ix == x && iy == y)
-                    continue;
-
-                struct position_t p = {ix, iy};
-
-                if (point_in_array(p, checked_points, num_checked_points))
-                    continue;
-
-                checked_points[num_checked_points++] = p;
-
-                // Seed with a fixed constant
-                pcg32_srandom_r(&rng, float_hash(ix), float_hash(iy));
-
-                int has_star = abs(pcg32_random_r(&rng)) % 1000 < REGION_DENSITY;
-
-                printf("\n%f,%f ::: %d", ix, iy, has_star);
-            }
+            zoom_star(planet->planets[i], scale, step);
         }
     }
 }

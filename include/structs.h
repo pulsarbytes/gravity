@@ -33,10 +33,8 @@ struct planet_t
     char name[MAX_PLANET_NAME];
     char *image;
     int class;
-    float radius;     // game scale
-    float radius_raw; // range scale
-    float cutoff;     // game scale
-    float cutoff_raw; // range scale
+    float radius;
+    float cutoff;
     struct position_t position;
     float vx;
     float vy;

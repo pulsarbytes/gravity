@@ -71,6 +71,7 @@ void poll_events(int *quit)
                 break;
             case SDL_SCANCODE_M:
                 map_on = map_on ? OFF : ON;
+                camera_on = ON;
                 break;
             case SDL_SCANCODE_ESCAPE:
                 *quit = 1;
