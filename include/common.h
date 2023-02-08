@@ -44,9 +44,9 @@
 #define ZOOM_MAP 0.02     // Default: 0.02
 
 // Ship
-#define START_IN_ORBIT 0
-#define STARTING_X -40600    // Left < 0. Default: -40000
-#define STARTING_Y -80600    // Up < 0. Default: -80000
+#define START_IN_ORBIT 1
+#define STARTING_X -40000    // Left < 0. Default: -40000
+#define STARTING_Y -80000    // Up < 0. Default: -80000
 #define SHIP_RADIUS 17       // Default: 17
 #define BASE_SPEED_LIMIT 300 // Default: 300
 

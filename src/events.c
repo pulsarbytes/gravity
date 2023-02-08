@@ -20,6 +20,7 @@ extern int zoom_out;
 extern int console;
 extern int map_enter;
 extern int map_exit;
+extern int map_center;
 
 /*
  * Poll SDL events.
@@ -84,6 +85,10 @@ void poll_events(int *quit)
                     map_enter = ON;
                     camera_on = ON;
                 }
+                break;
+            case SDL_SCANCODE_SPACE:
+                if (state == MAP)
+                    map_center = ON;
                 break;
             case SDL_SCANCODE_ESCAPE:
                 if (state == MAP)

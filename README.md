@@ -54,6 +54,7 @@ make
 |            | `Left`  | Scroll left    |
 |            | `[`     | Zoom out       |
 |            | `]`     | Zoom in        |
+|            | `Space` | Reset Map      |
 |            | `Esc`   | Exit Map       |
 | `K`        |         | Toggle console |
 | `P`        |         | Pause game     |

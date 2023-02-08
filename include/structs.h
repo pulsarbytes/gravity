@@ -30,6 +30,7 @@ struct vector_t
 // Struct for a planet
 struct planet_t
 {
+    int initialized;
     char name[MAX_PLANET_NAME];
     char *image;
     int class;

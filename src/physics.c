@@ -74,10 +74,10 @@ uint64_t float_hash(float x)
 /*
  * Hash function that maps two float numbers to a unique 64-bit integer.
  */
-uint64_t float_pair_hash_order_sensitive(float x, float y)
+uint64_t float_pair_hash_order_sensitive(struct position_t position)
 {
-    uint64_t x_hash = float_hash(x);
-    uint64_t y_hash = float_hash(y);
+    uint64_t x_hash = float_hash(position.x);
+    uint64_t y_hash = float_hash(position.y);
 
     return x_hash + 0x9e3779b97f4a7c15 * y_hash;
 }
