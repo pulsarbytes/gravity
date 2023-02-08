@@ -36,25 +36,28 @@ make
 
 ## Keyboard controls
 
-| Mode       | Key     | Action          |
-| ---------- | ------- | --------------- |
-| Navigation |         |                 |
-|            | `Up`    | Thrust          |
-|            | `Down`  | Reverse thrust  |
-|            | `Right` | Rotate right    |
-|            | `Left`  | Rotate left     |
-|            | `S`     | Stop ship       |
-|            | `C`     | Toggle camera   |
-| Map        | `M`     | Toggle Map mode |
-|            | `Up`    | Scroll up       |
-|            | `Down`  | Scroll down     |
-|            | `Right` | Scroll right    |
-|            | `Left`  | Scroll left     |
-|            | `[`     | Zoom out        |
-|            | `]`     | Zoom in         |
-| `K`        |         | Toggle console  |
-| `P`        |         | Pause game      |
-| `Esc`      |         | Exit program    |
+| Mode       | Key     | Action         |
+| ---------- | ------- | -------------- |
+| Navigation |         |                |
+|            | `Up`    | Thrust         |
+|            | `Down`  | Reverse thrust |
+|            | `Right` | Rotate right   |
+|            | `Left`  | Rotate left    |
+|            | `S`     | Stop ship      |
+|            | `C`     | Toggle camera  |
+|            | `[`     | Zoom out       |
+|            | `]`     | Zoom in        |
+| Map        | `M`     | Enter Map      |
+|            | `Up`    | Scroll up      |
+|            | `Down`  | Scroll down    |
+|            | `Right` | Scroll right   |
+|            | `Left`  | Scroll left    |
+|            | `[`     | Zoom out       |
+|            | `]`     | Zoom in        |
+|            | `Esc`   | Exit Map       |
+| `K`        |         | Toggle console |
+| `P`        |         | Pause game     |
+| `Esc`      |         | Exit program   |
 
 ## Console contents
 

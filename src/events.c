@@ -6,19 +6,20 @@
 
 #include "../include/common.h"
 
+extern int state;
 extern int left;
 extern int right;
 extern int up;
 extern int down;
 extern int thrust;
 extern int reverse;
-extern int console;
 extern int camera_on;
-extern int pause;
 extern int stop;
-extern int map_on;
 extern int zoom_in;
 extern int zoom_out;
+extern int console;
+extern int map_enter;
+extern int map_exit;
 
 /*
  * Poll SDL events.
@@ -38,43 +39,60 @@ void poll_events(int *quit)
             switch (event.key.keysym.scancode)
             {
             case SDL_SCANCODE_LEFT:
-                left = ON;
                 right = OFF;
+                left = ON;
                 break;
             case SDL_SCANCODE_RIGHT:
-                right = ON;
                 left = OFF;
+                right = ON;
                 break;
             case SDL_SCANCODE_UP:
                 reverse = OFF;
+                down = OFF;
                 thrust = ON;
                 up = ON;
-                down = OFF;
                 break;
             case SDL_SCANCODE_DOWN:
                 thrust = OFF;
+                up = OFF;
                 reverse = ON;
                 down = ON;
-                up = OFF;
                 break;
             case SDL_SCANCODE_C:
-                camera_on = camera_on ? OFF : ON;
+                if (state == NAVIGATE)
+                    camera_on = !camera_on;
+                else if (state == MAP)
+                    camera_on = ON;
                 break;
             case SDL_SCANCODE_K:
-                console = console ? OFF : ON;
+                console = !console;
                 break;
             case SDL_SCANCODE_P:
-                pause = pause ? OFF : ON;
+                if (state == NAVIGATE)
+                    state = PAUSE;
+                else if (state == PAUSE)
+                    state = NAVIGATE;
                 break;
             case SDL_SCANCODE_S:
-                stop = ON;
+                if (state == NAVIGATE)
+                    stop = ON;
                 break;
             case SDL_SCANCODE_M:
-                map_on = map_on ? OFF : ON;
-                camera_on = ON;
+                if (state == NAVIGATE)
+                {
+                    state = MAP;
+                    map_enter = ON;
+                    camera_on = ON;
+                }
                 break;
             case SDL_SCANCODE_ESCAPE:
-                *quit = 1;
+                if (state == MAP)
+                {
+                    state = NAVIGATE;
+                    map_exit = ON;
+                }
+                else if (state == NAVIGATE)
+                    *quit = 1;
                 break;
             case SDL_SCANCODE_LEFTBRACKET:
                 zoom_in = OFF;

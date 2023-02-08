@@ -17,8 +17,8 @@
 
 // Background stars
 #define BGSTARS_MAX_SPEED 300 // Default: 300
-#define BGSTARS_SQUARE 10000  // Groups X pixels: Default: 10000
-#define BGSTARS_PER_SQUARE 5  // X stars per square; Default: 5
+#define BGSTARS_SQUARE 10000  // Groups X pixels. Default: 10000
+#define BGSTARS_PER_SQUARE 5  // X stars per square. Default: 5
 
 // Game settings
 #define BGSTARS_ON 1
@@ -30,21 +30,30 @@
 #define SOLAR_SYSTEMS_ON 1
 #define PROJECTION_RADIUS 5       // Default: 10
 #define SHIP_PROJECTION_RADIUS 10 // Default: 10
-#define MAP_SPEED_MAX 35          // Zoom in; Default: 35
-#define MAP_SPEED_MIN 10          // Zoom out; Default: 10
-#define GAME_SCALE 0.15           // Game scale compared to global scale. Default: 1
+#define ZOOM_STEP 0.01            // Default: 0.01
+#define ZOOM_MAX 1                // Default: 1
+
+// Navigate
+#define ZOOM_NAVIGATE_MIN 0.20 // Default: 0.20
+#define ZOOM_NAVIGATE 1        // Default: 1
+
+// Map
+#define MAP_SPEED_MAX 35  // Zoom in. Default: 35
+#define MAP_SPEED_MIN 10  // Zoom out. Default: 10
+#define ZOOM_MAP_MIN 0.01 // Default: 0.01
+#define ZOOM_MAP 0.02     // Default: 0.02
 
 // Ship
 #define START_IN_ORBIT 0
-#define STARTING_X -40600    // Left < 0; Default: -40600
-#define STARTING_Y -80600    // Up < 0; Default: -80600
+#define STARTING_X -40600    // Left < 0. Default: -40000
+#define STARTING_Y -80600    // Up < 0. Default: -80000
 #define SHIP_RADIUS 17       // Default: 17
 #define BASE_SPEED_LIMIT 300 // Default: 300
 
 // Stars sections
-#define REGION_SIZE 30     // Sections per axis; Even number; Default: 30
-#define REGION_DENSITY 20  // Per 1000; Default: 20
-#define MAX_STARS 907      // First prime number > (REGION_SIZE * REGION_SIZE); Default 907
+#define REGION_SIZE 30     // Sections per axis. Even number; Default: 30
+#define REGION_DENSITY 20  // Per 1000. Default: 20
+#define MAX_STARS 907      // First prime number > (REGION_SIZE * REGION_SIZE). Default 907
                            // We use this in the modulo operations of the hash function output
 #define SECTION_SIZE 10000 // Default: 10000
 
@@ -113,7 +122,15 @@
 #define PLANET_CLASS_5_MOON_RADIUS_MAX 72  // Default: 75
 #define PLANET_CLASS_6_MOON_RADIUS_MAX 100 // Default: 100
 
-// Enumerations
+// States
+enum
+{
+    MENU,
+    NAVIGATE,
+    MAP,
+    PAUSE
+};
+
 enum
 {
     STAGE_OFF = -1, // Not landed

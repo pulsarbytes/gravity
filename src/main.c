@@ -42,7 +42,9 @@ SDL_Color text_color;
 const float g_launch = 0.7 * G_CONSTANT;
 const float g_thrust = 1 * G_CONSTANT;
 static int start = 1;
-float game_scale = GAME_SCALE;
+int state = NAVIGATE;
+float game_scale = ZOOM_NAVIGATE;
+float save_scale = 1;
 int speed_limit = BASE_SPEED_LIMIT;
 int landing_stage = STAGE_OFF;
 struct vector_t velocity;
@@ -54,17 +56,16 @@ int up = OFF;
 int down = OFF;
 int thrust = OFF;
 int reverse = OFF;
-int console = ON;
 int camera_on = CAMERA_ON;
-int pause = OFF;
 int stop = OFF;
-int map_on = OFF;
 int zoom_in = OFF;
 int zoom_out = OFF;
+int console = ON;
+int map_enter = OFF;
+int map_exit = OFF;
 
 // Keep track of current nearest axis coordinates
-static float cross_x;
-static float cross_y;
+struct position_t cross_axis;
 
 // Array for game console entries
 struct game_console_entry game_console_entries[LOG_COUNT];
@@ -73,6 +74,10 @@ struct game_console_entry game_console_entries[LOG_COUNT];
 struct star_entry *stars[MAX_STARS];
 
 // Function prototypes
+void onMenu(void);
+void onNavigate(struct bgstar_t bgstars[], int bgstars_count, struct ship_t *, struct camera_t *, struct position_t *);
+void onMap(struct bgstar_t bgstars[], int bgstars_count, struct ship_t *, struct camera_t *, struct position_t *);
+void onPause(struct bgstar_t bgstars[], int bgstars_count, struct ship_t *, const struct camera_t *, unsigned int start_time);
 int init_sdl(void);
 void close_sdl(void);
 void poll_events(int *quit);
@@ -82,20 +87,21 @@ void log_fps(unsigned int time_diff);
 void cleanup_resources(struct ship_t *);
 void calc_orbital_velocity(float height, float angle, float radius, float *vx, float *vy);
 int create_bgstars(struct bgstar_t bgstars[], int max_bgstars);
-void update_bgstars(struct bgstar_t bgstars[], int stars_count, struct ship_t *, const struct camera_t *);
+void update_bgstars(struct bgstar_t bgstars[], int stars_count, float vx, float vy, const struct camera_t *);
 struct planet_t *create_star(float x, float y);
 uint64_t float_pair_hash_order_sensitive(float x, float y);
 void create_system(struct planet_t *, float x, float y);
-struct ship_t create_ship(int radius, int x, int y);
-void update_system(struct planet_t *, struct ship_t *, const struct camera_t *);
+struct ship_t create_ship(int radius, struct position_t);
+void update_system(struct planet_t *, struct ship_t *, const struct camera_t *, float x, float y, int state);
 void project_planet(struct planet_t *, const struct camera_t *);
 void update_projection_coordinates(void *, int entity_type, const struct camera_t *);
 void apply_gravity_to_ship(struct planet_t *, struct ship_t *, const struct camera_t *);
 void update_camera(struct camera_t *, struct ship_t *);
+void update_map_camera(struct camera_t *camera, struct position_t);
 void update_ship(struct ship_t *, const struct camera_t *);
-void project_ship(struct ship_t *, const struct camera_t *);
+void project_ship(struct ship_t *, const struct camera_t *, int state);
 float find_nearest_section_axis(float n);
-void generate_stars(float x, float y);
+void generate_stars(struct position_t);
 void put_star(float x, float y, struct planet_t *);
 struct planet_t *get_star(float x, float y);
 int star_exists(float x, float y);
@@ -105,7 +111,7 @@ void update_velocity(struct ship_t *ship);
 float nearest_star_distance(int x, int y);
 int get_star_class(float n);
 int get_planet_class(float n);
-void zoom_star(struct planet_t *planet, float scale, float step);
+void zoom_star(struct planet_t *planet);
 
 int main(int argc, char *argv[])
 {
@@ -124,17 +130,20 @@ int main(int argc, char *argv[])
     struct bgstar_t bgstars[max_bgstars];
     int bgstars_count = create_bgstars(bgstars, max_bgstars);
 
-    // Global coordinates; keep track of where we are
-    float x_offset = STARTING_X;
-    float y_offset = STARTING_Y;
+    // Navigation coordinates
+    struct position_t offset = {.x = STARTING_X, .y = STARTING_Y};
+
+    // Map coordinates
+    struct position_t map_offset = {.x = STARTING_X, .y = STARTING_Y};
 
     // Create ship and ship projection
-    struct ship_t ship = create_ship(SHIP_RADIUS, x_offset, y_offset);
-    struct ship_t ship_projection = create_ship(SHIP_PROJECTION_RADIUS, 0.0, 0.0);
+    struct ship_t ship = create_ship(SHIP_RADIUS, offset);
+    struct position_t zero_position = {.x = 0, .y = 0};
+    struct ship_t ship_projection = create_ship(SHIP_PROJECTION_RADIUS, zero_position);
     ship.projection = &ship_projection;
 
     // Generate stars
-    generate_stars(x_offset, y_offset);
+    generate_stars(offset);
 
     // Put ship in orbit around a star
     if (START_IN_ORBIT)
@@ -143,9 +152,9 @@ int main(int argc, char *argv[])
         {
             struct planet_t *star = get_star(STARTING_X, STARTING_Y);
 
-            ship.position.x = STARTING_X;
+            ship.position.x = STARTING_X + 7 * (star->radius);
             ship.position.y = STARTING_Y - 7 * (star->radius);
-            calc_orbital_velocity(7 * star->radius, 0, star->radius, &ship.vx, &ship.vy);
+            calc_orbital_velocity(7 * (star->radius), 90, star->radius, &ship.vx, &ship.vy);
         }
     }
 
@@ -157,11 +166,11 @@ int main(int argc, char *argv[])
         .h = display_mode.h};
 
     // Initialize sections crossings
-    cross_x = ship.position.x;
-    cross_y = ship.position.y;
+    cross_axis.x = ship.position.x;
+    cross_axis.y = ship.position.y;
 
     // Set time keeping variables
-    unsigned int start_time, end_time;
+    unsigned int start_time;
 
     // Main loop
     while (!quit)
@@ -177,143 +186,31 @@ int main(int argc, char *argv[])
         // Clear the renderer
         SDL_RenderClear(renderer);
 
-        if (pause)
+        switch (state)
         {
-            // Update game console
-            if (console)
-                update_game_console(game_console_entries);
-
-            if (BGSTARS_ON)
-            {
-                // Draw background stars
-                update_bgstars(bgstars, bgstars_count, &ship, &camera);
-            }
-
-            // Switch buffers, display back buffer
-            SDL_RenderPresent(renderer);
-
-            // Set FPS
-            if ((1000 / FPS) > ((end_time = SDL_GetTicks()) - start_time))
-                SDL_Delay((1000 / FPS) - (end_time - start_time));
-
-            // Log FPS
-            log_fps(end_time - start_time);
-
+        case MENU:
+            onMenu();
+            break;
+        case NAVIGATE:
+            onNavigate(bgstars, bgstars_count, &ship, &camera, &offset);
+            break;
+        case MAP:
+            onMap(bgstars, bgstars_count, &ship, &camera, &map_offset);
+            break;
+        case PAUSE:
+            onPause(bgstars, bgstars_count, &ship, &camera, start_time);
             continue;
-        }
-
-        // Update velocity
-        update_velocity(&ship);
-
-        if (BGSTARS_ON)
-        {
-            // Draw background stars
-            update_bgstars(bgstars, bgstars_count, &ship, &camera);
-        }
-
-        if (zoom_in)
-        {
-            if (game_scale + 0.01 <= 1.0)
-            {
-                // Zoom stars
-                for (int s = 0; s < MAX_STARS; s++)
-                {
-                    if (stars[s] != NULL && stars[s]->star != NULL)
-                        zoom_star(stars[s]->star, game_scale, 0.01);
-                }
-
-                // Reset scale
-                game_scale += 0.01;
-            }
-        }
-
-        if (zoom_out)
-        {
-            if (game_scale - 0.01 >= 0.01)
-            {
-                // Zoom stars
-                for (int s = 0; s < MAX_STARS; s++)
-                {
-                    if (stars[s] != NULL && stars[s]->star != NULL)
-                        zoom_star(stars[s]->star, game_scale, -0.01);
-                }
-
-                // Reset scale
-                game_scale -= 0.01;
-            }
-        }
-
-        if (camera_on)
-        {
-            // Generate stars
-            generate_stars(x_offset, y_offset);
-        }
-
-        if (!zoom_in && !zoom_out)
-        {
-            // Update system
-            for (int i = 0; i < MAX_STARS; i++)
-            {
-                if (stars[i] != NULL)
-                    update_system(stars[i]->star, &ship, &camera);
-            }
-        }
-
-        if (!map_on)
-        {
-            // Update ship
-            update_ship(&ship, &camera);
-        }
-        else
-        {
-            ship.vx = 0;
-            ship.vy = 0;
-            ship.angle = 0;
-
-            float rate = MAP_SPEED_MIN + (MAP_SPEED_MAX - MAP_SPEED_MIN) * (camera.w / 1000) / game_scale;
-
-            if (right)
-                ship.position.x += rate;
-
-            if (left)
-                ship.position.x -= rate;
-
-            if (up)
-                ship.position.y -= rate;
-
-            if (down)
-                ship.position.y += rate;
-        }
-
-        // Update coordinates
-        x_offset = ship.position.x;
-        y_offset = ship.position.y;
-
-        // Update camera
-        if (camera_on)
-            update_camera(&camera, &ship);
-
-        if (CONSOLE_ON)
-        {
-            // Log velocity magnitude (relative to 0,0)
-            log_game_console(game_console_entries, V_INDEX, velocity.magnitude);
-
-            // Log coordinates (relative to (0,0))
-            log_game_console(game_console_entries, X_INDEX, x_offset);
-            log_game_console(game_console_entries, Y_INDEX, y_offset);
-
-            // Log game scale
-            log_game_console(game_console_entries, SCALE_INDEX, game_scale);
-
-            // Update game console
-            if (console)
-                update_game_console(game_console_entries);
+        default:
+            onMenu();
+            break;
         }
 
         // Switch buffers, display back buffer
         SDL_RenderPresent(renderer);
 
         // Set FPS
+        unsigned int end_time;
+
         if ((1000 / FPS) > ((end_time = SDL_GetTicks()) - start_time))
             SDL_Delay((1000 / FPS) - (end_time - start_time));
 
@@ -330,29 +227,308 @@ int main(int argc, char *argv[])
     return 0;
 }
 
+void onMenu(void)
+{
+    // printf("\nonMenu");
+}
+
+void onNavigate(struct bgstar_t bgstars[], int bgstars_count, struct ship_t *ship, struct camera_t *camera, struct position_t *offset)
+{
+    if (map_exit)
+    {
+        // Reset previous game_scale
+        game_scale = save_scale;
+
+        // Update camera
+        if (camera_on)
+            update_camera(camera, ship);
+
+        // Zoom in
+        for (int s = 0; s < MAX_STARS; s++)
+        {
+            if (stars[s] != NULL && stars[s]->star != NULL)
+                zoom_star(stars[s]->star);
+        }
+    }
+
+    // Update velocity
+    update_velocity(ship);
+
+    if (BGSTARS_ON)
+    {
+        // Draw background stars
+        update_bgstars(bgstars, bgstars_count, ship->vx, ship->vy, camera);
+    }
+
+    if (camera_on)
+    {
+        // Generate stars
+        generate_stars(*offset);
+    }
+
+    if ((!map_exit && !zoom_in && !zoom_out) || game_scale > ZOOM_NAVIGATE_MIN)
+    {
+        // Update system
+        for (int i = 0; i < MAX_STARS; i++)
+        {
+            if (stars[i] != NULL)
+                update_system(stars[i]->star, ship, camera, ship->position.x, ship->position.y, NAVIGATE);
+        }
+    }
+
+    // Add small tolerance to account for floating-point precision errors
+    const float epsilon = 0.0001;
+
+    if (zoom_in)
+    {
+        if (game_scale + ZOOM_STEP <= ZOOM_MAX + epsilon)
+        {
+            // Reset scale
+            game_scale += ZOOM_STEP;
+
+            // Zoom in
+            for (int s = 0; s < MAX_STARS; s++)
+            {
+                if (stars[s] != NULL && stars[s]->star != NULL)
+                    zoom_star(stars[s]->star);
+            }
+        }
+
+        zoom_in = OFF;
+    }
+
+    if (zoom_out)
+    {
+        if (game_scale - ZOOM_STEP >= ZOOM_NAVIGATE_MIN - epsilon)
+        {
+            // Reset scale
+            game_scale -= ZOOM_STEP;
+
+            // Zoom out
+            for (int s = 0; s < MAX_STARS; s++)
+            {
+                if (stars[s] != NULL && stars[s]->star != NULL)
+                    zoom_star(stars[s]->star);
+            }
+        }
+
+        zoom_out = OFF;
+    }
+
+    // Update ship
+    update_ship(ship, camera);
+
+    // Update coordinates
+    offset->x = ship->position.x;
+    offset->y = ship->position.y;
+
+    // Update camera
+    if (camera_on)
+        update_camera(camera, ship);
+
+    if (console && CONSOLE_ON)
+    {
+        // Log velocity magnitude (relative to 0,0)
+        log_game_console(game_console_entries, V_INDEX, velocity.magnitude);
+
+        // Log coordinates (relative to (0,0))
+        log_game_console(game_console_entries, X_INDEX, offset->x);
+        log_game_console(game_console_entries, Y_INDEX, offset->y);
+
+        // Log game scale
+        log_game_console(game_console_entries, SCALE_INDEX, game_scale);
+
+        // Update game console
+        update_game_console(game_console_entries);
+    }
+
+    if (map_exit)
+        map_exit = OFF;
+}
+
+void onMap(struct bgstar_t bgstars[], int bgstars_count, struct ship_t *ship, struct camera_t *camera, struct position_t *offset)
+{
+    if (map_enter)
+    {
+        save_scale = game_scale;
+        game_scale = ZOOM_MAP;
+
+        // Zoom in
+        for (int s = 0; s < MAX_STARS; s++)
+        {
+            if (stars[s] != NULL && stars[s]->star != NULL)
+                zoom_star(stars[s]->star);
+        }
+
+        // Reset map to ship position
+        offset->x = ship->position.x;
+        offset->y = ship->position.y;
+
+        // Update map camera
+        update_map_camera(camera, *offset);
+    }
+
+    // Generate stars
+    generate_stars(*offset);
+
+    if ((!map_enter && !zoom_in && !zoom_out) || game_scale > 0)
+    {
+        // Update system
+        for (int i = 0; i < MAX_STARS; i++)
+        {
+            if (stars[i] != NULL)
+                update_system(stars[i]->star, ship, camera, offset->x, offset->y, MAP);
+        }
+    }
+
+    // Add small tolerance to account for floating-point precision errors
+    const float epsilon = 0.0001;
+
+    if (zoom_in)
+    {
+        if (game_scale + ZOOM_STEP <= ZOOM_MAX + epsilon)
+        {
+            // Reset scale
+            game_scale += ZOOM_STEP;
+
+            // Zoom in
+            for (int s = 0; s < MAX_STARS; s++)
+            {
+                if (stars[s] != NULL && stars[s]->star != NULL)
+                    zoom_star(stars[s]->star);
+            }
+        }
+
+        zoom_in = OFF;
+    }
+
+    if (zoom_out)
+    {
+        if (game_scale - ZOOM_STEP >= ZOOM_MAP_MIN - epsilon)
+        {
+            // Reset scale
+            game_scale -= ZOOM_STEP;
+
+            // Zoom out
+            for (int s = 0; s < MAX_STARS; s++)
+            {
+                if (stars[s] != NULL && stars[s]->star != NULL)
+                    zoom_star(stars[s]->star);
+            }
+        }
+
+        zoom_out = OFF;
+    }
+
+    // Move through map
+    float rate_x = 0;
+
+    if (right)
+        rate_x = MAP_SPEED_MIN + (MAP_SPEED_MAX - MAP_SPEED_MIN) * (camera->w / 1000) / game_scale;
+    else if (left)
+        rate_x = -(MAP_SPEED_MIN + (MAP_SPEED_MAX - MAP_SPEED_MIN) * (camera->w / 1000) / game_scale);
+
+    offset->x += rate_x;
+
+    float rate_y = 0;
+
+    if (down)
+        rate_y = MAP_SPEED_MIN + (MAP_SPEED_MAX - MAP_SPEED_MIN) * (camera->w / 1000) / game_scale;
+    else if (up)
+        rate_y = -(MAP_SPEED_MIN + (MAP_SPEED_MAX - MAP_SPEED_MIN) * (camera->w / 1000) / game_scale);
+
+    offset->y += rate_y;
+
+    if (BGSTARS_ON)
+    {
+        // Draw background stars
+        update_bgstars(bgstars, bgstars_count, rate_x, rate_y, camera);
+    }
+
+    // Update map camera
+    update_map_camera(camera, *offset);
+
+    // Draw ship projection
+    ship->projection->rect.x = (ship->position.x - offset->x) * game_scale + (camera->w / 2 - ship->projection->radius);
+    ship->projection->rect.y = (ship->position.y - offset->y) * game_scale + (camera->h / 2 - ship->projection->radius);
+    ship->projection->angle = ship->angle;
+    // SDL_RenderCopyEx(renderer, ship->projection->texture, &ship->projection->main_img_rect, &ship->projection->rect, ship->projection->angle, &ship->projection->rotation_pt, SDL_FLIP_NONE);
+
+    if (ship->projection->rect.x + ship->projection->radius < 0 ||
+        ship->projection->rect.x + ship->projection->radius > camera->w ||
+        ship->projection->rect.y + ship->projection->radius < 0 ||
+        ship->projection->rect.y + ship->projection->radius > camera->h)
+    {
+        project_ship(ship, camera, MAP);
+    }
+    else
+        SDL_RenderCopyEx(renderer, ship->projection->texture, &ship->projection->main_img_rect, &ship->projection->rect, ship->projection->angle, &ship->projection->rotation_pt, SDL_FLIP_NONE);
+
+    if (console && CONSOLE_ON)
+    {
+        // Log coordinates (relative to (0,0))
+        log_game_console(game_console_entries, X_INDEX, offset->x);
+        log_game_console(game_console_entries, Y_INDEX, offset->y);
+
+        // Log game scale
+        log_game_console(game_console_entries, SCALE_INDEX, game_scale);
+
+        // Update game console
+        update_game_console(game_console_entries);
+    }
+
+    if (map_enter)
+        map_enter = OFF;
+}
+
+void onPause(struct bgstar_t bgstars[], int bgstars_count, struct ship_t *ship, const struct camera_t *camera, unsigned int start_time)
+{
+    // Update game console
+    if (console)
+        update_game_console(game_console_entries);
+
+    if (BGSTARS_ON)
+    {
+        // Draw background stars
+        update_bgstars(bgstars, bgstars_count, 0, 0, camera);
+    }
+
+    // Switch buffers, display back buffer
+    SDL_RenderPresent(renderer);
+
+    // Set FPS
+    unsigned int end_time;
+
+    if ((1000 / FPS) > ((end_time = SDL_GetTicks()) - start_time))
+        SDL_Delay((1000 / FPS) - (end_time - start_time));
+
+    // Log FPS
+    log_fps(end_time - start_time);
+}
+
 /*
  * Probe region for stars and create them procedurally.
  * The region has intervals of size SECTION_SIZE.
  */
-void generate_stars(float x, float y)
+void generate_stars(struct position_t offset)
 {
     // Keep track of current nearest section axis coordinates
-    float bx = find_nearest_section_axis(x);
-    float by = find_nearest_section_axis(y);
+    float bx = find_nearest_section_axis(offset.x);
+    float by = find_nearest_section_axis(offset.y);
 
     // Check if this is the first time calling this function
     if (!start)
     {
         // Check whether nearest section axis have changed
-        if (bx == cross_x && by == cross_y)
+        if (bx == cross_axis.x && by == cross_axis.y)
             return;
 
         // Keep track of new axis
-        if (bx != cross_x)
-            cross_x = bx;
+        if (bx != cross_axis.x)
+            cross_axis.x = bx;
 
-        if (by != cross_y)
-            cross_y = by;
+        if (by != cross_axis.y)
+            cross_axis.y = by;
     }
 
     // Define a region of REGION_SIZE x REGION_SIZE
@@ -478,7 +654,7 @@ int create_bgstars(struct bgstar_t bgstars[], int max_bgstars)
 /*
  * Move and draw background stars.
  */
-void update_bgstars(struct bgstar_t bgstars[], int stars_count, struct ship_t *ship, const struct camera_t *camera)
+void update_bgstars(struct bgstar_t bgstars[], int stars_count, float vx, float vy, const struct camera_t *camera)
 {
     for (int i = 0; i < stars_count; i++)
     {
@@ -487,13 +663,13 @@ void update_bgstars(struct bgstar_t bgstars[], int stars_count, struct ship_t *s
             // Don't move background stars faster than BGSTARS_MAX_SPEED
             if (velocity.magnitude > BGSTARS_MAX_SPEED)
             {
-                bgstars[i].position.x -= 0.2 * (BGSTARS_MAX_SPEED * ship->vx / velocity.magnitude) / FPS;
-                bgstars[i].position.y -= 0.2 * (BGSTARS_MAX_SPEED * ship->vy / velocity.magnitude) / FPS;
+                bgstars[i].position.x -= 0.2 * (BGSTARS_MAX_SPEED * vx / velocity.magnitude) / FPS;
+                bgstars[i].position.y -= 0.2 * (BGSTARS_MAX_SPEED * vy / velocity.magnitude) / FPS;
             }
             else
             {
-                bgstars[i].position.x -= 0.2 * ship->vx / FPS;
-                bgstars[i].position.y -= 0.2 * ship->vy / FPS;
+                bgstars[i].position.x -= 0.2 * vx / FPS;
+                bgstars[i].position.y -= 0.2 * vy / FPS;
             }
 
             // Normalize within camera boundaries
@@ -537,16 +713,25 @@ void update_camera(struct camera_t *camera, struct ship_t *ship)
 }
 
 /*
+ * Update map camera position.
+ */
+void update_map_camera(struct camera_t *camera, struct position_t offset)
+{
+    camera->x = offset.x - (camera->w / 2) / game_scale;
+    camera->y = offset.y - (camera->h / 2) / game_scale;
+}
+
+/*
  * Create a ship.
  */
-struct ship_t create_ship(int radius, int x, int y)
+struct ship_t create_ship(int radius, struct position_t position)
 {
     struct ship_t ship;
 
     ship.image = "../assets/sprites/ship.png";
     ship.radius = radius;
-    ship.position.x = x;
-    ship.position.y = y;
+    ship.position.x = (int)position.x;
+    ship.position.y = (int)position.y;
     ship.vx = 0.0;
     ship.vy = 0.0;
     ship.angle = 0;
@@ -930,13 +1115,13 @@ void create_system(struct planet_t *planet, float x, float y)
 /*
  * Draw system and apply gravity to planets and ship (recursive).
  */
-void update_system(struct planet_t *planet, struct ship_t *ship, const struct camera_t *camera)
+void update_system(struct planet_t *planet, struct ship_t *ship, const struct camera_t *camera, float x, float y, int state)
 {
     int is_star = planet->level == LEVEL_STAR;
     int is_moon = planet->level == LEVEL_MOON;
     float distance_star = 0.0;
 
-    if (!is_star)
+    if (state == NAVIGATE && !is_star)
     {
         float delta_x = 0.0;
         float delta_y = 0.0;
@@ -974,17 +1159,17 @@ void update_system(struct planet_t *planet, struct ship_t *ship, const struct ca
         planet->position.y += dy;
     }
 
-    // If star, get ship distance from star
+    // If star, get position distance from star
     if (is_star)
     {
         float delta_x_star = 0.0;
         float delta_y_star = 0.0;
-        delta_x_star = planet->position.x - ship->position.x;
-        delta_y_star = planet->position.y - ship->position.y;
+        delta_x_star = planet->position.x - x;
+        delta_y_star = planet->position.y - y;
         distance_star = sqrt(delta_x_star * delta_x_star + delta_y_star * delta_y_star);
     }
 
-    // Don't update if it's a star and ship is outside cutoff
+    // Don't update if it's a star and position is outside cutoff
     if (!is_star || (is_star && distance_star < planet->cutoff))
     {
         int max_planets = (planet->level == LEVEL_STAR) ? MAX_PLANETS : MAX_MOONS;
@@ -992,7 +1177,7 @@ void update_system(struct planet_t *planet, struct ship_t *ship, const struct ca
         // Update planets
         for (int i = 0; i < max_planets && planet->planets[i] != NULL; i++)
         {
-            update_system(planet->planets[i], ship, camera);
+            update_system(planet->planets[i], ship, camera, x, y, state);
         }
     }
 
@@ -1010,21 +1195,18 @@ void update_system(struct planet_t *planet, struct ship_t *ship, const struct ca
     {
         if (is_moon)
         {
-            float delta_x = planet->parent->position.x - ship->position.x;
-            float delta_y = planet->parent->position.y - ship->position.y;
+            float delta_x = planet->parent->position.x - x;
+            float delta_y = planet->parent->position.y - y;
             float distance = sqrt(delta_x * delta_x + delta_y * delta_y);
 
             if (distance < 2 * planet->parent->cutoff)
                 project_planet(planet, camera);
         }
         else
-        {
-            if (!zoom_in && !zoom_out)
-                project_planet(planet, camera);
-        }
+            project_planet(planet, camera);
     }
 
-    if (!map_on && SHIP_GRAVITY_ON)
+    if (state == NAVIGATE && SHIP_GRAVITY_ON)
     {
         // Update ship speed due to gravity
         apply_gravity_to_ship(planet, ship, camera);
@@ -1227,7 +1409,7 @@ void update_ship(struct ship_t *ship, const struct camera_t *camera)
     // Draw ship projection
     else if (PROJECTIONS_ON)
     {
-        project_ship(ship, camera);
+        project_ship(ship, camera, NAVIGATE);
     }
 
     // Draw ship thrust

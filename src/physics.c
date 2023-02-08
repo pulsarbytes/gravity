@@ -25,7 +25,7 @@ void update_velocity(struct ship_t *ship)
 
 /*
  * Calculate orbital velocity for object orbiting
- * at distance <h> and angle <a> around object with radius <r>.
+ * at distance <h> and angle <a> degrees around object with radius <r>.
  *
  * Centripetal force:
  * Fc = m * v^2 / h

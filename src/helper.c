@@ -183,22 +183,24 @@ void delete_star(float x, float y)
 
 /*
  * Update projection position.
+ * Projection rect top-left point is where the object projection crosses a quadrant line.
+ * Projection rect can be centered by moving left or up by <offset>.
  */
 void update_projection_coordinates(void *ptr, int entity_type, const struct camera_t *camera)
 {
     struct planet_t *planet = NULL;
     struct ship_t *ship = NULL;
-    int projection_radius;
+    int offset;
 
     switch (entity_type)
     {
     case ENTITY_PLANET:
         planet = (struct planet_t *)ptr;
-        projection_radius = PROJECTION_RADIUS;
+        offset = PROJECTION_RADIUS;
         break;
     case ENTITY_SHIP:
         ship = (struct ship_t *)ptr;
-        projection_radius = SHIP_PROJECTION_RADIUS;
+        offset = SHIP_PROJECTION_RADIUS;
         break;
     }
 
@@ -221,19 +223,19 @@ void update_projection_coordinates(void *ptr, int entity_type, const struct came
     // 1st quadrant (clockwise)
     if (delta_x >= 0 && delta_y < 0)
     {
-        point = (int)(((camera_h / 2) - projection_radius) * delta_x / (-delta_y));
+        point = (int)(camera_h / 2) * delta_x / -delta_y;
 
         // Top
-        if (point <= (camera_w / 2) - projection_radius)
+        if (point <= camera_w / 2)
         {
             if (planet)
             {
-                planet->projection.x = ((camera_w / 2) + point) * game_scale - projection_radius;
+                planet->projection.x = ((camera_w / 2) + point) * game_scale - offset * (point / (camera_w / 2) + 1);
                 planet->projection.y = 0;
             }
             else if (ship)
             {
-                ship->projection->rect.x = ((camera_w / 2) + point) * game_scale - projection_radius;
+                ship->projection->rect.x = ((camera_w / 2) + point) * game_scale - offset * (point / (camera_w / 2) + 1);
                 ship->projection->rect.y = 0;
             }
         }
@@ -241,19 +243,19 @@ void update_projection_coordinates(void *ptr, int entity_type, const struct came
         else
         {
             if (delta_x > 0)
-                point = (int)(((camera_h / 2) - projection_radius) - ((camera_w / 2) - projection_radius) * (-delta_y) / delta_x);
+                point = (int)(camera_h / 2) - (camera_w / 2) * -delta_y / delta_x;
             else
-                point = (int)(((camera_h / 2) - projection_radius) - ((camera_w / 2) - projection_radius));
+                point = (int)(camera_h / 2) - (camera_w / 2);
 
             if (planet)
             {
-                planet->projection.x = camera_w * game_scale - (2 * projection_radius);
-                planet->projection.y = point * game_scale;
+                planet->projection.x = camera_w * game_scale - (2 * offset);
+                planet->projection.y = point * game_scale - offset * (point / (camera_h / 2));
             }
             else if (ship)
             {
-                ship->projection->rect.x = camera_w * game_scale - (2 * projection_radius);
-                ship->projection->rect.y = point * game_scale;
+                ship->projection->rect.x = camera_w * game_scale - (2 * offset);
+                ship->projection->rect.y = point * game_scale - offset * (point / (camera_h / 2));
             }
         }
     }
@@ -261,41 +263,41 @@ void update_projection_coordinates(void *ptr, int entity_type, const struct came
     else if (delta_x >= 0 && delta_y >= 0)
     {
         if (delta_x > 0)
-            point = (int)(((camera_w / 2) - projection_radius) * delta_y / delta_x);
+            point = (int)(camera_w / 2) * delta_y / delta_x;
         else
-            point = (int)((camera_w / 2) - projection_radius);
+            point = (int)camera_w / 2;
 
         // Right
-        if (point <= (camera_h / 2) - projection_radius)
+        if (point <= camera_h / 2)
         {
             if (planet)
             {
-                planet->projection.x = camera_w * game_scale - (2 * projection_radius);
-                planet->projection.y = ((camera_h / 2) + point) * game_scale - projection_radius;
+                planet->projection.x = camera_w * game_scale - (2 * offset);
+                planet->projection.y = ((camera_h / 2) + point) * game_scale - offset * (point / (camera_h / 2) + 1);
             }
             else if (ship)
             {
-                ship->projection->rect.x = camera_w * game_scale - (2 * projection_radius);
-                ship->projection->rect.y = ((camera_h / 2) + point) * game_scale - projection_radius;
+                ship->projection->rect.x = camera_w * game_scale - (2 * offset);
+                ship->projection->rect.y = ((camera_h / 2) + point) * game_scale - offset * (point / (camera_h / 2) + 1);
             }
         }
         // Bottom
         else
         {
             if (delta_y > 0)
-                point = (int)(((camera_h / 2) - projection_radius) * delta_x / delta_y);
+                point = (int)(camera_h / 2) * delta_x / delta_y;
             else
-                point = (int)(((camera_h / 2) - projection_radius));
+                point = (int)camera_h / 2;
 
             if (planet)
             {
-                planet->projection.x = ((camera_w / 2) + point) * game_scale - projection_radius;
-                planet->projection.y = camera_h * game_scale - (2 * projection_radius);
+                planet->projection.x = ((camera_w / 2) + point) * game_scale - offset * (point / (camera_w / 2) + 1);
+                planet->projection.y = camera_h * game_scale - (2 * offset);
             }
             else if (ship)
             {
-                ship->projection->rect.x = ((camera_w / 2) + point) * game_scale - projection_radius;
-                ship->projection->rect.y = camera_h * game_scale - (2 * projection_radius);
+                ship->projection->rect.x = ((camera_w / 2) + point) * game_scale - offset * (point / (camera_w / 2) + 1);
+                ship->projection->rect.y = camera_h * game_scale - (2 * offset);
             }
         }
     }
@@ -303,73 +305,73 @@ void update_projection_coordinates(void *ptr, int entity_type, const struct came
     else if (delta_x < 0 && delta_y >= 0)
     {
         if (delta_y > 0)
-            point = (int)(((camera_h / 2) - projection_radius) * (-delta_x) / delta_y);
+            point = (int)(camera_h / 2) * -delta_x / delta_y;
         else
-            point = (int)(((camera_h / 2) - projection_radius));
+            point = (int)camera_h / 2;
 
         // Bottom
-        if (point <= (camera_w / 2) - projection_radius)
+        if (point <= camera_w / 2)
         {
             if (planet)
             {
-                planet->projection.x = ((camera_w / 2) - point) * game_scale - projection_radius;
-                planet->projection.y = camera_h * game_scale - (2 * projection_radius);
+                planet->projection.x = ((camera_w / 2) - point) * game_scale - offset * (((camera_w / 2) - point) / (camera_w / 2));
+                planet->projection.y = camera_h * game_scale - (2 * offset);
             }
             else if (ship)
             {
-                ship->projection->rect.x = ((camera_w / 2) - point) * game_scale - projection_radius;
-                ship->projection->rect.y = camera_h * game_scale - (2 * projection_radius);
+                ship->projection->rect.x = ((camera_w / 2) - point) * game_scale - offset * (((camera_w / 2) - point) / (camera_w / 2));
+                ship->projection->rect.y = camera_h * game_scale - (2 * offset);
             }
         }
         // Left
         else
         {
-            point = (int)(((camera_h / 2) - projection_radius) - ((camera_w / 2) - projection_radius) * delta_y / (-delta_x));
+            point = (int)(camera_h / 2) - (camera_w / 2) * delta_y / -delta_x;
 
             if (planet)
             {
                 planet->projection.x = 0;
-                planet->projection.y = (camera_h - point) * game_scale - (2 * projection_radius);
+                planet->projection.y = (camera_h - point) * game_scale - offset * (((camera_h / 2) - point) / (camera_h / 2) + 1);
             }
             else if (ship)
             {
                 ship->projection->rect.x = 0;
-                ship->projection->rect.y = (camera_h - point) * game_scale - (2 * projection_radius);
+                ship->projection->rect.y = (camera_h - point) * game_scale - offset * (((camera_h / 2) - point) / (camera_h / 2) + 1);
             }
         }
     }
     // 4th quadrant
     else if (delta_x < 0 && delta_y < 0)
     {
-        point = (int)(((camera_w / 2) - projection_radius) * (-delta_y) / (-delta_x));
+        point = (int)(camera_w / 2) * -delta_y / -delta_x;
 
         // Left
-        if (point <= (camera_h / 2) - projection_radius)
+        if (point <= camera_h / 2)
         {
             if (planet)
             {
                 planet->projection.x = 0;
-                planet->projection.y = ((camera_h / 2) - point) * game_scale - projection_radius;
+                planet->projection.y = ((camera_h / 2) - point) * game_scale - offset * (((camera_h / 2) - point) / (camera_h / 2));
             }
             else if (ship)
             {
                 ship->projection->rect.x = 0;
-                ship->projection->rect.y = ((camera_h / 2) - point) * game_scale - projection_radius;
+                ship->projection->rect.y = ((camera_h / 2) - point) * game_scale - offset * (((camera_h / 2) - point) / (camera_h / 2));
             }
         }
         // Top
         else
         {
-            point = (int)(((camera_w / 2) - projection_radius) - ((camera_h / 2) - projection_radius) * (-delta_x) / (-delta_y));
+            point = (int)(camera_w / 2) - (camera_h / 2) * -delta_x / -delta_y;
 
             if (planet)
             {
-                planet->projection.x = point * game_scale;
+                planet->projection.x = point * game_scale - offset * (point / (camera_w / 2));
                 planet->projection.y = 0;
             }
             else if (ship)
             {
-                ship->projection->rect.x = point * game_scale;
+                ship->projection->rect.x = point * game_scale - offset * (point / (camera_w / 2));
                 ship->projection->rect.y = 0;
             }
         }
@@ -379,7 +381,7 @@ void update_projection_coordinates(void *ptr, int entity_type, const struct came
 /*
  * Draw ship projection on axis.
  */
-void project_ship(struct ship_t *ship, const struct camera_t *camera)
+void project_ship(struct ship_t *ship, const struct camera_t *camera, int state)
 {
     update_projection_coordinates(ship, ENTITY_SHIP, camera);
 
@@ -390,11 +392,11 @@ void project_ship(struct ship_t *ship, const struct camera_t *camera)
     SDL_RenderCopyEx(renderer, ship->projection->texture, &ship->projection->main_img_rect, &ship->projection->rect, ship->projection->angle, &ship->projection->rotation_pt, SDL_FLIP_NONE);
 
     // Draw projection thrust
-    if (thrust)
+    if (state == NAVIGATE && thrust)
         SDL_RenderCopyEx(renderer, ship->projection->texture, &ship->projection->thrust_img_rect, &ship->projection->rect, ship->projection->angle, &ship->projection->rotation_pt, SDL_FLIP_NONE);
 
     // Draw projection reverse
-    if (reverse)
+    if (state == NAVIGATE && reverse)
         SDL_RenderCopyEx(renderer, ship->projection->texture, &ship->projection->reverse_img_rect, &ship->projection->rect, ship->projection->angle, &ship->projection->rotation_pt, SDL_FLIP_NONE);
 }
 
@@ -531,7 +533,7 @@ bool point_in_array(struct position_t p, struct position_t arr[], int len)
 /*
  * Zoom in/out a star system (recursive).
  */
-void zoom_star(struct planet_t *planet, float scale, float step)
+void zoom_star(struct planet_t *planet)
 {
     planet->rect.x = (planet->position.x - planet->radius) * game_scale;
     planet->rect.y = (planet->position.y - planet->radius) * game_scale;
@@ -545,7 +547,7 @@ void zoom_star(struct planet_t *planet, float scale, float step)
 
         for (int i = 0; i < max_planets && planet->planets[i] != NULL; i++)
         {
-            zoom_star(planet->planets[i], scale, step);
+            zoom_star(planet->planets[i]);
         }
     }
 }
