@@ -4,6 +4,7 @@
 
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_ttf.h>
+#include <SDL2/SDL2_gfxPrimitives.h>
 
 #include "../include/common.h"
 
@@ -105,4 +106,35 @@ void close_sdl(void)
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
     SDL_Quit();
+}
+
+/*
+ * Midpoint Circle Algorithm for drawing a circle in SDL.
+ */
+void SDL_DrawCircle(SDL_Renderer *renderer, int xc, int yc, int radius, Uint8 r, Uint8 g, Uint8 b, Uint8 a)
+{
+    int x = 0, y = radius;
+    int d = 3 - 2 * radius;
+    while (y >= x)
+    {
+        // Draw the 8 points symmetrically
+        SDL_SetRenderDrawColor(renderer, r, g, b, a);
+        SDL_RenderDrawPoint(renderer, xc + x, yc + y);
+        SDL_RenderDrawPoint(renderer, xc + x, yc - y);
+        SDL_RenderDrawPoint(renderer, xc - x, yc + y);
+        SDL_RenderDrawPoint(renderer, xc - x, yc - y);
+        SDL_RenderDrawPoint(renderer, xc + y, yc + x);
+        SDL_RenderDrawPoint(renderer, xc + y, yc - x);
+        SDL_RenderDrawPoint(renderer, xc - y, yc + x);
+        SDL_RenderDrawPoint(renderer, xc - y, yc - x);
+
+        if (d < 0)
+            d = d + 4 * x + 6;
+        else
+        {
+            d = d + 4 * (x - y) + 10;
+            y--;
+        }
+        x++;
+    }
 }

@@ -2,7 +2,7 @@
 
 CC=/usr/bin/gcc
 COMPILER_FLAGS=-Wall -g
-LINKER_FLAGS=`sdl2-config --libs --cflags` -lSDL2_image -lSDL2_ttf -lm
+LINKER_FLAGS=`sdl2-config --libs --cflags` -lSDL2_gfx -lSDL2_image -lSDL2_ttf -lm
 
 bin/gravity: build/main.o build/sdl.o build/physics.o build/events.o build/helper.o build/console.o build/pcg.o
 	$(CC) $(COMPILER_FLAGS) build/main.o build/sdl.o build/physics.o build/events.o build/helper.o build/console.o build/pcg.o $(LINKER_FLAGS) -o bin/gravity
