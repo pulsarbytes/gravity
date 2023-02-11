@@ -18,7 +18,7 @@
 // Background stars
 #define BGSTARS_MAX_SPEED 300 // Default: 300
 #define BGSTARS_SQUARE 10000  // Groups X pixels. Default: 10000
-#define BGSTARS_PER_SQUARE 5  // X stars per square. Default: 5
+#define BGSTARS_PER_SQUARE 5  // X stars per square. Default: 3
 
 // Game settings
 #define BGSTARS_ON 1
@@ -35,10 +35,14 @@
 #define ZOOM_MAX 1                // Default: 1
 
 // Navigate
-#define STARTING_X -40000      // Left < 0. Default: -40000
-#define STARTING_Y -80000      // Up < 0. Default: -80000
+#define STARTING_X -200000000  // Left < 0. Default: -40000
+#define STARTING_Y 200000000   // Up < 0. Default: -80000
 #define ZOOM_NAVIGATE_MIN 0.20 // Default: 0.20
 #define ZOOM_NAVIGATE 1        // Default: 1
+
+// Galaxy
+#define X_LIMIT 200000000 // Default: 200000000
+#define Y_LIMIT 200000000 // Default: 200000000
 
 // Map
 #define MAP_SPEED_MAX 35  // Zoom in. Default: 35
@@ -51,7 +55,7 @@
 #define SHIP_RADIUS 17       // Default: 17
 #define BASE_SPEED_LIMIT 300 // Default: 300
 
-// Stars sections
+// Stars regions
 #define REGION_SIZE 30     // Sections per axis. Even number; Default: 30
 #define REGION_DENSITY 20  // Per 1000. Default: 20
 #define MAX_STARS 907      // First prime number > (REGION_SIZE * REGION_SIZE). Default 907
@@ -129,6 +133,7 @@ enum
     MENU,
     NAVIGATE,
     MAP,
+    GALAXY,
     PAUSE
 };
 

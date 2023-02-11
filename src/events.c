@@ -22,6 +22,9 @@ extern int orbits_on;
 extern int map_enter;
 extern int map_exit;
 extern int map_center;
+extern int galaxy_enter;
+extern int galaxy_exit;
+extern int galaxy_center;
 
 /*
  * Poll SDL events.
@@ -63,14 +66,22 @@ void poll_events(int *quit)
             case SDL_SCANCODE_C:
                 if (state == NAVIGATE)
                     camera_on = !camera_on;
-                else if (state == MAP)
+                else if (state == MAP || state == GALAXY)
                     camera_on = ON;
+                break;
+            case SDL_SCANCODE_G:
+                if (state == NAVIGATE || state == MAP)
+                {
+                    state = GALAXY;
+                    galaxy_enter = ON;
+                    camera_on = ON;
+                }
                 break;
             case SDL_SCANCODE_K:
                 console = !console;
                 break;
             case SDL_SCANCODE_M:
-                if (state == NAVIGATE)
+                if (state == NAVIGATE || state == GALAXY)
                 {
                     state = MAP;
                     map_enter = ON;
@@ -99,6 +110,11 @@ void poll_events(int *quit)
                 {
                     state = NAVIGATE;
                     map_exit = ON;
+                }
+                else if (state == GALAXY)
+                {
+                    state = NAVIGATE;
+                    galaxy_exit = ON;
                 }
                 else if (state == NAVIGATE)
                     *quit = 1;

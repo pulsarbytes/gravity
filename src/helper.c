@@ -20,11 +20,12 @@ extern float game_scale;
 
 static void cleanup_planets(struct planet_t *planet);
 static void cleanup_stars(void);
-uint64_t float_pair_hash_order_sensitive(struct position_t);
-uint64_t float_hash(float x);
+uint64_t pair_hash_order_sensitive(struct position_t);
+uint64_t double_hash(double x);
 bool point_eq(struct position_t a, struct position_t b);
 bool point_in_array(struct position_t p, struct position_t arr[], int len);
 int calculate_projection_opacity(float distance);
+double find_nearest_section_axis(double n);
 
 /*
  * Clean up planets (recursive).
@@ -94,7 +95,7 @@ void cleanup_resources(struct ship_t *ship)
  */
 void put_star(struct position_t position, struct planet_t *star)
 {
-    uint64_t index = float_pair_hash_order_sensitive(position) % MAX_STARS;
+    uint64_t index = pair_hash_order_sensitive(position) % MAX_STARS;
     struct star_entry *entry = (struct star_entry *)malloc(sizeof(struct star_entry));
     entry->x = position.x;
     entry->y = position.y;
@@ -108,7 +109,7 @@ void put_star(struct position_t position, struct planet_t *star)
  */
 int star_exists(struct position_t position)
 {
-    uint64_t index = float_pair_hash_order_sensitive(position) % MAX_STARS;
+    uint64_t index = pair_hash_order_sensitive(position) % MAX_STARS;
     struct star_entry *entry = stars[index];
 
     while (entry != NULL)
@@ -130,7 +131,7 @@ int star_exists(struct position_t position)
  */
 struct planet_t *get_star(struct position_t position)
 {
-    uint64_t index = float_pair_hash_order_sensitive(position) % MAX_STARS;
+    uint64_t index = pair_hash_order_sensitive(position) % MAX_STARS;
     struct star_entry *entry = stars[index];
 
     while (entry != NULL)
@@ -149,7 +150,7 @@ struct planet_t *get_star(struct position_t position)
  */
 void delete_star(struct position_t position)
 {
-    uint64_t index = float_pair_hash_order_sensitive(position) % MAX_STARS;
+    uint64_t index = pair_hash_order_sensitive(position) % MAX_STARS;
     struct star_entry *previous = NULL;
     struct star_entry *entry = stars[index];
 
@@ -478,7 +479,7 @@ float nearest_star_distance(struct position_t position)
                 checked_points[num_checked_points++] = p;
 
                 // Seed with a fixed constant
-                pcg32_srandom_r(&rng, float_hash(ix), float_hash(iy));
+                pcg32_srandom_r(&rng, double_hash(ix), double_hash(iy));
 
                 int has_star = abs(pcg32_random_r(&rng)) % 1000 < REGION_DENSITY;
 
@@ -596,8 +597,235 @@ int in_camera_game_scale(const struct camera_t *camera, int x, int y)
  * Check whether object with center (x,y) and radius r is in camera.
  * x, y are absolute full scale coordinates. Radius is full scale.
  */
-int in_camera(const struct camera_t *camera, float x, float y, float radius)
+int in_camera(const struct camera_t *camera, double x, double y, float radius)
 {
     return x + radius >= camera->x && x - radius - camera->x < camera->w / game_scale &&
            y + radius >= camera->y && y - radius - camera->y < camera->h / game_scale;
+}
+
+/*
+ * Draw map section lines.
+ */
+void draw_section_lines(const struct camera_t *camera, struct position_t offset)
+{
+    double bx = find_nearest_section_axis(camera->x);
+    double by = find_nearest_section_axis(camera->y);
+    SDL_SetRenderDrawColor(renderer, 255, 165, 0, 32);
+
+    // We are far from edges (> 20 sections far)
+    if ((offset.x < -X_LIMIT - 20 * SECTION_SIZE || offset.x > -X_LIMIT + 20 * SECTION_SIZE) &&
+        (offset.x < X_LIMIT - 20 * SECTION_SIZE || offset.x > X_LIMIT + 20 * SECTION_SIZE) &&
+        (offset.y < -Y_LIMIT - 20 * SECTION_SIZE || offset.y > -Y_LIMIT + 20 * SECTION_SIZE) &&
+        (offset.y < Y_LIMIT - 20 * SECTION_SIZE || offset.y > Y_LIMIT + 20 * SECTION_SIZE))
+    {
+        for (int ix = bx; ix <= bx + camera->w / game_scale; ix = ix + SECTION_SIZE)
+        {
+            SDL_RenderDrawLine(renderer, (ix - camera->x) * game_scale, 0, (ix - camera->x) * game_scale, camera->h);
+        }
+
+        for (int iy = by; iy <= by + camera->h / game_scale; iy = iy + SECTION_SIZE)
+        {
+            SDL_RenderDrawLine(renderer, 0, (iy - camera->y) * game_scale, camera->w, (iy - camera->y) * game_scale);
+        }
+    }
+    // We are close to an edge (< 20 sections far)
+    else
+    {
+        int top_left_corner = in_camera_game_scale(camera, (-X_LIMIT - camera->x) * game_scale, (-Y_LIMIT - camera->y) * game_scale);
+        int top_right_corner = in_camera_game_scale(camera, (X_LIMIT - camera->x) * game_scale, (-Y_LIMIT - camera->y) * game_scale);
+        int bottom_right_corner = in_camera_game_scale(camera, (X_LIMIT - camera->x) * game_scale, (Y_LIMIT - camera->y) * game_scale);
+        int bottom_left_corner = in_camera_game_scale(camera, (-X_LIMIT - camera->x) * game_scale, (Y_LIMIT - camera->y) * game_scale);
+        double _x_intersection = (-X_LIMIT - camera->x) * game_scale;
+        double x_intersection = (X_LIMIT - camera->x) * game_scale;
+        double _y_intersection = (-Y_LIMIT - camera->y) * game_scale;
+        double y_intersection = (Y_LIMIT - camera->y) * game_scale;
+
+        for (int ix = bx; ix <= bx + camera->w / game_scale; ix = ix + SECTION_SIZE)
+        {
+            if (ix == -X_LIMIT)
+            {
+                if (top_left_corner)
+                {
+                    SDL_SetRenderDrawColor(renderer, 255, 165, 0, 32);
+                    SDL_RenderDrawLine(renderer, (ix - camera->x) * game_scale, 0, (ix - camera->x) * game_scale, _y_intersection);
+
+                    SDL_SetRenderDrawColor(renderer, 255, 165, 0, 80);
+                    SDL_RenderDrawLine(renderer, (ix - camera->x) * game_scale, _y_intersection, (ix - camera->x) * game_scale, camera->h);
+                    SDL_SetRenderDrawColor(renderer, 255, 165, 0, 32);
+                }
+                else if (bottom_left_corner)
+                {
+                    SDL_SetRenderDrawColor(renderer, 255, 165, 0, 80);
+                    SDL_RenderDrawLine(renderer, (ix - camera->x) * game_scale, 0, (ix - camera->x) * game_scale, y_intersection);
+
+                    SDL_SetRenderDrawColor(renderer, 255, 165, 0, 32);
+                    SDL_RenderDrawLine(renderer, (ix - camera->x) * game_scale, y_intersection, (ix - camera->x) * game_scale, camera->h);
+                }
+                else
+                {
+                    if ((offset.y > 0 && y_intersection > camera->h) || (offset.y < 0 && _y_intersection < 0))
+                    {
+                        SDL_SetRenderDrawColor(renderer, 255, 165, 0, 80);
+                        SDL_RenderDrawLine(renderer, (ix - camera->x) * game_scale, 0, (ix - camera->x) * game_scale, camera->h);
+                        SDL_SetRenderDrawColor(renderer, 255, 165, 0, 32);
+                    }
+                    else
+                    {
+                        SDL_SetRenderDrawColor(renderer, 255, 165, 0, 32);
+                        SDL_RenderDrawLine(renderer, (ix - camera->x) * game_scale, 0, (ix - camera->x) * game_scale, camera->h);
+                    }
+                }
+            }
+            else if (ix == X_LIMIT)
+            {
+                if (top_right_corner)
+                {
+                    SDL_SetRenderDrawColor(renderer, 255, 165, 0, 32);
+                    SDL_RenderDrawLine(renderer, (ix - camera->x) * game_scale, 0, (ix - camera->x) * game_scale, _y_intersection);
+
+                    SDL_SetRenderDrawColor(renderer, 255, 165, 0, 80);
+                    SDL_RenderDrawLine(renderer, (ix - camera->x) * game_scale, _y_intersection, (ix - camera->x) * game_scale, camera->h);
+                    SDL_SetRenderDrawColor(renderer, 255, 165, 0, 32);
+                }
+                else if (bottom_right_corner)
+                {
+                    SDL_SetRenderDrawColor(renderer, 255, 165, 0, 80);
+                    SDL_RenderDrawLine(renderer, (ix - camera->x) * game_scale, 0, (ix - camera->x) * game_scale, y_intersection);
+
+                    SDL_SetRenderDrawColor(renderer, 255, 165, 0, 32);
+                    SDL_RenderDrawLine(renderer, (ix - camera->x) * game_scale, y_intersection, (ix - camera->x) * game_scale, camera->h);
+                }
+                else
+                {
+                    if ((offset.y > 0 && y_intersection > camera->h) || (offset.y < 0 && _y_intersection < 0))
+                    {
+                        SDL_SetRenderDrawColor(renderer, 255, 165, 0, 80);
+                        SDL_RenderDrawLine(renderer, (ix - camera->x) * game_scale, 0, (ix - camera->x) * game_scale, camera->h);
+                        SDL_SetRenderDrawColor(renderer, 255, 165, 0, 32);
+                    }
+                    else
+                    {
+                        SDL_SetRenderDrawColor(renderer, 255, 165, 0, 32);
+                        SDL_RenderDrawLine(renderer, (ix - camera->x) * game_scale, 0, (ix - camera->x) * game_scale, camera->h);
+                    }
+                }
+            }
+            else
+            {
+                SDL_RenderDrawLine(renderer, (ix - camera->x) * game_scale, 0, (ix - camera->x) * game_scale, camera->h);
+            }
+        }
+
+        for (int iy = by; iy <= by + camera->h / game_scale; iy = iy + SECTION_SIZE)
+        {
+            if (iy == -Y_LIMIT)
+            {
+                if (top_left_corner)
+                {
+                    SDL_SetRenderDrawColor(renderer, 255, 165, 0, 32);
+                    SDL_RenderDrawLine(renderer, 0, (iy - camera->y) * game_scale, _x_intersection, (iy - camera->y) * game_scale);
+
+                    SDL_SetRenderDrawColor(renderer, 255, 165, 0, 80);
+                    SDL_RenderDrawLine(renderer, _x_intersection, (iy - camera->y) * game_scale, camera->w, (iy - camera->y) * game_scale);
+                    SDL_SetRenderDrawColor(renderer, 255, 165, 0, 32);
+                }
+                else if (top_right_corner)
+                {
+                    SDL_SetRenderDrawColor(renderer, 255, 165, 0, 80);
+                    SDL_RenderDrawLine(renderer, 0, (iy - camera->y) * game_scale, x_intersection, (iy - camera->y) * game_scale);
+
+                    SDL_SetRenderDrawColor(renderer, 255, 165, 0, 32);
+                    SDL_RenderDrawLine(renderer, x_intersection, (iy - camera->y) * game_scale, camera->w, (iy - camera->y) * game_scale);
+                }
+                else
+                {
+                    if ((offset.x > 0 && x_intersection > camera->w) || (offset.x < 0 && _x_intersection < 0))
+                    {
+                        SDL_SetRenderDrawColor(renderer, 255, 165, 0, 80);
+                        SDL_RenderDrawLine(renderer, 0, (iy - camera->y) * game_scale, camera->w, (iy - camera->y) * game_scale);
+                        SDL_SetRenderDrawColor(renderer, 255, 165, 0, 32);
+                    }
+                    else
+                    {
+                        SDL_SetRenderDrawColor(renderer, 255, 165, 0, 32);
+                        SDL_RenderDrawLine(renderer, 0, (iy - camera->y) * game_scale, camera->w, (iy - camera->y) * game_scale);
+                    }
+                }
+            }
+            else if (iy == Y_LIMIT)
+            {
+                if (bottom_left_corner)
+                {
+                    SDL_SetRenderDrawColor(renderer, 255, 165, 0, 32);
+                    SDL_RenderDrawLine(renderer, 0, (iy - camera->y) * game_scale, _x_intersection, (iy - camera->y) * game_scale);
+
+                    SDL_SetRenderDrawColor(renderer, 255, 165, 0, 80);
+                    SDL_RenderDrawLine(renderer, _x_intersection, (iy - camera->y) * game_scale, camera->w, (iy - camera->y) * game_scale);
+                    SDL_SetRenderDrawColor(renderer, 255, 165, 0, 32);
+                }
+                else if (bottom_right_corner)
+                {
+                    SDL_SetRenderDrawColor(renderer, 255, 165, 0, 80);
+                    SDL_RenderDrawLine(renderer, 0, (iy - camera->y) * game_scale, x_intersection, (iy - camera->y) * game_scale);
+
+                    SDL_SetRenderDrawColor(renderer, 255, 165, 0, 32);
+                    SDL_RenderDrawLine(renderer, x_intersection, (iy - camera->y) * game_scale, camera->w, (iy - camera->y) * game_scale);
+                }
+                else
+                {
+                    if ((offset.x > 0 && x_intersection > camera->w) || (offset.x < 0 && _x_intersection < 0))
+                    {
+                        SDL_SetRenderDrawColor(renderer, 255, 165, 0, 80);
+                        SDL_RenderDrawLine(renderer, 0, (iy - camera->y) * game_scale, camera->w, (iy - camera->y) * game_scale);
+                        SDL_SetRenderDrawColor(renderer, 255, 165, 0, 32);
+                    }
+                    else
+                    {
+                        SDL_SetRenderDrawColor(renderer, 255, 165, 0, 32);
+                        SDL_RenderDrawLine(renderer, 0, (iy - camera->y) * game_scale, camera->w, (iy - camera->y) * game_scale);
+                    }
+                }
+            }
+            else
+            {
+                SDL_RenderDrawLine(renderer, 0, (iy - camera->y) * game_scale, camera->w, (iy - camera->y) * game_scale);
+            }
+        }
+    }
+}
+
+/*
+ * Draw screen frame.
+ */
+void draw_screen_frame(struct camera_t *camera)
+{
+    SDL_Rect top_frame;
+    top_frame.x = 0;
+    top_frame.y = 0;
+    top_frame.w = camera->w;
+    top_frame.h = 2 * PROJECTION_RADIUS;
+
+    SDL_Rect left_frame;
+    left_frame.x = 0;
+    left_frame.y = 2 * PROJECTION_RADIUS;
+    left_frame.w = 2 * PROJECTION_RADIUS;
+    left_frame.h = camera->h - 4 * PROJECTION_RADIUS;
+
+    SDL_Rect bottom_frame;
+    bottom_frame.x = 0;
+    bottom_frame.y = camera->h - 2 * PROJECTION_RADIUS;
+    bottom_frame.w = camera->w;
+    bottom_frame.h = 2 * PROJECTION_RADIUS;
+
+    SDL_Rect right_frame;
+    right_frame.x = camera->w - 2 * PROJECTION_RADIUS;
+    right_frame.y = 2 * PROJECTION_RADIUS;
+    right_frame.w = 2 * PROJECTION_RADIUS;
+    right_frame.h = camera->h - 4 * PROJECTION_RADIUS;
+
+    SDL_SetRenderDrawColor(renderer, 255, 165, 0, 22);
+    SDL_RenderFillRect(renderer, &top_frame);
+    SDL_RenderFillRect(renderer, &left_frame);
+    SDL_RenderFillRect(renderer, &bottom_frame);
+    SDL_RenderFillRect(renderer, &right_frame);
 }

@@ -11,11 +11,11 @@ struct game_console_entry
     SDL_Rect rect;
 };
 
-// Struct for x,y float coordinates
+// Struct for x,y coordinates
 struct position_t
 {
-    float x;
-    float y;
+    double x;
+    double y;
 };
 
 // Struct for a vector
@@ -53,8 +53,8 @@ struct planet_t
 // Struct for a star entry in stars hash table
 struct star_entry
 {
-    float x;
-    float y;
+    double x;
+    double y;
     struct planet_t *star;
     struct star_entry *next;
 };
@@ -88,8 +88,8 @@ struct bgstar_t
 // Struct for camera
 struct camera_t
 {
-    float x;
-    float y;
+    double x;
+    double y;
     int w;
     int h;
 };
