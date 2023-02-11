@@ -117,7 +117,7 @@ float nearest_star_distance(struct position_t position);
 int get_star_class(float n);
 int get_planet_class(float n);
 void zoom_star(struct planet_t *planet);
-void SDL_DrawCircle(SDL_Renderer *renderer, const struct camera_t *, int xc, int yc, int radius, Uint8 r, Uint8 g, Uint8 b, Uint8 a);
+void SDL_DrawCircle(SDL_Renderer *renderer, const struct camera_t *, int xc, int yc, int radius, SDL_Color color);
 int in_camera(const struct camera_t *camera, float x, float y, float radius);
 
 int main(int argc, char *argv[])
@@ -1257,8 +1257,9 @@ void update_system(struct planet_t *planet, struct ship_t *ship, const struct ca
             int radius = distance * game_scale;
             int _x = (planet->parent->position.x - camera->x) * game_scale;
             int _y = (planet->parent->position.y - camera->y) * game_scale;
+            SDL_Color orbit_color = {255, 255, 255, orbit_opacity};
 
-            SDL_DrawCircle(renderer, camera, _x, _y, radius, 255, 255, 255, orbit_opacity);
+            SDL_DrawCircle(renderer, camera, _x, _y, radius, orbit_color);
         }
 
         // Update moons
@@ -1304,10 +1305,11 @@ void update_system(struct planet_t *planet, struct ship_t *ship, const struct ca
                     int radius = _r * game_scale;
                     int _x = (planet->position.x - camera->x) * game_scale;
                     int _y = (planet->position.y - camera->y) * game_scale;
+                    SDL_Color cutoff_color = {0, 255, 255, 25};
 
-                    SDL_DrawCircle(renderer, camera, _x, _y, radius - 1, 0, 255, 255, 25);
-                    SDL_DrawCircle(renderer, camera, _x, _y, radius - 2, 0, 255, 255, 25);
-                    SDL_DrawCircle(renderer, camera, _x, _y, radius - 3, 0, 255, 255, 25);
+                    SDL_DrawCircle(renderer, camera, _x, _y, radius - 1, cutoff_color);
+                    SDL_DrawCircle(renderer, camera, _x, _y, radius - 2, cutoff_color);
+                    SDL_DrawCircle(renderer, camera, _x, _y, radius - 3, cutoff_color);
                 }
             }
         }
@@ -1337,8 +1339,9 @@ void update_system(struct planet_t *planet, struct ship_t *ship, const struct ca
                 int radius = planet->cutoff * game_scale;
                 int _x = (planet->position.x - camera->x) * game_scale;
                 int _y = (planet->position.y - camera->y) * game_scale;
+                SDL_Color cutoff_color = {0, 255, 255, 50};
 
-                SDL_DrawCircle(renderer, camera, _x, _y, radius, 0, 255, 255, 50);
+                SDL_DrawCircle(renderer, camera, _x, _y, radius, cutoff_color);
             }
         }
     }

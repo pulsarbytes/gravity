@@ -116,12 +116,13 @@ void close_sdl(void)
  * Midpoint Circle Algorithm for drawing a circle in SDL.
  * xc, xy, radius are in game_scale.
  */
-void SDL_DrawCircle(SDL_Renderer *renderer, const struct camera_t *camera, int xc, int yc, int radius, Uint8 r, Uint8 g, Uint8 b, Uint8 a)
+void SDL_DrawCircle(SDL_Renderer *renderer, const struct camera_t *camera, int xc, int yc, int radius, SDL_Color color)
 {
-    int x = 0, y = radius;
+    int x = 0;
+    int y = radius;
     int d = 3 - 2 * radius;
 
-    SDL_SetRenderDrawColor(renderer, r, g, b, a);
+    SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a);
 
     // Draw the circle
     while (y >= x)
