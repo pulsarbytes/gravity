@@ -57,6 +57,7 @@ make
 |            | `Space` | Reset Map      |
 |            | `Esc`   | Exit Map       |
 | `K`        |         | Toggle console |
+| `O`        |         | Show orbits    |
 | `P`        |         | Pause game     |
 | `Esc`      |         | Exit program   |
 

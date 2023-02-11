@@ -18,6 +18,7 @@ extern int stop;
 extern int zoom_in;
 extern int zoom_out;
 extern int console;
+extern int orbits_on;
 extern int map_enter;
 extern int map_exit;
 extern int map_center;
@@ -68,6 +69,17 @@ void poll_events(int *quit)
             case SDL_SCANCODE_K:
                 console = !console;
                 break;
+            case SDL_SCANCODE_M:
+                if (state == NAVIGATE)
+                {
+                    state = MAP;
+                    map_enter = ON;
+                    camera_on = ON;
+                }
+                break;
+            case SDL_SCANCODE_O:
+                orbits_on = !orbits_on;
+                break;
             case SDL_SCANCODE_P:
                 if (state == NAVIGATE)
                     state = PAUSE;
@@ -77,14 +89,6 @@ void poll_events(int *quit)
             case SDL_SCANCODE_S:
                 if (state == NAVIGATE)
                     stop = ON;
-                break;
-            case SDL_SCANCODE_M:
-                if (state == NAVIGATE)
-                {
-                    state = MAP;
-                    map_enter = ON;
-                    camera_on = ON;
-                }
                 break;
             case SDL_SCANCODE_SPACE:
                 if (state == MAP)

@@ -7,12 +7,16 @@
 #include <SDL2/SDL2_gfxPrimitives.h>
 
 #include "../include/common.h"
+#include "../include/structs.h"
 
 extern SDL_Window *window;
 extern SDL_DisplayMode display_mode;
 extern SDL_Renderer *renderer;
 extern TTF_Font *font;
 extern SDL_Color text_color;
+extern float game_scale;
+
+int in_camera_game_scale(const struct camera_t *camera, int x, int y);
 
 /*
  * Initialize SDL.
@@ -110,23 +114,51 @@ void close_sdl(void)
 
 /*
  * Midpoint Circle Algorithm for drawing a circle in SDL.
+ * xc, xy, radius are in game_scale.
  */
-void SDL_DrawCircle(SDL_Renderer *renderer, int xc, int yc, int radius, Uint8 r, Uint8 g, Uint8 b, Uint8 a)
+void SDL_DrawCircle(SDL_Renderer *renderer, const struct camera_t *camera, int xc, int yc, int radius, Uint8 r, Uint8 g, Uint8 b, Uint8 a)
 {
     int x = 0, y = radius;
     int d = 3 - 2 * radius;
+
+    SDL_SetRenderDrawColor(renderer, r, g, b, a);
+
+    // Draw the circle
     while (y >= x)
     {
         // Draw the 8 points symmetrically
-        SDL_SetRenderDrawColor(renderer, r, g, b, a);
-        SDL_RenderDrawPoint(renderer, xc + x, yc + y);
-        SDL_RenderDrawPoint(renderer, xc + x, yc - y);
-        SDL_RenderDrawPoint(renderer, xc - x, yc + y);
-        SDL_RenderDrawPoint(renderer, xc - x, yc - y);
-        SDL_RenderDrawPoint(renderer, xc + y, yc + x);
-        SDL_RenderDrawPoint(renderer, xc + y, yc - x);
-        SDL_RenderDrawPoint(renderer, xc - y, yc + x);
-        SDL_RenderDrawPoint(renderer, xc - y, yc - x);
+        if (in_camera_game_scale(camera, xc + x, yc + y))
+        {
+            SDL_RenderDrawPoint(renderer, xc + x, yc + y);
+        }
+        if (in_camera_game_scale(camera, xc + x, yc - y))
+        {
+            SDL_RenderDrawPoint(renderer, xc + x, yc - y);
+        }
+        if (in_camera_game_scale(camera, xc - x, yc + y))
+        {
+            SDL_RenderDrawPoint(renderer, xc - x, yc + y);
+        }
+        if (in_camera_game_scale(camera, xc - x, yc - y))
+        {
+            SDL_RenderDrawPoint(renderer, xc - x, yc - y);
+        }
+        if (in_camera_game_scale(camera, xc + y, yc + x))
+        {
+            SDL_RenderDrawPoint(renderer, xc + y, yc + x);
+        }
+        if (in_camera_game_scale(camera, xc + y, yc - x))
+        {
+            SDL_RenderDrawPoint(renderer, xc + y, yc - x);
+        }
+        if (in_camera_game_scale(camera, xc - y, yc + x))
+        {
+            SDL_RenderDrawPoint(renderer, xc - y, yc + x);
+        }
+        if (in_camera_game_scale(camera, xc - y, yc - x))
+        {
+            SDL_RenderDrawPoint(renderer, xc - y, yc - x);
+        }
 
         if (d < 0)
             d = d + 4 * x + 6;
@@ -135,6 +167,7 @@ void SDL_DrawCircle(SDL_Renderer *renderer, int xc, int yc, int radius, Uint8 r,
             d = d + 4 * (x - y) + 10;
             y--;
         }
+
         x++;
     }
 }

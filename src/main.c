@@ -43,12 +43,12 @@ SDL_Color text_color;
 const float g_launch = 0.7 * G_CONSTANT;
 const float g_thrust = 1 * G_CONSTANT;
 static int start = 1;
+static float save_scale = 1;
+static int speed_limit = BASE_SPEED_LIMIT;
+static int landing_stage = STAGE_OFF;
+struct vector_t velocity;
 int state = NAVIGATE;
 float game_scale = ZOOM_NAVIGATE;
-float save_scale = 1;
-int speed_limit = BASE_SPEED_LIMIT;
-int landing_stage = STAGE_OFF;
-struct vector_t velocity;
 
 // Keep track of keyboard inputs
 int left = OFF;
@@ -62,6 +62,9 @@ int stop = OFF;
 int zoom_in = OFF;
 int zoom_out = OFF;
 int console = ON;
+int orbits_on = SHOW_ORBITS;
+
+// Keep track of events
 int map_enter = OFF;
 int map_exit = OFF;
 int map_center = OFF;
@@ -114,7 +117,8 @@ float nearest_star_distance(struct position_t position);
 int get_star_class(float n);
 int get_planet_class(float n);
 void zoom_star(struct planet_t *planet);
-void SDL_DrawCircle(SDL_Renderer *renderer, int xc, int yc, int radius, Uint8 r, Uint8 g, Uint8 b, Uint8 a);
+void SDL_DrawCircle(SDL_Renderer *renderer, const struct camera_t *, int xc, int yc, int radius, Uint8 r, Uint8 g, Uint8 b, Uint8 a);
+int in_camera(const struct camera_t *camera, float x, float y, float radius);
 
 int main(int argc, char *argv[])
 {
@@ -264,9 +268,9 @@ void onNavigate(struct bgstar_t bgstars[], int bgstars_count, struct ship_t *shi
     if (BGSTARS_ON)
         update_bgstars(bgstars, bgstars_count, ship->vx, ship->vy, camera);
 
+    // Generate stars
     if (camera_on)
     {
-        // Generate stars
         generate_stars(*offset);
     }
 
@@ -1206,42 +1210,55 @@ void update_system(struct planet_t *planet, struct ship_t *ship, const struct ca
     // Update planets & moons
     if (planet->level != LEVEL_STAR)
     {
+        float distance;
+        float orbit_opacity;
+
         if (state == NAVIGATE)
         {
-            float delta_x = 0.0;
-            float delta_y = 0.0;
-            float distance;
-            float g_planet = G_CONSTANT;
-            float dx = planet->parent->dx;
-            float dy = planet->parent->dy;
-
             // Update planet position
             planet->position.x += planet->parent->dx;
             planet->position.y += planet->parent->dy;
 
             // Find distance from parent
-            delta_x = planet->parent->position.x - planet->position.x;
-            delta_y = planet->parent->position.y - planet->position.y;
+            float delta_x = planet->parent->position.x - planet->position.x;
+            float delta_y = planet->parent->position.y - planet->position.y;
             distance = sqrt(delta_x * delta_x + delta_y * delta_y);
 
             // Determine speed and position shift
             if (distance > (planet->parent->radius + planet->radius))
             {
-                g_planet = G_CONSTANT * (float)(planet->parent->radius * planet->parent->radius) / (distance * distance);
+                float g_planet = G_CONSTANT * planet->parent->radius * planet->parent->radius / (distance * distance);
 
                 planet->vx += g_planet * delta_x / distance;
                 planet->vy += g_planet * delta_y / distance;
-
-                dx = (float)planet->vx / FPS;
-                dy = (float)planet->vy / FPS;
-
-                planet->dx = dx;
-                planet->dy = dy;
+                planet->dx = planet->vx / FPS;
+                planet->dy = planet->vy / FPS;
             }
 
             // Update planet position
-            planet->position.x += dx;
-            planet->position.y += dy;
+            planet->position.x += planet->vx / FPS;
+            planet->position.y += planet->vy / FPS;
+
+            orbit_opacity = 45;
+        }
+        else if (state == MAP)
+        {
+            // Find distance from parent
+            float delta_x = planet->parent->position.x - planet->position.x;
+            float delta_y = planet->parent->position.y - planet->position.y;
+            distance = sqrt(delta_x * delta_x + delta_y * delta_y);
+
+            orbit_opacity = 32;
+        }
+
+        // Draw orbit
+        if (orbits_on)
+        {
+            int radius = distance * game_scale;
+            int _x = (planet->parent->position.x - camera->x) * game_scale;
+            int _y = (planet->parent->position.y - camera->y) * game_scale;
+
+            SDL_DrawCircle(renderer, camera, _x, _y, radius, 255, 255, 255, orbit_opacity);
         }
 
         // Update moons
@@ -1280,16 +1297,18 @@ void update_system(struct planet_t *planet, struct ship_t *ship, const struct ca
                     update_system(planet->planets[i], ship, camera, position, state);
                 }
 
-                // Draw cutoff area circles
-                int _r = planet->class * SECTION_SIZE / 2;
-                int radius = _r * game_scale;
-                int _x = (planet->position.x - camera->x) * game_scale;
-                int _y = (planet->position.y - camera->y) * game_scale;
+                if (orbits_on)
+                {
+                    // Draw cutoff area circles
+                    int _r = planet->class * SECTION_SIZE / 2;
+                    int radius = _r * game_scale;
+                    int _x = (planet->position.x - camera->x) * game_scale;
+                    int _y = (planet->position.y - camera->y) * game_scale;
 
-                SDL_DrawCircle(renderer, _x, _y, radius - 1, 0, 255, 255, 20);
-                SDL_DrawCircle(renderer, _x, _y, radius - 2, 0, 255, 255, 20);
-                SDL_DrawCircle(renderer, _x, _y, radius - 3, 0, 255, 255, 20);
-                SDL_DrawCircle(renderer, _x, _y, radius - 4, 0, 255, 255, 20);
+                    SDL_DrawCircle(renderer, camera, _x, _y, radius - 1, 0, 255, 255, 25);
+                    SDL_DrawCircle(renderer, camera, _x, _y, radius - 2, 0, 255, 255, 25);
+                    SDL_DrawCircle(renderer, camera, _x, _y, radius - 3, 0, 255, 255, 25);
+                }
             }
         }
         else if (state == NAVIGATE)
@@ -1311,12 +1330,21 @@ void update_system(struct planet_t *planet, struct ship_t *ship, const struct ca
                     update_system(planet->planets[i], ship, camera, position, state);
                 }
             }
+
+            // Draw cutoff area circle
+            if (orbits_on && distance_star < 2 * planet->cutoff)
+            {
+                int radius = planet->cutoff * game_scale;
+                int _x = (planet->position.x - camera->x) * game_scale;
+                int _y = (planet->position.y - camera->y) * game_scale;
+
+                SDL_DrawCircle(renderer, camera, _x, _y, radius, 0, 255, 255, 50);
+            }
         }
     }
 
-    // Draw if in camera
-    if (planet->position.x - planet->radius <= camera->x + camera->w / game_scale && planet->position.x + planet->radius > camera->x &&
-        planet->position.y - planet->radius <= camera->y + camera->h / game_scale && planet->position.y + planet->radius > camera->y)
+    // Draw planet
+    if (in_camera(camera, planet->position.x, planet->position.y, planet->radius))
     {
         planet->rect.x = (int)(planet->position.x - planet->radius - camera->x) * game_scale;
         planet->rect.y = (int)(planet->position.y - planet->radius - camera->y) * game_scale;
@@ -1446,7 +1474,8 @@ void apply_gravity_to_ship(struct planet_t *planet, struct ship_t *ship, const s
     // Ship inside cutoff
     else if (distance < planet->cutoff)
     {
-        g_planet = G_CONSTANT * (float)(planet->radius * planet->radius) / (distance * distance);
+        landing_stage = STAGE_OFF;
+        g_planet = G_CONSTANT * planet->radius * planet->radius / (distance * distance);
 
         ship->vx += g_planet * delta_x / distance;
         ship->vy += g_planet * delta_y / distance;
@@ -1532,16 +1561,13 @@ void update_ship(struct ship_t *ship, const struct camera_t *camera)
     }
 
     // Draw ship if in camera
-    if (camera_on || (!camera_on && (ship->position.x <= camera->x + camera->w / game_scale && ship->position.x > camera->x &&
-                                     ship->position.y <= camera->y + camera->h / game_scale && ship->position.y > camera->y)))
+    if (in_camera(camera, ship->position.x, ship->position.y, ship->radius))
     {
         SDL_RenderCopyEx(renderer, ship->texture, &ship->main_img_rect, &ship->rect, ship->angle, &ship->rotation_pt, SDL_FLIP_NONE);
     }
     // Draw ship projection
     else if (PROJECTIONS_ON)
-    {
         project_ship(ship, camera, NAVIGATE);
-    }
 
     // Draw ship thrust
     if (thrust)

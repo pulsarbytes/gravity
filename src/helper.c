@@ -582,3 +582,22 @@ void zoom_star(struct planet_t *planet)
         }
     }
 }
+
+/*
+ * Check whether point is in camera in game scale.
+ * x, y are relative to camera->x, camera->y.
+ */
+int in_camera_game_scale(const struct camera_t *camera, int x, int y)
+{
+    return x >= 0 && x < camera->w && y >= 0 && y < camera->h;
+}
+
+/*
+ * Check whether object with center (x,y) and radius r is in camera.
+ * x, y are absolute full scale coordinates. Radius is full scale.
+ */
+int in_camera(const struct camera_t *camera, float x, float y, float radius)
+{
+    return x + radius >= camera->x && x - radius - camera->x < camera->w / game_scale &&
+           y + radius >= camera->y && y - radius - camera->y < camera->h / game_scale;
+}

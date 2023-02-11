@@ -28,12 +28,15 @@
 #define SHIP_GRAVITY_ON 1
 #define PROJECTIONS_ON 1
 #define SOLAR_SYSTEMS_ON 1
+#define SHOW_ORBITS 1
 #define PROJECTION_RADIUS 5       // Default: 10
-#define SHIP_PROJECTION_RADIUS 10 // Default: 10
+#define SHIP_PROJECTION_RADIUS 12 // Default: 12
 #define ZOOM_STEP 0.01            // Default: 0.01
 #define ZOOM_MAX 1                // Default: 1
 
 // Navigate
+#define STARTING_X -40000      // Left < 0. Default: -40000
+#define STARTING_Y -80000      // Up < 0. Default: -80000
 #define ZOOM_NAVIGATE_MIN 0.20 // Default: 0.20
 #define ZOOM_NAVIGATE 1        // Default: 1
 
@@ -45,8 +48,6 @@
 
 // Ship
 #define START_IN_ORBIT 1
-#define STARTING_X -40000    // Left < 0. Default: -40000
-#define STARTING_Y -80000    // Up < 0. Default: -80000
 #define SHIP_RADIUS 17       // Default: 17
 #define BASE_SPEED_LIMIT 300 // Default: 300
 
