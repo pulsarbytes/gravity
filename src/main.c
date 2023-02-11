@@ -95,7 +95,7 @@ int create_bgstars(struct bgstar_t bgstars[], int max_bgstars);
 void update_bgstars(struct bgstar_t bgstars[], int stars_count, float vx, float vy, const struct camera_t *);
 struct planet_t *create_star(struct position_t);
 uint64_t float_pair_hash_order_sensitive(struct position_t);
-void create_system(struct planet_t *, struct position_t);
+void create_system(struct planet_t *, struct position_t, pcg32_random_t rng);
 struct ship_t create_ship(int radius, struct position_t);
 void update_system(struct planet_t *, struct ship_t *, const struct camera_t *, struct position_t, int state);
 void project_planet(struct planet_t *, const struct camera_t *, int state);
@@ -928,7 +928,7 @@ struct planet_t *create_star(struct position_t position)
  * Create a system (recursive). Takes a pointer to a star or planet
  * and populates it with children planets.
  */
-void create_system(struct planet_t *planet, struct position_t position)
+void create_system(struct planet_t *planet, struct position_t position, pcg32_random_t rng)
 {
     if (planet->level == LEVEL_STAR && planet->initialized == 1)
         return;
@@ -940,12 +940,6 @@ void create_system(struct planet_t *planet, struct position_t position)
 
     if (max_planets == 0)
         return;
-
-    // Use a local rng
-    pcg32_random_t rng;
-
-    // Seed with a fixed constant
-    pcg32_srandom_r(&rng, float_hash(position.x), float_hash(position.y));
 
     if (planet->level == LEVEL_STAR)
     {
@@ -1061,7 +1055,7 @@ void create_system(struct planet_t *planet, struct position_t position)
                 planet->planets[i + 1] = NULL;
                 i++;
 
-                create_system(_planet, position);
+                create_system(_planet, position, rng);
             }
             else
                 break;
@@ -1287,7 +1281,14 @@ void update_system(struct planet_t *planet, struct ship_t *ship, const struct ca
                 if (!planet->initialized && SOLAR_SYSTEMS_ON)
                 {
                     struct position_t star_position = {.x = planet->position.x, .y = planet->position.y};
-                    create_system(planet, star_position);
+
+                    // Use a local rng
+                    pcg32_random_t rng;
+
+                    // Seed with a fixed constant
+                    pcg32_srandom_r(&rng, float_hash(planet->position.x), float_hash(planet->position.y));
+
+                    create_system(planet, star_position, rng);
                 }
 
                 // Update planets
@@ -1321,7 +1322,14 @@ void update_system(struct planet_t *planet, struct ship_t *ship, const struct ca
                 if (!planet->initialized)
                 {
                     struct position_t star_position = {.x = planet->position.x, .y = planet->position.y};
-                    create_system(planet, star_position);
+
+                    // Use a local rng
+                    pcg32_random_t rng;
+
+                    // Seed with a fixed constant
+                    pcg32_srandom_r(&rng, float_hash(planet->position.x), float_hash(planet->position.y));
+
+                    create_system(planet, star_position, rng);
                 }
 
                 // Update planets
