@@ -16,12 +16,12 @@
 #endif
 
 // Background stars
-#define BGSTARS_MAX_SPEED 300 // Default: 300
-#define BGSTARS_SQUARE 10000  // Groups X pixels. Default: 10000
-#define BGSTARS_PER_SQUARE 5  // X stars per square. Default: 3
+#define BSTARS_MAX_SPEED 300 // Default: 300
+#define BSTARS_SQUARE 10000  // Groups X pixels. Default: 10000
+#define BSTARS_PER_SQUARE 5  // X stars per square. Default: 3
 
 // Game settings
-#define BGSTARS_ON 1
+#define BSTARS_ON 1
 #define CAMERA_ON 1
 #define CONSOLE_ON 1
 #define COLLISIONS_ON 1
@@ -62,6 +62,9 @@
                                   // We use this in the modulo operations of the hash function output
 #define GALAXY_SECTION_SIZE 10000 // Default: 10000
 
+// Galaxy cloud
+#define MAX_GSTARS 90000 // Default 90000. (300 * 300)
+
 // Starting position
 #define UNIVERSE_START_X -140000
 #define UNIVERSE_START_Y -70000
@@ -69,7 +72,7 @@
 #define GALAXY_START_Y 0      // Default: 0
 
 // Galaxies
-#define GALAXY_SCALE 6                  // We multiply radius by this factor to get galaxy full size radius in points. Default: 8000
+#define GALAXY_SCALE 100                // We multiply radius by this factor to get galaxy full size radius in points. Default: 100 (min 10, max 10000)
                                         // Use a smaller number to generate smaller galaxies
 #define GALAXY_CLASS_1_RADIUS_MIN 3000  // Default: 3000
 #define GALAXY_CLASS_1_RADIUS_MAX 1000  // Default: 1000 (+ 3000 = 4000) (max 5000)

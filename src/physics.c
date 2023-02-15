@@ -58,22 +58,3 @@ double find_nearest_section_axis(double n, int size)
 
     return diff_down < diff_up ? round_down : round_up;
 }
-
-/**
- * Calculates the density of a cloud pattern at a given point
- *
- * @x: x coordinate of the point
- * @y: y coordinate of the point
- * @density: scaling factor to adjust the overall density of the pattern
- *
- * Returns a value between 0 and 1 that represents the density of the cloud pattern at the given point.
- */
-double cloud_density(double x, double y, float radius, float density)
-{
-    double distanceFromCenter = sqrt((x - radius / 2) * (x - radius / 2) + (y - radius / 2) * (y - radius / 2));
-    double falloff = exp(-0.2 * (distanceFromCenter / (radius / 4)) * (distanceFromCenter / (radius / 4)));
-    double edgeFactor = 1.0 - distanceFromCenter / (radius / 2);
-    double adjustedDensityFactor = density * pow(edgeFactor, 2);
-
-    return falloff * adjustedDensityFactor;
-}

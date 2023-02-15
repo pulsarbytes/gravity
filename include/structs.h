@@ -68,19 +68,25 @@ struct star_entry
     struct star_entry *next;
 };
 
+// Struct for a galaxy cloud star
+struct gstar_t
+{
+    struct position_t position;
+    unsigned short opacity;
+};
+
 // Struct for a galaxy
 struct galaxy_t
 {
+    int initialized;
     char name[MAX_OBJECT_NAME];
-    char *image;
     int class;
     float radius;
     float cutoff;
     struct position_t position;
-    SDL_Texture *texture;
-    SDL_Rect rect;
     SDL_Rect projection;
     SDL_Color color;
+    struct gstar_t gstars[MAX_GSTARS];
 };
 
 // Struct for a galaxy entry in galaxies hash table
@@ -111,7 +117,7 @@ struct ship_t
 };
 
 // Struct for a background star
-struct bgstar_t
+struct bstar_t
 {
     struct position_t position;
     SDL_Rect rect;

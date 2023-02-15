@@ -32,6 +32,7 @@ double find_nearest_section_axis(double n, int size);
 uint64_t unique_index(struct position_t, int modulo, int entity_type);
 void delete_star(struct position_t position);
 void delete_galaxy(struct position_t position);
+void update_projection_coordinates(void *, int entity_type, const struct camera_t *, int state);
 
 /*
  * Clean up planets (recursive).
@@ -189,8 +190,6 @@ void delete_galaxy(struct position_t position)
         if (entry->x == position.x && entry->y == position.y)
         {
             // Clean up galaxy
-            SDL_DestroyTexture(entry->galaxy->texture);
-            entry->galaxy->texture = NULL;
             free(entry->galaxy);
             entry->galaxy = NULL;
 
@@ -355,7 +354,7 @@ void update_projection_coordinates(void *ptr, int entity_type, const struct came
     }
     else if (ship)
     {
-        if (state == MAP)
+        if (state == NAVIGATE || state == MAP)
         {
             delta_x = ship->position.x - camera->x - (camera_w / 2);
             delta_y = ship->position.y - camera->y - (camera_h / 2);
@@ -898,17 +897,6 @@ bool point_in_array(struct position_t p, struct position_t arr[], int len)
 }
 
 /*
- * Zoom in/out a galaxy.
- */
-void zoom_galaxy(struct galaxy_t *galaxy)
-{
-    galaxy->rect.x = (galaxy->position.x - galaxy->radius) * game_scale;
-    galaxy->rect.y = (galaxy->position.y - galaxy->radius) * game_scale;
-    galaxy->rect.w = 2 * galaxy->radius * game_scale;
-    galaxy->rect.h = 2 * galaxy->radius * game_scale;
-}
-
-/*
  * Zoom in/out a star system (recursive).
  */
 void zoom_star(struct planet_t *planet)
@@ -1064,5 +1052,73 @@ void draw_section_lines(struct camera_t *camera, int section_size, SDL_Color col
     for (int iy = by; iy <= by + camera->h / game_scale; iy = iy + section_size)
     {
         SDL_RenderDrawLine(renderer, 0, (iy - camera->y) * game_scale, camera->w, (iy - camera->y) * game_scale);
+    }
+}
+
+void create_galaxy_cloud(struct galaxy_t *galaxy)
+{
+    float radius = galaxy->radius;
+    int section_size = 100;
+    float ix, iy;
+    int i = 0;
+    int max_density = 40;
+
+    // Use a local rng
+    pcg32_random_t rng;
+
+    // Scaling parameter
+    float a = radius / 2.0f;
+
+    for (ix = -radius; ix <= radius; ix += section_size)
+    {
+        for (iy = -radius; iy <= radius; iy += section_size)
+        {
+            // Calculate the distance from the center of the galaxy
+            float distance_from_center = sqrt(ix * ix + iy * iy);
+
+            // Check that point is within galaxy radius
+            if (distance_from_center > radius)
+                continue;
+
+            // Create rng seed by combining x,y values
+            struct position_t position = {.x = ix, .y = iy};
+            uint64_t seed = pair_hash_order_sensitive(position);
+
+            // Set galaxy hash as initseq
+            uint64_t initseq = pair_hash_order_sensitive_2(galaxy->position);
+
+            // Seed with a fixed constant
+            pcg32_srandom_r(&rng, seed, initseq);
+
+            // Calculate density based on distance from center
+            float density = (max_density / pow((distance_from_center / a + 1), 4));
+
+            int has_star = abs(pcg32_random_r(&rng)) % 1000 < density;
+
+            if (has_star)
+            {
+                struct gstar_t star;
+                star.position.x = ix;
+                star.position.y = iy;
+                star.opacity = ((rand() % 196) + 25); // Get a random color between 25 - 195
+                galaxy->gstars[i++] = star;
+            }
+        }
+    }
+
+    // Set galaxy as initialized
+    galaxy->initialized = i;
+}
+
+void draw_galaxy_cloud(struct galaxy_t *galaxy, const struct camera_t *camera, int gstars_count)
+{
+    for (int i = 0; i < gstars_count; i++)
+    {
+        SDL_SetRenderDrawColor(renderer, 255, 255, 255, galaxy->gstars[i].opacity);
+
+        int x = ((galaxy->position.x - camera->x) * game_scale + galaxy->gstars[i].position.x * game_scale);
+        int y = ((galaxy->position.y - camera->y) * game_scale + galaxy->gstars[i].position.y * game_scale);
+
+        SDL_RenderDrawPoint(renderer, x, y);
     }
 }
