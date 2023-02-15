@@ -22,9 +22,9 @@ extern int orbits_on;
 extern int map_enter;
 extern int map_exit;
 extern int map_center;
-extern int galaxy_enter;
-extern int galaxy_exit;
-extern int galaxy_center;
+extern int universe_enter;
+extern int universe_exit;
+extern int universe_center;
 
 /*
  * Poll SDL events.
@@ -43,6 +43,48 @@ void poll_events(int *quit)
         case SDL_KEYDOWN:
             switch (event.key.keysym.scancode)
             {
+            case SDL_SCANCODE_C:
+                if (state == NAVIGATE)
+                    camera_on = !camera_on;
+                else if (state == MAP || state == UNIVERSE)
+                    camera_on = ON;
+                break;
+            case SDL_SCANCODE_K:
+                console = !console;
+                break;
+            case SDL_SCANCODE_M:
+                if (state == UNIVERSE)
+                    universe_exit = ON;
+                if (state == NAVIGATE || state == UNIVERSE)
+                {
+                    state = MAP;
+                    map_enter = ON;
+                    camera_on = ON;
+                }
+                break;
+            case SDL_SCANCODE_O:
+                orbits_on = !orbits_on;
+                break;
+            case SDL_SCANCODE_P:
+                if (state == NAVIGATE)
+                    state = PAUSE;
+                else if (state == PAUSE)
+                    state = NAVIGATE;
+                break;
+            case SDL_SCANCODE_S:
+                if (state == NAVIGATE)
+                    stop = ON;
+                break;
+            case SDL_SCANCODE_U:
+                if (state == MAP)
+                    map_exit = ON;
+                if (state == NAVIGATE || state == MAP)
+                {
+                    state = UNIVERSE;
+                    universe_enter = ON;
+                    camera_on = ON;
+                }
+                break;
             case SDL_SCANCODE_LEFT:
                 right = OFF;
                 left = ON;
@@ -63,47 +105,11 @@ void poll_events(int *quit)
                 reverse = ON;
                 down = ON;
                 break;
-            case SDL_SCANCODE_C:
-                if (state == NAVIGATE)
-                    camera_on = !camera_on;
-                else if (state == MAP || state == GALAXY)
-                    camera_on = ON;
-                break;
-            case SDL_SCANCODE_G:
-                if (state == NAVIGATE || state == MAP)
-                {
-                    state = GALAXY;
-                    galaxy_enter = ON;
-                    camera_on = ON;
-                }
-                break;
-            case SDL_SCANCODE_K:
-                console = !console;
-                break;
-            case SDL_SCANCODE_M:
-                if (state == NAVIGATE || state == GALAXY)
-                {
-                    state = MAP;
-                    map_enter = ON;
-                    camera_on = ON;
-                }
-                break;
-            case SDL_SCANCODE_O:
-                orbits_on = !orbits_on;
-                break;
-            case SDL_SCANCODE_P:
-                if (state == NAVIGATE)
-                    state = PAUSE;
-                else if (state == PAUSE)
-                    state = NAVIGATE;
-                break;
-            case SDL_SCANCODE_S:
-                if (state == NAVIGATE)
-                    stop = ON;
-                break;
             case SDL_SCANCODE_SPACE:
                 if (state == MAP)
                     map_center = ON;
+                else if (state == UNIVERSE)
+                    universe_center = ON;
                 break;
             case SDL_SCANCODE_ESCAPE:
                 if (state == MAP)
@@ -111,10 +117,10 @@ void poll_events(int *quit)
                     state = NAVIGATE;
                     map_exit = ON;
                 }
-                else if (state == GALAXY)
+                else if (state == UNIVERSE)
                 {
                     state = NAVIGATE;
-                    galaxy_exit = ON;
+                    universe_exit = ON;
                 }
                 else if (state == NAVIGATE)
                     *quit = 1;
@@ -134,6 +140,9 @@ void poll_events(int *quit)
         case SDL_KEYUP:
             switch (event.key.keysym.scancode)
             {
+            case SDL_SCANCODE_S:
+                stop = OFF;
+                break;
             case SDL_SCANCODE_LEFT:
                 left = OFF;
                 break;
@@ -147,9 +156,6 @@ void poll_events(int *quit)
             case SDL_SCANCODE_DOWN:
                 reverse = OFF;
                 down = OFF;
-                break;
-            case SDL_SCANCODE_S:
-                stop = OFF;
                 break;
             case SDL_SCANCODE_LEFTBRACKET:
                 zoom_out = OFF;

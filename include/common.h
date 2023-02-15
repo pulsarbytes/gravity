@@ -6,9 +6,9 @@
 #define FULLSCREEN 1
 #define FONT_SIZE 14 // Default: 14
 #define MAX(x, y) ((x) > (y) ? (x) : (y))
-#define MAX_PLANET_NAME 64 // Default: 64
+#define MAX_OBJECT_NAME 64 // Default: 64
 
-// Physics
+// Math/Physics
 #define COSMIC_CONSTANT 7.75 // Default: 7.75
 #define G_CONSTANT 5         // Default: 5
 #ifndef M_PI
@@ -29,38 +29,60 @@
 #define PROJECTIONS_ON 1
 #define SOLAR_SYSTEMS_ON 1
 #define SHOW_ORBITS 1
-#define PROJECTION_RADIUS 5       // Default: 10
+#define START_IN_ORBIT 1
+#define PROJECTION_RADIUS 5       // Default: 5
 #define SHIP_PROJECTION_RADIUS 12 // Default: 12
-#define ZOOM_STEP 0.01            // Default: 0.01
-#define ZOOM_MAX 1                // Default: 1
+#define SHIP_RADIUS 17            // Default: 17
+#define BASE_SPEED_LIMIT 300      // Default: 300
+#define MAP_SPEED_MAX 35          // Zoom in. Default: 35
+#define MAP_SPEED_MIN 10          // Zoom out. Default: 10
 
-// Navigate
-#define STARTING_X -200000000  // Left < 0. Default: -40000
-#define STARTING_Y 200000000   // Up < 0. Default: -80000
+// Zoom
+#define ZOOM_STEP 0.01         // Default: 0.01
+#define ZOOM_MAX 1             // Default: 1
+#define ZOOM_UNIVERSE 0.01     // Default: 0.01
 #define ZOOM_NAVIGATE_MIN 0.20 // Default: 0.20
 #define ZOOM_NAVIGATE 1        // Default: 1
+#define ZOOM_MAP_MIN 0.01      // Default: 0.01
+#define ZOOM_MAP 0.02          // Default: 0.02
+
+// Universe
+#define UNIVERSE_REGION_SIZE 30     // Sections per axis. Even number; Default: 30
+#define UNIVERSE_DENSITY 10         // Per 1000 sections. Default: 20
+#define MAX_GALAXIES 907            // First prime number > (UNIVERSE_REGION_SIZE * UNIVERSE_REGION_SIZE). Default 907
+                                    // We use this in the modulo operations of the hash function output
+#define UNIVERSE_SECTION_SIZE 10000 // Default: 10000
+#define UNIVERSE_X_LIMIT 200000000  // Default: 200000000
+#define UNIVERSE_Y_LIMIT 200000000  // Default: 200000000
 
 // Galaxy
-#define X_LIMIT 200000000 // Default: 200000000
-#define Y_LIMIT 200000000 // Default: 200000000
+#define GALAXY_REGION_SIZE 30     // Sections per axis. Even number; Default: 30
+#define GALAXY_DENSITY 20         // Per 1000 sections. Default: 20
+#define MAX_STARS 907             // First prime number > (GALAXY_REGION_SIZE * GALAXY_REGION_SIZE). Default 907
+                                  // We use this in the modulo operations of the hash function output
+#define GALAXY_SECTION_SIZE 10000 // Default: 10000
 
-// Map
-#define MAP_SPEED_MAX 35  // Zoom in. Default: 35
-#define MAP_SPEED_MIN 10  // Zoom out. Default: 10
-#define ZOOM_MAP_MIN 0.01 // Default: 0.01
-#define ZOOM_MAP 0.02     // Default: 0.02
+// Starting position
+#define UNIVERSE_START_X -140000
+#define UNIVERSE_START_Y -70000
+#define GALAXY_START_X -56032 // Default: -56032000
+#define GALAXY_START_Y 0      // Default: 0
 
-// Ship
-#define START_IN_ORBIT 1
-#define SHIP_RADIUS 17       // Default: 17
-#define BASE_SPEED_LIMIT 300 // Default: 300
-
-// Stars regions
-#define REGION_SIZE 30     // Sections per axis. Even number; Default: 30
-#define REGION_DENSITY 20  // Per 1000. Default: 20
-#define MAX_STARS 907      // First prime number > (REGION_SIZE * REGION_SIZE). Default 907
-                           // We use this in the modulo operations of the hash function output
-#define SECTION_SIZE 10000 // Default: 10000
+// Galaxies
+#define GALAXY_SCALE 6                  // We multiply radius by this factor to get galaxy full size radius in points. Default: 8000
+                                        // Use a smaller number to generate smaller galaxies
+#define GALAXY_CLASS_1_RADIUS_MIN 3000  // Default: 3000
+#define GALAXY_CLASS_1_RADIUS_MAX 1000  // Default: 1000 (+ 3000 = 4000) (max 5000)
+#define GALAXY_CLASS_2_RADIUS_MIN 5000  // Default: 5000
+#define GALAXY_CLASS_2_RADIUS_MAX 3000  // Default: 3000 (+ 5000 = 8000) (max 10000)
+#define GALAXY_CLASS_3_RADIUS_MIN 10000 // Default: 10000
+#define GALAXY_CLASS_3_RADIUS_MAX 3000  // Default: 3000 (+ 10000 = 13000) (max 15000)
+#define GALAXY_CLASS_4_RADIUS_MIN 15000 // Default: 15000
+#define GALAXY_CLASS_4_RADIUS_MAX 3000  // Default: 3000 (+ 15000 = 18000) (max 20000)
+#define GALAXY_CLASS_5_RADIUS_MIN 20000 // Default: 20000
+#define GALAXY_CLASS_5_RADIUS_MAX 3000  // Default: 3000 (+ 20000 = 23000) (max 25000)
+#define GALAXY_CLASS_6_RADIUS_MIN 25000 // Default: 25000
+#define GALAXY_CLASS_6_RADIUS_MAX 3000  // Default: 3000 (+ 25000 = 28000) (max 30000)
 
 // Stars
 #define STAR_CLASS_1_RADIUS_MIN 100 // Default: 100
@@ -133,7 +155,7 @@ enum
     MENU,
     NAVIGATE,
     MAP,
-    GALAXY,
+    UNIVERSE,
     PAUSE
 };
 
@@ -167,6 +189,16 @@ enum
 
 enum
 {
+    GALAXY_CLASS_1 = 1,
+    GALAXY_CLASS_2,
+    GALAXY_CLASS_3,
+    GALAXY_CLASS_4,
+    GALAXY_CLASS_5,
+    GALAXY_CLASS_6
+};
+
+enum
+{
     STAR_CLASS_1 = 1,
     STAR_CLASS_2,
     STAR_CLASS_3,
@@ -191,7 +223,9 @@ enum
 enum
 {
     ENTITY_SHIP,
-    ENTITY_PLANET
+    ENTITY_PLANET,
+    ENTITY_STAR,
+    ENTITY_GALAXY
 };
 
 #endif /* COMMON_H */

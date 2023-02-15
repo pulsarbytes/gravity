@@ -2,6 +2,8 @@
  * sdl.c - Functions for initializing and closing SDL.
  */
 
+#include <stdbool.h>
+
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_ttf.h>
 #include <SDL2/SDL2_gfxPrimitives.h>
@@ -17,6 +19,7 @@ extern SDL_Color text_color;
 extern float game_scale;
 
 int in_camera_game_scale(const struct camera_t *camera, int x, int y);
+bool line_intersects_viewport(const struct camera_t *camera, double x1, double y1, double x2, double y2);
 
 /*
  * Initialize SDL.
@@ -115,6 +118,7 @@ void close_sdl(void)
 /*
  * Midpoint Circle Algorithm for drawing a circle in SDL.
  * xc, xy, radius are in game_scale.
+ * This function is efficient only for small circles.
  */
 void SDL_DrawCircle(SDL_Renderer *renderer, const struct camera_t *camera, int xc, int yc, int radius, SDL_Color color)
 {
@@ -170,5 +174,52 @@ void SDL_DrawCircle(SDL_Renderer *renderer, const struct camera_t *camera, int x
         }
 
         x++;
+    }
+}
+
+/**
+ * Draws a circle approximation using a series of bezier curves.
+ * This function will only draw segments of the circle that intersect with the viewport defined by `camera`.
+ * This function is efficient for very large circles.
+ *
+ * @param renderer The renderer to use to draw the circle
+ * @param camera The camera used to view the scene
+ * @param x The x coordinate of the center of the circle
+ * @param y The y coordinate of the center of the circle
+ * @param r The radius of the circle
+ * @param color The color to use when drawing the circle
+ */
+void SDL_DrawCircleApprox(SDL_Renderer *renderer, const struct camera_t *camera, int x, int y, int r, SDL_Color color)
+{
+    const int CIRCLE_APPROXIMATION = 500;
+    int i;
+    double angle;
+    double x1, y1, x2, y2, x3, y3, x4, y4;
+
+    SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a);
+
+    for (i = 0; i < CIRCLE_APPROXIMATION; i++)
+    {
+        angle = 2 * M_PI * i / CIRCLE_APPROXIMATION;
+        x1 = x + r * cos(angle);
+        y1 = y + r * sin(angle);
+        angle = 2 * M_PI * (i + 1) / CIRCLE_APPROXIMATION;
+        x2 = x + r * cos(angle);
+        y2 = y + r * sin(angle);
+
+        x3 = (2 * x1 + x2) / 3;
+        y3 = (2 * y1 + y2) / 3;
+        x4 = (x1 + 2 * x2) / 3;
+        y4 = (y1 + 2 * y2) / 3;
+
+        if (line_intersects_viewport(camera, x1, y1, x3, y3) ||
+            line_intersects_viewport(camera, x3, y3, x4, y4) ||
+            line_intersects_viewport(camera, x4, y4, x2, y2))
+        {
+
+            SDL_RenderDrawLine(renderer, x1, y1, x3, y3);
+            SDL_RenderDrawLine(renderer, x3, y3, x4, y4);
+            SDL_RenderDrawLine(renderer, x4, y4, x2, y2);
+        }
     }
 }

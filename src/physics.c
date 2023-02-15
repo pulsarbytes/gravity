@@ -46,13 +46,13 @@ void calc_orbital_velocity(float h, float a, float r, float *vx, float *vy)
 }
 
 /*
- * Transform a double to the nearest SECTION_SIZE point,
+ * Transform a double to the nearest section point,
  * rounding up or down whichever is nearest.
  */
-double find_nearest_section_axis(double n)
+double find_nearest_section_axis(double n, int size)
 {
-    double round_down = floorf(n / SECTION_SIZE) * SECTION_SIZE;
-    double round_up = round_down + SECTION_SIZE;
+    double round_down = floorf(n / size) * size;
+    double round_up = round_down + size;
     double diff_down = fabs(n - round_down);
     double diff_up = fabs(n - round_up);
 
@@ -60,44 +60,20 @@ double find_nearest_section_axis(double n)
 }
 
 /**
- * Generates a hash value for a given double number `x`.
- *
- * @param x The double number to be hashed
- *
- * @return A 64-bit unsigned integer representing the hash value of `x`
- */
-uint64_t double_hash(double x)
-{
-    uint64_t x_bits = *(uint64_t *)&x;
-    uint64_t x_hash = x_bits * 0x9e3779b97f4a7c15ull;
-
-    return x_hash;
-}
-
-/*
- * Hash function that maps two double numbers to a unique 64-bit integer.
- */
-uint64_t pair_hash_order_sensitive(struct position_t position)
-{
-    uint64_t x_hash = double_hash(position.x);
-    uint64_t y_hash = double_hash(position.y);
-
-    return x_hash + 0x9e3779b97f4a7c15 * y_hash;
-}
-
-/**
  * Calculates the density of a cloud pattern at a given point
  *
  * @x: x coordinate of the point
  * @y: y coordinate of the point
- * @densityFactor: scaling factor to adjust the overall density of the pattern
+ * @density: scaling factor to adjust the overall density of the pattern
  *
  * Returns a value between 0 and 1 that represents the density of the cloud pattern at the given point.
  */
-double cloudDensity(double x, double y, double densityFactor)
+double cloud_density(double x, double y, float radius, float density)
 {
-    double distanceFromCenter = sqrt((x - 100 / 2) * (x - 100 / 2) + (y - 100 / 2) * (y - 100 / 2));
-    double falloff = 1.0 - distanceFromCenter / (100 / 2);
-    falloff = pow(falloff, 4);
-    return falloff * densityFactor;
+    double distanceFromCenter = sqrt((x - radius / 2) * (x - radius / 2) + (y - radius / 2) * (y - radius / 2));
+    double falloff = exp(-0.2 * (distanceFromCenter / (radius / 4)) * (distanceFromCenter / (radius / 4)));
+    double edgeFactor = 1.0 - distanceFromCenter / (radius / 2);
+    double adjustedDensityFactor = density * pow(edgeFactor, 2);
+
+    return falloff * adjustedDensityFactor;
 }

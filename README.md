@@ -2,6 +2,10 @@
 
 An infinite procedural 2d universe that models gravity and orbital motion.
 
+Is it truly infinite? No, but it's extremely vast.
+
+With more than 32 million unique galaxies, each containing a potential of up to 32 million stars, well, it's a mind-boggling number.
+
 ## Prerequisites
 
 ### GCC (build-essential)
@@ -36,30 +40,40 @@ make
 
 ## Keyboard controls
 
-| Mode       | Key     | Action         |
-| ---------- | ------- | -------------- |
-| Navigation |         |                |
-|            | `Up`    | Thrust         |
-|            | `Down`  | Reverse thrust |
-|            | `Right` | Rotate right   |
-|            | `Left`  | Rotate left    |
-|            | `S`     | Stop ship      |
-|            | `C`     | Toggle camera  |
-|            | `[`     | Zoom out       |
-|            | `]`     | Zoom in        |
-| Map        | `M`     | Enter Map      |
-|            | `Up`    | Scroll up      |
-|            | `Down`  | Scroll down    |
-|            | `Right` | Scroll right   |
-|            | `Left`  | Scroll left    |
-|            | `[`     | Zoom out       |
-|            | `]`     | Zoom in        |
-|            | `Space` | Reset Map      |
-|            | `Esc`   | Exit Map       |
-| `K`        |         | Toggle console |
-| `O`        |         | Show orbits    |
-| `P`        |         | Pause game     |
-| `Esc`      |         | Exit program   |
+| Mode       | Key     | Action              |
+| ---------- | ------- | ------------------- |
+| Navigation |         |                     |
+|            | `C`     | Toggle camera       |
+|            | `O`     | Show orbits         |
+|            | `S`     | Stop ship           |
+|            | `Up`    | Thrust              |
+|            | `Down`  | Reverse thrust      |
+|            | `Right` | Rotate right        |
+|            | `Left`  | Rotate left         |
+|            | `[`     | Zoom out            |
+|            | `]`     | Zoom in             |
+| Map        |         |                     |
+|            | `M`     | Enter Map mode      |
+|            | `O`     | Show orbits         |
+|            | `Up`    | Scroll up           |
+|            | `Down`  | Scroll down         |
+|            | `Right` | Scroll right        |
+|            | `Left`  | Scroll left         |
+|            | `[`     | Zoom out            |
+|            | `]`     | Zoom in             |
+|            | `Space` | Reset Map           |
+|            | `Esc`   | Exit Map mode       |
+| Universe   |         |                     |
+|            | `U`     | Enter Universe mode |
+|            | `Up`    | Scroll up           |
+|            | `Down`  | Scroll down         |
+|            | `Right` | Scroll right        |
+|            | `Left`  | Scroll left         |
+|            | `Space` | Reset Universe      |
+|            | `Esc`   | Exit Universe mode  |
+| `K`        |         | Toggle console      |
+| `P`        |         | Pause game          |
+| `Esc`      |         | Exit program        |
 
 ## Console contents
 

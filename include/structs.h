@@ -11,7 +11,7 @@ struct game_console_entry
     SDL_Rect rect;
 };
 
-// Struct for x,y coordinates
+// Struct for a point
 struct position_t
 {
     double x;
@@ -27,11 +27,20 @@ struct vector_t
     float angle; // radians between the positive x-axis and the line connecting the origin to the point (vx, vy)
 };
 
+// Struct for 2 points
+struct point_state
+{
+    double current_x;
+    double current_y;
+    double previous_x;
+    double previous_y;
+};
+
 // Struct for a planet
 struct planet_t
 {
     int initialized;
-    char name[MAX_PLANET_NAME];
+    char name[MAX_OBJECT_NAME];
     char *image;
     int class;
     float radius;
@@ -57,6 +66,30 @@ struct star_entry
     double y;
     struct planet_t *star;
     struct star_entry *next;
+};
+
+// Struct for a galaxy
+struct galaxy_t
+{
+    char name[MAX_OBJECT_NAME];
+    char *image;
+    int class;
+    float radius;
+    float cutoff;
+    struct position_t position;
+    SDL_Texture *texture;
+    SDL_Rect rect;
+    SDL_Rect projection;
+    SDL_Color color;
+};
+
+// Struct for a galaxy entry in galaxies hash table
+struct galaxy_entry
+{
+    double x;
+    double y;
+    struct galaxy_t *galaxy;
+    struct galaxy_entry *next;
 };
 
 // Struct for a ship
