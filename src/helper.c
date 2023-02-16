@@ -758,7 +758,7 @@ struct galaxy_t *nearest_galaxy(struct position_t position)
 /*
  * Find distance to nearest star.
  */
-float nearest_star_distance(struct position_t position, uint64_t initseq)
+float nearest_star_distance(struct position_t position, struct galaxy_t *current_galaxy, uint64_t initseq)
 {
     // We use 5 * GALAXY_SECTION_SIZE as max, since a CLASS_6 star needs 5 + 1 empty sections
     // We search inner circumferences of points first and work towards outward circumferences
@@ -770,6 +770,9 @@ float nearest_star_distance(struct position_t position, uint64_t initseq)
 
     // Use a local rng
     pcg32_random_t rng;
+
+    // Density scaling parameter
+    float a = current_galaxy->radius * GALAXY_SCALE / 2.0f;
 
     for (int i = 1; i <= 5; i++)
     {
@@ -793,7 +796,11 @@ float nearest_star_distance(struct position_t position, uint64_t initseq)
                 // Seed with a fixed constant
                 pcg32_srandom_r(&rng, seed, initseq);
 
-                int has_star = abs(pcg32_random_r(&rng)) % 1000 < GALAXY_DENSITY;
+                // Calculate density based on distance from center
+                double distance_from_center = sqrt((ix - position.x) * (ix - position.x) + (iy - position.y) * (iy - position.y));
+                float density = (GALAXY_DENSITY / pow((distance_from_center / a + 1), 2));
+
+                int has_star = abs(pcg32_random_r(&rng)) % 1000 < density;
 
                 if (has_star)
                 {
@@ -1066,7 +1073,7 @@ void create_galaxy_cloud(struct galaxy_t *galaxy)
     // Use a local rng
     pcg32_random_t rng;
 
-    // Scaling parameter
+    // Density scaling parameter
     float a = radius / 2.0f;
 
     for (ix = -radius; ix <= radius; ix += section_size)

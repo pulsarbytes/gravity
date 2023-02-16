@@ -132,7 +132,7 @@ struct planet_t *get_star(struct position_t);
 int star_exists(struct position_t);
 void delete_star(struct position_t);
 void update_velocity(struct ship_t *ship);
-float nearest_star_distance(struct position_t position, uint64_t initseq);
+float nearest_star_distance(struct position_t position, struct galaxy_t *, uint64_t initseq);
 int get_star_class(float n);
 int get_planet_class(float n);
 void zoom_star(struct planet_t *);
@@ -919,12 +919,17 @@ void generate_stars(struct position_t *offset, struct point_state *universe_offs
     // Use a local rng
     pcg32_random_t rng;
 
+    // Density scaling parameter
+    double a = current_galaxy->radius * GALAXY_SCALE / 2.0f;
+
     for (ix = left_boundary; ix < right_boundary && in_horizontal_bounds; ix += GALAXY_SECTION_SIZE)
     {
         for (iy = top_boundary; iy < bottom_boundary && in_vertical_bounds; iy += GALAXY_SECTION_SIZE)
         {
             // Check that point is within galaxy radius
-            if (sqrt(ix * ix + iy * iy) > (current_galaxy->radius * GALAXY_SCALE))
+            double distance_from_center = sqrt(ix * ix + iy * iy);
+
+            if (distance_from_center > (current_galaxy->radius * GALAXY_SCALE))
                 continue;
 
             // Create rng seed by combining x,y values
@@ -937,7 +942,10 @@ void generate_stars(struct position_t *offset, struct point_state *universe_offs
             // Seed with a fixed constant
             pcg32_srandom_r(&rng, seed, initseq);
 
-            int has_star = abs(pcg32_random_r(&rng)) % 1000 < GALAXY_DENSITY;
+            // Calculate density based on distance from center
+            float density = (GALAXY_DENSITY / pow((distance_from_center / a + 1), 2));
+
+            int has_star = abs(pcg32_random_r(&rng)) % 1000 < density;
 
             if (has_star)
             {
@@ -1312,7 +1320,7 @@ struct galaxy_t *create_galaxy(struct position_t position)
 struct planet_t *create_star(struct position_t position)
 {
     // Find distance to nearest star
-    float distance = nearest_star_distance(position, initseq);
+    float distance = nearest_star_distance(position, current_galaxy, initseq);
 
     // Get star class
     int class = get_star_class(distance);
