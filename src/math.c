@@ -119,7 +119,7 @@ uint64_t double_hash(double x)
 /*
  * Hash function that maps two double numbers to a unique 64-bit integer.
  */
-uint64_t pair_hash_order_sensitive(struct position_t position)
+uint64_t pair_hash_order_sensitive(struct point_t position)
 {
     uint64_t x_hash = double_hash(position.x);
     uint64_t y_hash = double_hash(position.y);
@@ -131,7 +131,7 @@ uint64_t pair_hash_order_sensitive(struct position_t position)
 /*
  * Hash function that maps two double numbers to a unique 64-bit integer.
  */
-uint64_t pair_hash_order_sensitive_2(struct position_t position)
+uint64_t pair_hash_order_sensitive_2(struct point_t position)
 {
     uint64_t x_hash = double_hash(position.x);
     uint64_t y_hash = double_hash(position.y);
@@ -144,7 +144,7 @@ uint64_t pair_hash_order_sensitive_2(struct position_t position)
  * Hash function that maps a unique 64-bit integer to an int between 0 and modulo.
  * This int will be used as index in hash table.
  */
-uint64_t unique_index(struct position_t position, int modulo, int entity_type)
+uint64_t unique_index(struct point_t position, int modulo, int entity_type)
 {
     uint64_t index;
 

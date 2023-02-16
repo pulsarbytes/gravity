@@ -12,7 +12,7 @@ struct game_console_entry
 };
 
 // Struct for a point
-struct position_t
+struct point_t
 {
     double x;
     double y;
@@ -25,6 +25,12 @@ struct vector_t
     float y;
     float magnitude;
     float angle; // radians between the positive x-axis and the line connecting the origin to the point (vx, vy)
+};
+
+struct speed_t
+{
+    float vx;
+    float vy;
 };
 
 // Struct for 2 points
@@ -45,7 +51,7 @@ struct planet_t
     int class;
     float radius;
     float cutoff;
-    struct position_t position;
+    struct point_t position;
     float vx;
     float vy;
     float dx;
@@ -71,7 +77,7 @@ struct star_entry
 // Struct for a galaxy cloud star
 struct gstar_t
 {
-    struct position_t position;
+    struct point_t position;
     unsigned short opacity;
 };
 
@@ -83,7 +89,7 @@ struct galaxy_t
     int class;
     float radius;
     float cutoff;
-    struct position_t position;
+    struct point_t position;
     SDL_Rect projection;
     SDL_Color color;
     struct gstar_t gstars[MAX_GSTARS];
@@ -103,7 +109,7 @@ struct ship_t
 {
     char *image;
     int radius;
-    struct position_t position;
+    struct point_t position;
     float angle;
     float vx;
     float vy;
@@ -119,7 +125,7 @@ struct ship_t
 // Struct for a background star
 struct bstar_t
 {
-    struct position_t position;
+    struct point_t position;
     SDL_Rect rect;
     unsigned short opacity;
 };

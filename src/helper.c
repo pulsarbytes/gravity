@@ -22,16 +22,16 @@ extern float game_scale;
 static void cleanup_planets(struct planet_t *);
 void cleanup_stars(void);
 static void cleanup_galaxies(void);
-uint64_t pair_hash_order_sensitive(struct position_t);
-uint64_t pair_hash_order_sensitive_2(struct position_t);
+uint64_t pair_hash_order_sensitive(struct point_t);
+uint64_t pair_hash_order_sensitive_2(struct point_t);
 uint64_t double_hash(double x);
-bool point_eq(struct position_t, struct position_t);
-bool point_in_array(struct position_t, struct position_t arr[], int len);
+bool point_eq(struct point_t, struct point_t);
+bool point_in_array(struct point_t, struct point_t arr[], int len);
 int calculate_projection_opacity(float distance, int region_size, int section_size);
 double find_nearest_section_axis(double n, int size);
-uint64_t unique_index(struct position_t, int modulo, int entity_type);
-void delete_star(struct position_t position);
-void delete_galaxy(struct position_t position);
+uint64_t unique_index(struct point_t, int modulo, int entity_type);
+void delete_star(struct point_t position);
+void delete_galaxy(struct point_t position);
 void update_projection_coordinates(void *, int entity_type, const struct camera_t *, int state);
 
 /*
@@ -63,7 +63,7 @@ static void cleanup_galaxies(void)
 
         while (entry != NULL)
         {
-            struct position_t position = {.x = entry->x, .y = entry->y};
+            struct point_t position = {.x = entry->x, .y = entry->y};
             delete_galaxy(position);
             entry = entry->next;
         }
@@ -82,7 +82,7 @@ void cleanup_stars(void)
 
         while (entry != NULL)
         {
-            struct position_t position = {.x = entry->x, .y = entry->y};
+            struct point_t position = {.x = entry->x, .y = entry->y};
             delete_star(position);
             entry = entry->next;
         }
@@ -116,7 +116,7 @@ void cleanup_resources(struct ship_t *ship, struct galaxy_t *current_galaxy, str
 /*
  * Insert a new galaxy entry in galaxies hash table.
  */
-void put_galaxy(struct position_t position, struct galaxy_t *galaxy)
+void put_galaxy(struct point_t position, struct galaxy_t *galaxy)
 {
     // Generate unique index for hash table
     uint64_t index = unique_index(position, MAX_GALAXIES, ENTITY_GALAXY);
@@ -132,7 +132,7 @@ void put_galaxy(struct position_t position, struct galaxy_t *galaxy)
 /*
  * Check whether a galaxy entry exists in the galaxies hash table.
  */
-int galaxy_exists(struct position_t position)
+int galaxy_exists(struct point_t position)
 {
     // Generate unique index for hash table
     uint64_t index = unique_index(position, MAX_GALAXIES, ENTITY_GALAXY);
@@ -156,7 +156,7 @@ int galaxy_exists(struct position_t position)
 /*
  * Get a galaxy entry from the galaxies hash table.
  */
-struct galaxy_t *get_galaxy(struct position_t position)
+struct galaxy_t *get_galaxy(struct point_t position)
 {
     // Generate unique index for hash table
     uint64_t index = unique_index(position, MAX_GALAXIES, ENTITY_GALAXY);
@@ -177,7 +177,7 @@ struct galaxy_t *get_galaxy(struct position_t position)
 /*
  * Delete a galaxy entry from the galaxies hash table.
  */
-void delete_galaxy(struct position_t position)
+void delete_galaxy(struct point_t position)
 {
     // Generate unique index for hash table
     uint64_t index = unique_index(position, MAX_GALAXIES, ENTITY_GALAXY);
@@ -211,7 +211,7 @@ void delete_galaxy(struct position_t position)
 /*
  * Insert a new star entry in stars hash table.
  */
-void put_star(struct position_t position, struct planet_t *star)
+void put_star(struct point_t position, struct planet_t *star)
 {
     // Generate unique index for hash table
     uint64_t index = unique_index(position, MAX_STARS, ENTITY_STAR);
@@ -227,7 +227,7 @@ void put_star(struct position_t position, struct planet_t *star)
 /*
  * Check whether a star entry exists in the stars hash table.
  */
-int star_exists(struct position_t position)
+int star_exists(struct point_t position)
 {
     // Generate unique index for hash table
     uint64_t index = unique_index(position, MAX_STARS, ENTITY_STAR);
@@ -251,7 +251,7 @@ int star_exists(struct position_t position)
 /*
  * Get a star entry from the stars hash table.
  */
-struct planet_t *get_star(struct position_t position)
+struct planet_t *get_star(struct point_t position)
 {
     // Generate unique index for hash table
     uint64_t index = unique_index(position, MAX_STARS, ENTITY_STAR);
@@ -272,7 +272,7 @@ struct planet_t *get_star(struct position_t position)
 /*
  * Delete a star entry from the stars hash table.
  */
-void delete_star(struct position_t position)
+void delete_star(struct point_t position)
 {
     // Generate unique index for hash table
     uint64_t index = unique_index(position, MAX_STARS, ENTITY_STAR);
@@ -633,18 +633,27 @@ void project_galaxy(struct galaxy_t *galaxy, const struct camera_t *camera, int 
  */
 int calculate_projection_opacity(float distance, int region_size, int section_size)
 {
-    int a = (int)(distance / section_size);
-    int near_sections = 4;
+    const int near_sections = 4;
+    int a = (int)distance / section_size;
     int opacity;
 
     if (a <= 1)
         opacity = 255;
-    else if (a <= near_sections)
-        opacity = 128 + (255 - 128) * (near_sections - a) / (near_sections - 1);
-    else if (a <= 10)
-        opacity = 64 + (128 - 64) * (10 - a) / (10 - 4);
-    else if (a <= region_size)
-        opacity = 0 + (64 - 0) * (30 - a) / (30 - 10);
+    else if (a > 1 && a <= near_sections)
+    {
+        // Linear fade from 255 to 100
+        opacity = 100 + (255 - 100) * (near_sections - a) / (near_sections - 1);
+    }
+    else if (a > near_sections && a <= 10)
+    {
+        // Linear fade from 100 to 40
+        opacity = 40 + (100 - 40) * (10 - a) / (10 - near_sections);
+    }
+    else if (a > 10 && a <= region_size)
+    {
+        // Linear fade from 40 to 0
+        opacity = 0 + (40 - 0) * (region_size - a) / (region_size - 10);
+    }
     else
         opacity = 0;
 
@@ -654,14 +663,14 @@ int calculate_projection_opacity(float distance, int region_size, int section_si
 /*
  * Find distance to nearest galaxy.
  */
-float nearest_galaxy_center_distance(struct position_t position)
+float nearest_galaxy_center_distance(struct point_t position)
 {
     // We use 5 * UNIVERSE_SECTION_SIZE as max, since a CLASS_6 galaxy needs 5 + 1 empty sections
     // We search inner circumferences of points first and work towards outward circumferences
     // If we find a galaxy, the function returns.
 
     // Keep track of checked points
-    struct position_t checked_points[169];
+    struct point_t checked_points[169];
     int num_checked_points = 0;
 
     // Use a local rng
@@ -676,7 +685,7 @@ float nearest_galaxy_center_distance(struct position_t position)
                 if (ix == position.x && iy == position.y)
                     continue;
 
-                struct position_t p = {ix, iy};
+                struct point_t p = {ix, iy};
 
                 if (point_in_array(p, checked_points, num_checked_points))
                     continue;
@@ -717,7 +726,7 @@ double find_distance(double x1, double y1, double x2, double y2)
  * The funtions finds the galaxy in the galaxies hash table
  * whose circumference is closest to the position.
  */
-struct galaxy_t *nearest_galaxy(struct position_t position)
+struct galaxy_t *nearest_galaxy(struct point_t position)
 {
     struct galaxy_t *closest = NULL;
     double closest_distance = INFINITY;
@@ -758,14 +767,14 @@ struct galaxy_t *nearest_galaxy(struct position_t position)
 /*
  * Find distance to nearest star.
  */
-float nearest_star_distance(struct position_t position, struct galaxy_t *current_galaxy, uint64_t initseq)
+float nearest_star_distance(struct point_t position, struct galaxy_t *current_galaxy, uint64_t initseq)
 {
     // We use 5 * GALAXY_SECTION_SIZE as max, since a CLASS_6 star needs 5 + 1 empty sections
     // We search inner circumferences of points first and work towards outward circumferences
     // If we find a star, the function returns.
 
     // Keep track of checked points
-    struct position_t checked_points[169];
+    struct point_t checked_points[169];
     int num_checked_points = 0;
 
     // Use a local rng
@@ -783,7 +792,7 @@ float nearest_star_distance(struct position_t position, struct galaxy_t *current
                 if (ix == position.x && iy == position.y)
                     continue;
 
-                struct position_t p = {ix, iy};
+                struct point_t p = {ix, iy};
 
                 if (point_in_array(p, checked_points, num_checked_points))
                     continue;
@@ -884,7 +893,7 @@ int get_planet_class(float n)
 /*
  * Compares two points.
  */
-bool point_eq(struct position_t a, struct position_t b)
+bool point_eq(struct point_t a, struct point_t b)
 {
     return a.x == b.x && a.y == b.y;
 }
@@ -892,7 +901,7 @@ bool point_eq(struct position_t a, struct position_t b)
 /*
  * Checks whether a point exists in an array.
  */
-bool point_in_array(struct position_t p, struct position_t arr[], int len)
+bool point_in_array(struct point_t p, struct point_t arr[], int len)
 {
     for (int i = 0; i < len; ++i)
     {
@@ -1068,7 +1077,7 @@ void create_galaxy_cloud(struct galaxy_t *galaxy)
     int section_size = 100;
     float ix, iy;
     int i = 0;
-    int max_density = 40;
+    int max_density = 150;
 
     // Use a local rng
     pcg32_random_t rng;
@@ -1088,7 +1097,7 @@ void create_galaxy_cloud(struct galaxy_t *galaxy)
                 continue;
 
             // Create rng seed by combining x,y values
-            struct position_t position = {.x = ix, .y = iy};
+            struct point_t position = {.x = ix, .y = iy};
             uint64_t seed = pair_hash_order_sensitive(position);
 
             // Set galaxy hash as initseq
@@ -1098,7 +1107,7 @@ void create_galaxy_cloud(struct galaxy_t *galaxy)
             pcg32_srandom_r(&rng, seed, initseq);
 
             // Calculate density based on distance from center
-            float density = (max_density / pow((distance_from_center / a + 1), 4));
+            float density = (max_density / pow((distance_from_center / a + 1), 6));
 
             int has_star = abs(pcg32_random_r(&rng)) % 1000 < density;
 
