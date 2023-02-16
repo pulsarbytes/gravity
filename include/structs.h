@@ -128,6 +128,7 @@ struct bstar_t
     struct point_t position;
     SDL_Rect rect;
     unsigned short opacity;
+    unsigned short final_star;
 };
 
 // Struct for camera

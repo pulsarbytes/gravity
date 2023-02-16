@@ -68,8 +68,8 @@
 // Starting position
 #define UNIVERSE_START_X -140000
 #define UNIVERSE_START_Y -70000
-#define GALAXY_START_X -56032 // Default: -56032000
-#define GALAXY_START_Y 0      // Default: 0
+#define GALAXY_START_X 0 // Default: -56032000
+#define GALAXY_START_Y 0 // Default: 0
 
 // Galaxies
 #define GALAXY_SCALE 10                 // We multiply radius by this factor to get galaxy full size radius in points. Default: 100 (min 10, max 10000)
