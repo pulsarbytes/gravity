@@ -25,7 +25,7 @@
 #define SPEED_LINES_NUM 8        // Number of rows and columns for the speeding lines array. Default: 8
 
 // Game settings
-#define BSTARS_ON 0      // Default: 1
+#define BSTARS_ON 1      // Default: 1
 #define SPEED_LINES_ON 1 // Default: 1
 #define GSTARS_ON 1      // Default: 1
 #define CAMERA_ON 1
@@ -72,11 +72,11 @@
 // Starting position
 #define UNIVERSE_START_X -140000
 #define UNIVERSE_START_Y -70000
-#define GALAXY_START_X -700000 // Default: 0
-#define GALAXY_START_Y -0      // Default: 0
+#define GALAXY_START_X -70000 // Default: 0
+#define GALAXY_START_Y -0     // Default: 0
 
 // Galaxies
-#define GALAXY_SCALE 100                // We multiply radius by this factor to get galaxy full size radius in points. Default: 100 (min 10, max 10000)
+#define GALAXY_SCALE 10                 // We multiply radius by this factor to get galaxy full size radius in points. Default: 100 (min 10, max 10000)
                                         // Use a smaller number to generate smaller galaxies
 #define GALAXY_CLASS_1_RADIUS_MIN 3000  // Default: 3000
 #define GALAXY_CLASS_1_RADIUS_MAX 1000  // Default: 1000 (+ 3000 = 4000) (max 5000)
