@@ -92,7 +92,7 @@ void cleanup_stars(void)
 /*
  * Clean up resources.
  */
-void cleanup_resources(struct ship_t *ship, struct galaxy_t *current_galaxy, struct galaxy_t *previous_galaxy)
+void cleanup_resources(struct ship_t *ship, struct galaxy_t *current_galaxy, struct galaxy_t *buffer_galaxy, struct galaxy_t *previous_galaxy)
 {
     // Clean up galaxies
     cleanup_galaxies();
@@ -106,10 +106,9 @@ void cleanup_resources(struct ship_t *ship, struct galaxy_t *current_galaxy, str
     SDL_DestroyTexture(ship->texture);
     ship->texture = NULL;
 
-    // Clean up current galaxy
+    // Clean up galaxies
     free(current_galaxy);
-
-    // Clean up previous galaxy
+    free(buffer_galaxy);
     free(previous_galaxy);
 }
 

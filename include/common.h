@@ -16,14 +16,16 @@
 #endif
 
 // Background stars
-#define BSTARS_MAX_SPEED 300 // Default: 300
-#define BSTARS_SQUARE 10000  // Groups X pixels. Default: 10000
-#define BSTARS_PER_SQUARE 5  // X stars per square. Default: 3
-#define MAX_GSTARS 90000     // Default 90000. (300 * 300)
-#define SPEED_LINES_NUM 10   // Number of rows and columns for the speeding lines array. Default: 10
+#define BSTARS_MAX_SPEED 260     // Default: 260
+#define BSTARS_SPEED_FACTOR 0.10 // Default: 0.10
+#define BSTARS_SQUARE 10000      // Groups X pixels. Default: 10000
+#define BSTARS_PER_SQUARE 4      // X stars per square. Default: 4
+#define MAX_GSTARS 90000         // Default 90000. (300 * 300)
+#define GSTARS_SCALE 10          // Designates gstars scaling compared to universe mode. Default: 10
+#define SPEED_LINES_NUM 8        // Number of rows and columns for the speeding lines array. Default: 8
 
 // Game settings
-#define BSTARS_ON 1      // Default: 1
+#define BSTARS_ON 0      // Default: 1
 #define SPEED_LINES_ON 1 // Default: 1
 #define GSTARS_ON 1      // Default: 1
 #define CAMERA_ON 1
@@ -70,11 +72,11 @@
 // Starting position
 #define UNIVERSE_START_X -140000
 #define UNIVERSE_START_Y -70000
-#define GALAXY_START_X -0 // Default: -56032000
-#define GALAXY_START_Y -0 // Default: 0
+#define GALAXY_START_X -700000 // Default: 0
+#define GALAXY_START_Y -0      // Default: 0
 
 // Galaxies
-#define GALAXY_SCALE 10                 // We multiply radius by this factor to get galaxy full size radius in points. Default: 100 (min 10, max 10000)
+#define GALAXY_SCALE 100                // We multiply radius by this factor to get galaxy full size radius in points. Default: 100 (min 10, max 10000)
                                         // Use a smaller number to generate smaller galaxies
 #define GALAXY_CLASS_1_RADIUS_MIN 3000  // Default: 3000
 #define GALAXY_CLASS_1_RADIUS_MAX 1000  // Default: 1000 (+ 3000 = 4000) (max 5000)
