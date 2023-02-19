@@ -79,6 +79,7 @@ struct gstar_t
 {
     struct point_t position;
     unsigned short opacity;
+    unsigned short final_star;
 };
 
 // Struct for a galaxy

@@ -344,8 +344,16 @@ void update_projection_coordinates(void *ptr, int entity_type, const struct came
     // Find screen quadrant for object exit from screen; 0, 0 is screen center, negative y is up
     if (galaxy)
     {
-        delta_x = galaxy->position.x - camera->x - (camera_w / 2);
-        delta_y = galaxy->position.y - camera->y - (camera_h / 2);
+        if (state == NAVIGATE || state == MAP)
+        {
+            delta_x = galaxy->position.x * GALAXY_SCALE - camera->x - (camera_w / 2);
+            delta_y = galaxy->position.y * GALAXY_SCALE - camera->y - (camera_h / 2);
+        }
+        else if (state == UNIVERSE)
+        {
+            delta_x = galaxy->position.x - camera->x - (camera_w / 2);
+            delta_y = galaxy->position.y - camera->y - (camera_h / 2);
+        }
     }
     else if (planet)
     {
@@ -613,14 +621,21 @@ void project_planet(struct planet_t *planet, const struct camera_t *camera, int 
  */
 void project_galaxy(struct galaxy_t *galaxy, const struct camera_t *camera, int state)
 {
+    int scaling_factor = 1;
+
+    if (state == NAVIGATE || state == MAP)
+        scaling_factor = GALAXY_SCALE;
+
     update_projection_coordinates(galaxy, ENTITY_GALAXY, camera, state);
 
     galaxy->projection.w = 2 * PROJECTION_RADIUS;
     galaxy->projection.h = 2 * PROJECTION_RADIUS;
-
     double x = camera->x + (camera->w / 2) / game_scale;
     double y = camera->y + (camera->h / 2) / game_scale;
-    float distance = sqrt(pow(fabs(x - galaxy->position.x), 2) + pow(fabs(y - galaxy->position.y), 2));
+    double delta_x = fabs(x - galaxy->position.x * scaling_factor) / scaling_factor;
+    double delta_y = fabs(y - galaxy->position.y * scaling_factor) / scaling_factor;
+
+    float distance = sqrt(pow(delta_x, 2) + pow(delta_y, 2));
     int opacity = calculate_projection_opacity(distance, UNIVERSE_REGION_SIZE, UNIVERSE_SECTION_SIZE);
 
     SDL_SetRenderDrawColor(renderer, galaxy->color.r, galaxy->color.g, galaxy->color.b, opacity);
@@ -722,11 +737,11 @@ double find_distance(double x1, double y1, double x2, double y2)
 }
 
 /*
- * Find nearest galaxy to position.
- * The funtions finds the galaxy in the galaxies hash table
+ * Find nearest galaxy to position, excluding or not <galaxy>.
+ * The funtion finds the galaxy in the galaxies hash table
  * whose circumference is closest to the position.
  */
-struct galaxy_t *nearest_galaxy(struct point_t position)
+struct galaxy_t *find_nearest_galaxy(struct point_t position, struct galaxy_t *galaxy, int exclude)
 {
     struct galaxy_t *closest = NULL;
     double closest_distance = INFINITY;
@@ -738,6 +753,16 @@ struct galaxy_t *nearest_galaxy(struct point_t position)
 
         while (entry != NULL)
         {
+            // Exlude current galaxy
+            if (exclude)
+            {
+                if (entry->galaxy->position.x == galaxy->position.x && entry->galaxy->position.y == galaxy->position.y)
+                {
+                    entry = entry->next;
+                    continue;
+                }
+            }
+
             double cx = entry->galaxy->position.x;
             double cy = entry->galaxy->position.y;
             double r = entry->galaxy->radius;
@@ -935,10 +960,10 @@ void zoom_star(struct planet_t *planet)
 }
 
 /*
- * Check whether point is in camera in game scale.
+ * Check whether relative point is in camera.
  * x, y are relative to camera->x, camera->y.
  */
-int in_camera_game_scale(const struct camera_t *camera, int x, int y)
+int in_camera_relative(const struct camera_t *camera, int x, int y)
 {
     return x >= 0 && x < camera->w && y >= 0 && y < camera->h;
 }
@@ -1008,7 +1033,7 @@ bool line_intersects_viewport(const struct camera_t *camera, double x1, double y
     double bottom = camera->h;
 
     // Check if both endpoints of the line are inside the viewport.
-    if (in_camera_game_scale(camera, x1, y1) || in_camera_game_scale(camera, x2, y2))
+    if (in_camera_relative(camera, x1, y1) || in_camera_relative(camera, x2, y2))
         return true;
 
     // Check if the line intersects the left edge of the viewport.
@@ -1117,6 +1142,7 @@ void create_galaxy_cloud(struct galaxy_t *galaxy)
                 star.position.x = ix;
                 star.position.y = iy;
                 star.opacity = ((rand() % 196) + 25); // Get a random color between 25 - 195
+                star.final_star = 1;
                 galaxy->gstars[i++] = star;
             }
         }
@@ -1132,8 +1158,8 @@ void draw_galaxy_cloud(struct galaxy_t *galaxy, const struct camera_t *camera, i
     {
         SDL_SetRenderDrawColor(renderer, 255, 255, 255, galaxy->gstars[i].opacity);
 
-        int x = ((galaxy->position.x - camera->x) * game_scale + galaxy->gstars[i].position.x * game_scale);
-        int y = ((galaxy->position.y - camera->y) * game_scale + galaxy->gstars[i].position.y * game_scale);
+        int x = (galaxy->position.x - camera->x + galaxy->gstars[i].position.x) * game_scale;
+        int y = (galaxy->position.y - camera->y + galaxy->gstars[i].position.y) * game_scale;
 
         SDL_RenderDrawPoint(renderer, x, y);
     }

@@ -18,7 +18,7 @@ extern TTF_Font *font;
 extern SDL_Color text_color;
 extern float game_scale;
 
-int in_camera_game_scale(const struct camera_t *camera, int x, int y);
+int in_camera_relative(const struct camera_t *camera, int x, int y);
 bool line_intersects_viewport(const struct camera_t *camera, double x1, double y1, double x2, double y2);
 
 /*
@@ -100,6 +100,9 @@ int init_sdl()
     text_color.g = 255;
     text_color.b = 255;
 
+    // Set blend mode
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+
     return TRUE;
 }
 
@@ -132,35 +135,35 @@ void SDL_DrawCircle(SDL_Renderer *renderer, const struct camera_t *camera, int x
     while (y >= x)
     {
         // Draw the 8 points symmetrically
-        if (in_camera_game_scale(camera, xc + x, yc + y))
+        if (in_camera_relative(camera, xc + x, yc + y))
         {
             SDL_RenderDrawPoint(renderer, xc + x, yc + y);
         }
-        if (in_camera_game_scale(camera, xc + x, yc - y))
+        if (in_camera_relative(camera, xc + x, yc - y))
         {
             SDL_RenderDrawPoint(renderer, xc + x, yc - y);
         }
-        if (in_camera_game_scale(camera, xc - x, yc + y))
+        if (in_camera_relative(camera, xc - x, yc + y))
         {
             SDL_RenderDrawPoint(renderer, xc - x, yc + y);
         }
-        if (in_camera_game_scale(camera, xc - x, yc - y))
+        if (in_camera_relative(camera, xc - x, yc - y))
         {
             SDL_RenderDrawPoint(renderer, xc - x, yc - y);
         }
-        if (in_camera_game_scale(camera, xc + y, yc + x))
+        if (in_camera_relative(camera, xc + y, yc + x))
         {
             SDL_RenderDrawPoint(renderer, xc + y, yc + x);
         }
-        if (in_camera_game_scale(camera, xc + y, yc - x))
+        if (in_camera_relative(camera, xc + y, yc - x))
         {
             SDL_RenderDrawPoint(renderer, xc + y, yc - x);
         }
-        if (in_camera_game_scale(camera, xc - y, yc + x))
+        if (in_camera_relative(camera, xc - y, yc + x))
         {
             SDL_RenderDrawPoint(renderer, xc - y, yc + x);
         }
-        if (in_camera_game_scale(camera, xc - y, yc - x))
+        if (in_camera_relative(camera, xc - y, yc - x))
         {
             SDL_RenderDrawPoint(renderer, xc - y, yc - x);
         }
