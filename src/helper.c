@@ -19,6 +19,7 @@ extern int thrust;
 extern int reverse;
 extern float game_scale;
 extern int galaxy_region_size;
+extern struct vector_t velocity;
 
 static void cleanup_planets(struct planet_t *);
 void cleanup_stars(void);
@@ -1204,7 +1205,7 @@ void draw_speed_arc(struct ship_t *ship, const struct camera_t *camera)
     float center_y = (ship->position.y - camera->y - vertical_offset * velocity_y) * game_scale;
 
     // Calculate opacity
-    float opacity = 5 + (velocity_length - GALAXY_SPEED_LIMIT) / 50;
+    float opacity = 5 + (velocity_length - GALAXY_SPEED_LIMIT) / 75;
     opacity = opacity > 255 ? 255 : opacity;
 
     // Set the renderer draw color to the circle color
@@ -1259,6 +1260,181 @@ void draw_speed_arc(struct ship_t *ship, const struct camera_t *camera)
         if (dot_product_1 >= velocity_factor)
         {
             SDL_RenderDrawLine(renderer, (int)start_x_1, (int)start_y_1, (int)end_x_1, (int)end_y_1);
+        }
+    }
+}
+
+/*
+ * Delete stars outside region.
+ */
+void delete_stars_outside_region(double bx, double by)
+{
+    for (int s = 0; s < MAX_STARS; s++)
+    {
+        struct star_entry *entry = stars[s];
+
+        while (entry != NULL)
+        {
+            struct point_t position = {.x = entry->x, .y = entry->y};
+
+            // Get distance from center of region
+            double dx = position.x - bx;
+            double dy = position.y - by;
+            double distance = sqrt(dx * dx + dy * dy);
+            double region_radius = sqrt((double)2 * ((galaxy_region_size + 1) / 2) * GALAXY_SECTION_SIZE * ((galaxy_region_size + 1) / 2) * GALAXY_SECTION_SIZE);
+
+            // If star outside region, delete it
+            if (distance >= region_radius)
+                delete_star(position);
+
+            entry = entry->next;
+        }
+    }
+}
+
+/*
+ * Move and draw speed lines.
+ */
+void draw_speed_lines(const struct camera_t *camera, struct speed_t speed)
+{
+    // Check if velocity magnitude is zero
+    if (velocity.magnitude == 0)
+        return;
+
+    // Define constants
+    SDL_Color color = {255, 255, 255};
+    const int num_lines = SPEED_LINES_NUM;
+    const int max_length = 100; // Final max length will be 4/6 of this length
+    const int line_distance = 120;
+    const int base_speed = BASE_SPEED_LIMIT;
+    const float max_speed = 2.5 * base_speed;
+    const int speed_limit = 6 * BASE_SPEED_LIMIT;
+    const float opacity_exponent = 1.5;
+
+    // Calculate opacity based on velocity
+    float opacity = 0.0;
+    float base_opacity = 60.0;
+
+    if (velocity.magnitude < 2.0 * base_speed)
+    {
+        opacity = base_opacity * (1.0 - exp(-3.0 * (velocity.magnitude / base_speed)));
+    }
+    else if (velocity.magnitude >= 2.0 * base_speed && velocity.magnitude < 3.0 * base_speed)
+    {
+        float opacity_ratio = (velocity.magnitude - 2.0 * base_speed) / (base_speed);
+        opacity = 60.0 * exp(-1.0 * opacity_ratio);
+        opacity = fmax(opacity, 30.0);
+    }
+    else
+    {
+        opacity = 30.0;
+    }
+
+    int final_opacity = (int)round(opacity); // Round the opacity to the nearest integer
+
+    // Calculate the normalized velocity vector
+    float velocity_x = speed.vx / velocity.magnitude;
+    float velocity_y = speed.vy / velocity.magnitude;
+
+    static float line_start_x[SPEED_LINES_NUM][SPEED_LINES_NUM], line_start_y[SPEED_LINES_NUM][SPEED_LINES_NUM];
+    static int initialized = FALSE;
+
+    if (!initialized)
+    {
+        // Initialize starting positions of lines
+        float start_x = -(num_lines / 2) * line_distance;
+        float start_y = -(num_lines / 2) * line_distance;
+
+        for (int row = 0; row < num_lines; row++)
+        {
+            for (int col = 0; col < num_lines; col++)
+            {
+                if (row % 2 == 0)
+                    line_start_x[row][col] = camera->w / 2 + line_distance / 2 + start_x + col * line_distance;
+                else
+                    line_start_x[row][col] = camera->w / 2 + line_distance + start_x + col * line_distance;
+
+                line_start_y[row][col] = camera->h / 2 + line_distance + start_y + row * line_distance;
+            }
+        }
+        initialized = TRUE;
+    }
+
+    for (int row = 0; row < num_lines; row++)
+    {
+        for (int col = 0; col < num_lines; col++)
+        {
+            float x = line_start_x[row][col];
+            float y = line_start_y[row][col];
+
+            // Calculate the starting position
+            float start_x = x - velocity_x;
+            float start_y = y - velocity_y;
+
+            // Calculate the ending position based on the magnitude of the velocity vector
+            float speed_ray_length;
+
+            if (velocity.magnitude >= speed_limit)
+                speed_ray_length = (float)4 * max_length / 6;
+            else
+            {
+                if (velocity.magnitude < 2 * base_speed)
+                    speed_ray_length = 1;
+                else
+                    speed_ray_length = max_length * (velocity.magnitude - 2 * base_speed) / speed_limit;
+            }
+
+            if (speed_ray_length > max_length)
+                speed_ray_length = max_length;
+
+            float end_x = x + velocity_x * speed_ray_length;
+            float end_y = y + velocity_y * speed_ray_length;
+
+            // Calculate opacity based on start point distance from center
+            float dist_x = start_x - camera->w / 2;
+            float dist_y = start_y - camera->h / 2;
+            float max_distance = sqrt(2 * (SPEED_LINES_NUM / 2) * line_distance * (SPEED_LINES_NUM / 2) * line_distance);
+            float opacity_factor = 1 - (sqrt(dist_x * dist_x + dist_y * dist_y) / max_distance);
+            int scaled_opacity = (int)final_opacity * pow(opacity_factor, opacity_exponent);
+
+            if (scaled_opacity < 0)
+                scaled_opacity = 0;
+            else if (scaled_opacity > base_opacity)
+                scaled_opacity = base_opacity;
+
+            SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, scaled_opacity);
+
+            // Draw the speed line
+            SDL_RenderDrawLine(renderer, (int)start_x, (int)start_y, (int)end_x, (int)end_y);
+
+            // Update the starting position of the line based on the velocity magnitude
+            float delta_x;
+            float delta_y;
+
+            if (velocity.magnitude > speed_limit)
+            {
+                delta_x = max_speed * velocity_x / FPS;
+                delta_y = max_speed * velocity_y / FPS;
+            }
+            else
+            {
+                delta_x = max_speed * velocity_x * (velocity.magnitude / speed_limit) / FPS;
+                delta_y = max_speed * velocity_y * (velocity.magnitude / speed_limit) / FPS;
+            }
+
+            // Move the line in the opposite direction
+            line_start_x[row][col] -= delta_x;
+            line_start_y[row][col] -= delta_y;
+
+            // Wrap around to the other side of the screen if the line goes off-screen
+            if (line_start_x[row][col] < camera->w / 2 - (num_lines / 2) * line_distance)
+                line_start_x[row][col] += line_distance * num_lines;
+            if (line_start_y[row][col] < camera->h / 2 - (num_lines / 2) * line_distance)
+                line_start_y[row][col] += line_distance * num_lines;
+            if (line_start_x[row][col] >= camera->w / 2 + (num_lines / 2) * line_distance)
+                line_start_x[row][col] -= line_distance * num_lines;
+            if (line_start_y[row][col] >= camera->h / 2 + (num_lines / 2) * line_distance)
+                line_start_y[row][col] -= line_distance * num_lines;
         }
     }
 }
