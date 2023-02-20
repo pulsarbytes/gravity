@@ -64,6 +64,7 @@ int zoom_in = OFF;
 int zoom_out = OFF;
 int console = ON;
 int orbits_on = SHOW_ORBITS;
+int galaxy_region_size = GALAXY_REGION_SIZE;
 
 // Keep track of events
 int map_enter = OFF;
@@ -157,6 +158,7 @@ void create_galaxy_cloud(struct galaxy_t *);
 void draw_galaxy_cloud(struct galaxy_t *, const struct camera_t *, int gstars_count);
 void update_gstars(struct galaxy_t *, struct point_t, const struct camera_t *, double distance, double limit);
 void update_speed_lines(const struct camera_t *, struct speed_t);
+void draw_speed_arc(struct ship_t *ship, const struct camera_t *camera);
 
 int main(int argc, char *argv[])
 {
@@ -404,9 +406,6 @@ void onNavigate(struct bstar_t bstars[], struct ship_t *ship, struct camera_t *c
     if (camera_on)
         update_camera(camera, *navigate_offset);
 
-    // Update velocity
-    update_velocity(ship);
-
     if (BSTARS_ON || GSTARS_ON || SPEED_LINES_ON)
     {
         struct speed_t speed = {.vx = ship->vx, .vy = ship->vy};
@@ -458,6 +457,10 @@ void onNavigate(struct bstar_t bstars[], struct ship_t *ship, struct camera_t *c
             update_speed_lines(camera, speed);
     }
 
+    // Draw speed tail
+    if (velocity.magnitude > GALAXY_SPEED_LIMIT)
+        draw_speed_arc(ship, camera);
+
     // Update system
     if ((!map_exit && !universe_exit && !zoom_in && !zoom_out) || game_scale > ZOOM_NAVIGATE_MIN)
     {
@@ -476,6 +479,27 @@ void onNavigate(struct bstar_t bstars[], struct ship_t *ship, struct camera_t *c
             }
         }
     }
+
+    // Enforce speed limits
+    if (!exited_galaxy)
+    {
+        if (velocity.magnitude > GALAXY_SPEED_LIMIT)
+        {
+            ship->vx = GALAXY_SPEED_LIMIT * ship->vx / velocity.magnitude;
+            ship->vy = GALAXY_SPEED_LIMIT * ship->vy / velocity.magnitude;
+        }
+    }
+    else
+    {
+        if (velocity.magnitude > UNIVERSE_SPEED_LIMIT)
+        {
+            ship->vx = UNIVERSE_SPEED_LIMIT * ship->vx / velocity.magnitude;
+            ship->vy = UNIVERSE_SPEED_LIMIT * ship->vy / velocity.magnitude;
+        }
+    }
+
+    // Update velocity
+    update_velocity(ship);
 
     // Update ship
     update_ship(ship, camera);
@@ -602,13 +626,21 @@ void onMap(struct bstar_t bstars[], struct ship_t *ship, struct camera_t *camera
 
     // Add small tolerance to account for floating-point precision errors
     const float epsilon = 0.0001;
+    float zoom_step = ZOOM_STEP;
 
     if (zoom_in)
     {
-        if (game_scale + ZOOM_STEP <= ZOOM_MAX + epsilon)
+        if (game_scale + epsilon < 0.01)
+            zoom_step = 0.001;
+
+        if (game_scale + zoom_step <= ZOOM_MAX + epsilon)
         {
             // Reset scale
-            game_scale += ZOOM_STEP;
+            game_scale += zoom_step;
+
+            // Reset region_size
+            if (game_scale + epsilon >= 0.01)
+                galaxy_region_size = GALAXY_REGION_SIZE;
 
             // Zoom in
             for (int s = 0; s < MAX_STARS; s++)
@@ -623,10 +655,22 @@ void onMap(struct bstar_t bstars[], struct ship_t *ship, struct camera_t *camera
 
     if (zoom_out)
     {
-        if (game_scale - ZOOM_STEP >= ZOOM_MAP_MIN - epsilon)
+        if (game_scale - epsilon <= 0.01)
+            zoom_step = 0.001;
+
+        if (game_scale - zoom_step >= ZOOM_MAP_MIN - epsilon)
         {
             // Reset scale
-            game_scale -= ZOOM_STEP;
+            game_scale -= zoom_step;
+
+            // Reset region_size
+            if (game_scale + epsilon < 0.01)
+            {
+                galaxy_region_size = GALAXY_REGION_SIZE_MAX;
+
+                // Generate new stars for new region size
+                stars_start = 1;
+            }
 
             // Zoom out
             for (int s = 0; s < MAX_STARS; s++)
@@ -976,16 +1020,16 @@ void generate_stars(struct bstar_t bstars[], struct ship_t *ship, struct point_t
             cross_axis.y = by;
     }
 
-    // Define a region of GALAXY_REGION_SIZE * GALAXY_REGION_SIZE
+    // Define a region of galaxy_region_size * galaxy_region_size
     // bx,by are at the center of this area
     double ix, iy;
-    double left_boundary = bx - ((GALAXY_REGION_SIZE / 2) * GALAXY_SECTION_SIZE);
-    double right_boundary = bx + ((GALAXY_REGION_SIZE / 2) * GALAXY_SECTION_SIZE);
-    double top_boundary = by - ((GALAXY_REGION_SIZE / 2) * GALAXY_SECTION_SIZE);
-    double bottom_boundary = by + ((GALAXY_REGION_SIZE / 2) * GALAXY_SECTION_SIZE);
+    double left_boundary = bx - ((galaxy_region_size / 2) * GALAXY_SECTION_SIZE);
+    double right_boundary = bx + ((galaxy_region_size / 2) * GALAXY_SECTION_SIZE);
+    double top_boundary = by - ((galaxy_region_size / 2) * GALAXY_SECTION_SIZE);
+    double bottom_boundary = by + ((galaxy_region_size / 2) * GALAXY_SECTION_SIZE);
 
-    // Add a buffer zone of <GALAXY_REGION_SIZE> sections beyond galaxy radius
-    int radius_plus_buffer = (current_galaxy->radius * GALAXY_SCALE) + GALAXY_REGION_SIZE * GALAXY_SECTION_SIZE;
+    // Add a buffer zone of <galaxy_region_size> sections beyond galaxy radius
+    int radius_plus_buffer = (current_galaxy->radius * GALAXY_SCALE) + galaxy_region_size * GALAXY_SECTION_SIZE;
     int in_horizontal_bounds = left_boundary > -radius_plus_buffer && right_boundary < radius_plus_buffer;
     int in_vertical_bounds = top_boundary > -radius_plus_buffer && bottom_boundary < radius_plus_buffer;
 
@@ -1143,7 +1187,7 @@ void generate_stars(struct bstar_t bstars[], struct ship_t *ship, struct point_t
             double dx = position.x - bx;
             double dy = position.y - by;
             double distance = sqrt(dx * dx + dy * dy);
-            double region_radius = sqrt((double)2 * ((GALAXY_REGION_SIZE + 1) / 2) * GALAXY_SECTION_SIZE * ((GALAXY_REGION_SIZE + 1) / 2) * GALAXY_SECTION_SIZE);
+            double region_radius = sqrt((double)2 * ((galaxy_region_size + 1) / 2) * GALAXY_SECTION_SIZE * ((galaxy_region_size + 1) / 2) * GALAXY_SECTION_SIZE);
 
             // If star outside region, delete it
             if (distance >= region_radius)

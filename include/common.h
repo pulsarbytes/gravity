@@ -41,6 +41,8 @@
 #define SHIP_PROJECTION_RADIUS 12 // Default: 12
 #define SHIP_RADIUS 17            // Default: 17
 #define BASE_SPEED_LIMIT 300      // Default: 300
+#define GALAXY_SPEED_LIMIT 1800   // Default: 1800
+#define UNIVERSE_SPEED_LIMIT 3000 // Default: 3000
 #define MAP_SPEED_MAX 30          // Zoom in. Default: 35
 #define MAP_SPEED_MIN 10          // Zoom out. Default: 10
 
@@ -50,8 +52,8 @@
 #define ZOOM_UNIVERSE 0.01     // Default: 0.01
 #define ZOOM_NAVIGATE_MIN 0.20 // Default: 0.20
 #define ZOOM_NAVIGATE 1        // Default: 1
-#define ZOOM_MAP_MIN 0.01      // Default: 0.01
-#define ZOOM_MAP 0.02          // Default: 0.02
+#define ZOOM_MAP_MIN 0.004     // Default: 0.004
+#define ZOOM_MAP 0.01          // Default: 0.01
 
 // Universe
 #define UNIVERSE_REGION_SIZE 30     // Sections per axis. Even number; Default: 30
@@ -64,6 +66,7 @@
 
 // Galaxy
 #define GALAXY_REGION_SIZE 30     // Sections per axis. Even number; Default: 30
+#define GALAXY_REGION_SIZE_MAX 70 // Region size for zoom < 0.01. Default:70
 #define GALAXY_DENSITY 30         // Maximum at galaxy center per 1000 sections. Default: 30
 #define MAX_STARS 907             // First prime number > (GALAXY_REGION_SIZE * GALAXY_REGION_SIZE). Default 907
                                   // We use this in the modulo operations of the hash function output
@@ -72,11 +75,11 @@
 // Starting position
 #define UNIVERSE_START_X -140000
 #define UNIVERSE_START_Y -70000
-#define GALAXY_START_X -70000 // Default: 0
+#define GALAXY_START_X -65000 // Default: 0
 #define GALAXY_START_Y -0     // Default: 0
 
 // Galaxies
-#define GALAXY_SCALE 10                 // We multiply radius by this factor to get galaxy full size radius in points. Default: 100 (min 10, max 10000)
+#define GALAXY_SCALE 100                // We multiply radius by this factor to get galaxy full size radius in points. Default: 100 (min 10, max 10000)
                                         // Use a smaller number to generate smaller galaxies
 #define GALAXY_CLASS_1_RADIUS_MIN 3000  // Default: 3000
 #define GALAXY_CLASS_1_RADIUS_MAX 1000  // Default: 1000 (+ 3000 = 4000) (max 5000)

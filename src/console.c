@@ -43,7 +43,12 @@ void log_fps(unsigned int time_diff)
 void log_game_console(struct game_console_entry entries[], int index, float value)
 {
     char text[16];
-    float rounded_value = roundf(value * 100) / 100;
+    float rounded_value;
+
+    if (index == SCALE_INDEX)
+        rounded_value = 100 * roundf(value * 1000) / 1000;
+    else
+        rounded_value = (int)value;
 
     sprintf(text, "%f", rounded_value);
     strcpy(entries[index].value, text);

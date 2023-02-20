@@ -18,6 +18,7 @@ extern struct galaxy_entry *galaxies[];
 extern int thrust;
 extern int reverse;
 extern float game_scale;
+extern int galaxy_region_size;
 
 static void cleanup_planets(struct planet_t *);
 void cleanup_stars(void);
@@ -609,7 +610,12 @@ void project_planet(struct planet_t *planet, const struct camera_t *camera, int 
     int opacity = 255;
 
     if (planet->level == LEVEL_STAR)
-        opacity = calculate_projection_opacity(distance, GALAXY_REGION_SIZE, GALAXY_SECTION_SIZE);
+    {
+        if (state == NAVIGATE)
+            opacity = calculate_projection_opacity(distance, GALAXY_REGION_SIZE, GALAXY_SECTION_SIZE);
+        else if (state == MAP)
+            opacity = calculate_projection_opacity(distance, galaxy_region_size, GALAXY_SECTION_SIZE);
+    }
 
     SDL_SetRenderDrawColor(renderer, planet->color.r, planet->color.g, planet->color.b, opacity);
     SDL_RenderFillRect(renderer, &planet->projection);
@@ -1161,5 +1167,98 @@ void draw_galaxy_cloud(struct galaxy_t *galaxy, const struct camera_t *camera, i
         int y = (galaxy->position.y - camera->y + galaxy->gstars[i].position.y) * game_scale;
 
         SDL_RenderDrawPoint(renderer, x, y);
+    }
+}
+
+/*
+ * Draw a speed arc for the ship.
+ */
+void draw_speed_arc(struct ship_t *ship, const struct camera_t *camera)
+{
+    SDL_Color color = {255, 165, 0};
+    int radius_1 = 50;
+    int radius_2 = radius_1 + 1;
+    int radius_3 = radius_1 + 2;
+    int vertical_offset = -20;
+
+    // Calculate the velocity vector
+    float velocity_x = ship->vx;
+    float velocity_y = ship->vy;
+
+    // Normalize the velocity vector
+    float velocity_length = sqrt(velocity_x * velocity_x + velocity_y * velocity_y);
+    velocity_x /= velocity_length;
+    velocity_y /= velocity_length;
+
+    // Calculate the perpendicular vector to the velocity vector
+    float perpendicular_x = -velocity_y;
+    float perpendicular_y = velocity_x;
+
+    // Normalize the perpendicular vector
+    float perpendicular_length = sqrt(perpendicular_x * perpendicular_x + perpendicular_y * perpendicular_y);
+    perpendicular_x /= perpendicular_length;
+    perpendicular_y /= perpendicular_length;
+
+    // Calculate the center point of the circle
+    float center_x = (ship->position.x - camera->x - vertical_offset * velocity_x) * game_scale;
+    float center_y = (ship->position.y - camera->y - vertical_offset * velocity_y) * game_scale;
+
+    // Calculate opacity
+    float opacity = 5 + (velocity_length - GALAXY_SPEED_LIMIT) / 50;
+    opacity = opacity > 255 ? 255 : opacity;
+
+    // Set the renderer draw color to the circle color
+    SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, (int)opacity);
+
+    // Draw the circle
+    for (float angle = 0; angle < 2 * M_PI; angle += 0.01)
+    {
+        // Outer circle
+        float start_x_3 = center_x + radius_3 * cos(angle);
+        float start_y_3 = center_y + radius_3 * sin(angle);
+        float end_x_3 = center_x + radius_3 * cos(angle + 0.01);
+        float end_y_3 = center_y + radius_3 * sin(angle + 0.01);
+
+        // Calculate the dot product between the velocity vector and the vector from the center of the circle to the current point
+        float dot_product_3 = (start_x_3 - center_x) * velocity_x + (start_y_3 - center_y) * velocity_y;
+
+        // Middle circle
+        float start_x_2 = center_x + radius_2 * cos(angle);
+        float start_y_2 = center_y + radius_2 * sin(angle);
+        float end_x_2 = center_x + radius_2 * cos(angle + 0.01);
+        float end_y_2 = center_y + radius_2 * sin(angle + 0.01);
+
+        // Calculate the dot product between the velocity vector and the vector from the center of the circle to the current point
+        float dot_product_2 = (start_x_2 - center_x) * velocity_x + (start_y_2 - center_y) * velocity_y;
+
+        // Inner circle
+        float start_x_1 = center_x + radius_1 * cos(angle);
+        float start_y_1 = center_y + radius_1 * sin(angle);
+        float end_x_1 = center_x + radius_1 * cos(angle + 0.01);
+        float end_y_1 = center_y + radius_1 * sin(angle + 0.01);
+
+        // Calculate the dot product between the velocity vector and the vector from the center of the circle to the current point
+        float dot_product_1 = (start_x_1 - center_x) * velocity_x + (start_y_1 - center_y) * velocity_y;
+
+        // Check if the point is above or below the diameter in the opposite direction to the velocity direction
+        // Range: -50 < x < 50 (0 is half circle, positive is above diameter)
+        // For v = 1800, velocity_factor = 50
+        // For v = UNIVERSE_SPEED_LIMIT, velocity_factor = 10 (increase above 0 to make arc smaller)
+        float velocity_factor = 10 + (UNIVERSE_SPEED_LIMIT - velocity_length) / 30;
+
+        if (dot_product_3 >= velocity_factor)
+        {
+            SDL_RenderDrawLine(renderer, (int)start_x_3, (int)start_y_3, (int)end_x_3, (int)end_y_3);
+        }
+
+        if (dot_product_2 >= velocity_factor)
+        {
+            SDL_RenderDrawLine(renderer, (int)start_x_2, (int)start_y_2, (int)end_x_2, (int)end_y_2);
+        }
+
+        if (dot_product_1 >= velocity_factor)
+        {
+            SDL_RenderDrawLine(renderer, (int)start_x_1, (int)start_y_1, (int)end_x_1, (int)end_y_1);
+        }
     }
 }
