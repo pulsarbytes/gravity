@@ -38,8 +38,8 @@ struct point_state
 {
     double current_x;
     double current_y;
-    double previous_x;
-    double previous_y;
+    double buffer_x;
+    double buffer_y;
 };
 
 // Struct for a planet
@@ -86,6 +86,7 @@ struct gstar_t
 struct galaxy_t
 {
     int initialized;
+    int initialized_hd;
     char name[MAX_OBJECT_NAME];
     int class;
     float radius;
@@ -94,6 +95,7 @@ struct galaxy_t
     SDL_Rect projection;
     SDL_Color color;
     struct gstar_t gstars[MAX_GSTARS];
+    struct gstar_t gstars_hd[MAX_GSTARS];
 };
 
 // Struct for a galaxy entry in galaxies hash table

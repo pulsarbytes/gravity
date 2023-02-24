@@ -17,7 +17,7 @@ extern struct star_entry *stars[];
 extern struct galaxy_entry *galaxies[];
 extern int thrust;
 extern int reverse;
-extern float game_scale;
+extern long double game_scale;
 extern int galaxy_region_size;
 extern struct vector_t velocity;
 
@@ -29,7 +29,7 @@ uint64_t pair_hash_order_sensitive_2(struct point_t);
 uint64_t double_hash(double x);
 bool point_eq(struct point_t, struct point_t);
 bool point_in_array(struct point_t, struct point_t arr[], int len);
-int calculate_projection_opacity(float distance, int region_size, int section_size);
+int calculate_projection_opacity(double distance, int region_size, int section_size);
 double find_nearest_section_axis(double n, int size);
 uint64_t unique_index(struct point_t, int modulo, int entity_type);
 void delete_star(struct point_t position);
@@ -286,11 +286,13 @@ void delete_star(struct point_t position)
         if (entry->x == position.x && entry->y == position.y)
         {
             // Clean up planets
-            if (entry->star != NULL)
+            if (entry->star != NULL && entry->star->planets[0] != NULL)
                 cleanup_planets(entry->star);
 
             // Clean up star
-            SDL_DestroyTexture(entry->star->texture);
+            if (entry->star->texture != NULL)
+                SDL_DestroyTexture(entry->star->texture);
+
             entry->star->texture = NULL;
             free(entry->star);
             entry->star = NULL;
@@ -320,8 +322,9 @@ void update_projection_coordinates(void *ptr, int entity_type, const struct came
     struct galaxy_t *galaxy = NULL;
     struct planet_t *planet = NULL;
     struct ship_t *ship = NULL;
-    float delta_x, delta_y, point;
+    double delta_x, delta_y, point;
     int offset;
+    long double scale;
 
     switch (entity_type)
     {
@@ -339,8 +342,13 @@ void update_projection_coordinates(void *ptr, int entity_type, const struct came
         break;
     }
 
-    int camera_w = camera->w / game_scale;
-    int camera_h = camera->h / game_scale;
+    if (state == NAVIGATE || state == MAP)
+        scale = game_scale;
+    else if (state == UNIVERSE)
+        scale = game_scale * GALAXY_SCALE;
+
+    int camera_w = camera->w / scale;
+    int camera_h = camera->h / scale;
 
     // Find screen quadrant for object exit from screen; 0, 0 is screen center, negative y is up
     if (galaxy)
@@ -385,17 +393,17 @@ void update_projection_coordinates(void *ptr, int entity_type, const struct came
         {
             if (galaxy)
             {
-                galaxy->projection.x = ((camera_w / 2) + point) * game_scale - offset * (point / (camera_w / 2) + 1);
+                galaxy->projection.x = ((camera_w / 2) + point) * scale - offset * (point / (camera_w / 2) + 1);
                 galaxy->projection.y = 0;
             }
             else if (planet)
             {
-                planet->projection.x = ((camera_w / 2) + point) * game_scale - offset * (point / (camera_w / 2) + 1);
+                planet->projection.x = ((camera_w / 2) + point) * scale - offset * (point / (camera_w / 2) + 1);
                 planet->projection.y = 0;
             }
             else if (ship)
             {
-                ship->projection->rect.x = ((camera_w / 2) + point) * game_scale - offset * (point / (camera_w / 2) + 1) + 3 * PROJECTION_RADIUS;
+                ship->projection->rect.x = ((camera_w / 2) + point) * scale - offset * (point / (camera_w / 2) + 1) + 3 * PROJECTION_RADIUS;
                 ship->projection->rect.y = 3 * PROJECTION_RADIUS;
             }
         }
@@ -409,18 +417,18 @@ void update_projection_coordinates(void *ptr, int entity_type, const struct came
 
             if (galaxy)
             {
-                galaxy->projection.x = camera_w * game_scale - (2 * offset);
-                galaxy->projection.y = point * game_scale - offset * (point / (camera_h / 2));
+                galaxy->projection.x = camera_w * scale - (2 * offset);
+                galaxy->projection.y = point * scale - offset * (point / (camera_h / 2));
             }
             else if (planet)
             {
-                planet->projection.x = camera_w * game_scale - (2 * offset);
-                planet->projection.y = point * game_scale - offset * (point / (camera_h / 2));
+                planet->projection.x = camera_w * scale - (2 * offset);
+                planet->projection.y = point * scale - offset * (point / (camera_h / 2));
             }
             else if (ship)
             {
-                ship->projection->rect.x = camera_w * game_scale - (2 * offset) + 3 * PROJECTION_RADIUS;
-                ship->projection->rect.y = point * game_scale - offset * (point / (camera_h / 2)) + 3 * PROJECTION_RADIUS;
+                ship->projection->rect.x = camera_w * scale - (2 * offset) + 3 * PROJECTION_RADIUS;
+                ship->projection->rect.y = point * scale - offset * (point / (camera_h / 2)) + 3 * PROJECTION_RADIUS;
             }
         }
     }
@@ -437,18 +445,18 @@ void update_projection_coordinates(void *ptr, int entity_type, const struct came
         {
             if (galaxy)
             {
-                galaxy->projection.x = camera_w * game_scale - (2 * offset);
-                galaxy->projection.y = ((camera_h / 2) + point) * game_scale - offset * (point / (camera_h / 2) + 1);
+                galaxy->projection.x = camera_w * scale - (2 * offset);
+                galaxy->projection.y = ((camera_h / 2) + point) * scale - offset * (point / (camera_h / 2) + 1);
             }
             else if (planet)
             {
-                planet->projection.x = camera_w * game_scale - (2 * offset);
-                planet->projection.y = ((camera_h / 2) + point) * game_scale - offset * (point / (camera_h / 2) + 1);
+                planet->projection.x = camera_w * scale - (2 * offset);
+                planet->projection.y = ((camera_h / 2) + point) * scale - offset * (point / (camera_h / 2) + 1);
             }
             else if (ship)
             {
-                ship->projection->rect.x = camera_w * game_scale - (2 * offset) + 3 * PROJECTION_RADIUS;
-                ship->projection->rect.y = ((camera_h / 2) + point) * game_scale - offset * (point / (camera_h / 2) + 1) + 3 * PROJECTION_RADIUS;
+                ship->projection->rect.x = camera_w * scale - (2 * offset) + 3 * PROJECTION_RADIUS;
+                ship->projection->rect.y = ((camera_h / 2) + point) * scale - offset * (point / (camera_h / 2) + 1) + 3 * PROJECTION_RADIUS;
             }
         }
         // Bottom
@@ -461,18 +469,18 @@ void update_projection_coordinates(void *ptr, int entity_type, const struct came
 
             if (galaxy)
             {
-                galaxy->projection.x = ((camera_w / 2) + point) * game_scale - offset * (point / (camera_w / 2) + 1);
-                galaxy->projection.y = camera_h * game_scale - (2 * offset);
+                galaxy->projection.x = ((camera_w / 2) + point) * scale - offset * (point / (camera_w / 2) + 1);
+                galaxy->projection.y = camera_h * scale - (2 * offset);
             }
             else if (planet)
             {
-                planet->projection.x = ((camera_w / 2) + point) * game_scale - offset * (point / (camera_w / 2) + 1);
-                planet->projection.y = camera_h * game_scale - (2 * offset);
+                planet->projection.x = ((camera_w / 2) + point) * scale - offset * (point / (camera_w / 2) + 1);
+                planet->projection.y = camera_h * scale - (2 * offset);
             }
             else if (ship)
             {
-                ship->projection->rect.x = ((camera_w / 2) + point) * game_scale - offset * (point / (camera_w / 2) + 1) + 3 * PROJECTION_RADIUS;
-                ship->projection->rect.y = camera_h * game_scale - (2 * offset) + 3 * PROJECTION_RADIUS;
+                ship->projection->rect.x = ((camera_w / 2) + point) * scale - offset * (point / (camera_w / 2) + 1) + 3 * PROJECTION_RADIUS;
+                ship->projection->rect.y = camera_h * scale - (2 * offset) + 3 * PROJECTION_RADIUS;
             }
         }
     }
@@ -489,18 +497,18 @@ void update_projection_coordinates(void *ptr, int entity_type, const struct came
         {
             if (galaxy)
             {
-                galaxy->projection.x = ((camera_w / 2) - point) * game_scale - offset * (((camera_w / 2) - point) / (camera_w / 2));
-                galaxy->projection.y = camera_h * game_scale - (2 * offset);
+                galaxy->projection.x = ((camera_w / 2) - point) * scale - offset * (((camera_w / 2) - point) / (camera_w / 2));
+                galaxy->projection.y = camera_h * scale - (2 * offset);
             }
             else if (planet)
             {
-                planet->projection.x = ((camera_w / 2) - point) * game_scale - offset * (((camera_w / 2) - point) / (camera_w / 2));
-                planet->projection.y = camera_h * game_scale - (2 * offset);
+                planet->projection.x = ((camera_w / 2) - point) * scale - offset * (((camera_w / 2) - point) / (camera_w / 2));
+                planet->projection.y = camera_h * scale - (2 * offset);
             }
             else if (ship)
             {
-                ship->projection->rect.x = ((camera_w / 2) - point) * game_scale - offset * (((camera_w / 2) - point) / (camera_w / 2)) + 3 * PROJECTION_RADIUS;
-                ship->projection->rect.y = camera_h * game_scale - (2 * offset) + 3 * PROJECTION_RADIUS;
+                ship->projection->rect.x = ((camera_w / 2) - point) * scale - offset * (((camera_w / 2) - point) / (camera_w / 2)) + 3 * PROJECTION_RADIUS;
+                ship->projection->rect.y = camera_h * scale - (2 * offset) + 3 * PROJECTION_RADIUS;
             }
         }
         // Left
@@ -511,17 +519,17 @@ void update_projection_coordinates(void *ptr, int entity_type, const struct came
             if (galaxy)
             {
                 galaxy->projection.x = 0;
-                galaxy->projection.y = (camera_h - point) * game_scale - offset * (((camera_h / 2) - point) / (camera_h / 2) + 1);
+                galaxy->projection.y = (camera_h - point) * scale - offset * (((camera_h / 2) - point) / (camera_h / 2) + 1);
             }
             else if (planet)
             {
                 planet->projection.x = 0;
-                planet->projection.y = (camera_h - point) * game_scale - offset * (((camera_h / 2) - point) / (camera_h / 2) + 1);
+                planet->projection.y = (camera_h - point) * scale - offset * (((camera_h / 2) - point) / (camera_h / 2) + 1);
             }
             else if (ship)
             {
                 ship->projection->rect.x = 3 * PROJECTION_RADIUS;
-                ship->projection->rect.y = (camera_h - point) * game_scale - offset * (((camera_h / 2) - point) / (camera_h / 2) + 1) + 3 * PROJECTION_RADIUS;
+                ship->projection->rect.y = (camera_h - point) * scale - offset * (((camera_h / 2) - point) / (camera_h / 2) + 1) + 3 * PROJECTION_RADIUS;
             }
         }
     }
@@ -536,17 +544,17 @@ void update_projection_coordinates(void *ptr, int entity_type, const struct came
             if (galaxy)
             {
                 galaxy->projection.x = 0;
-                galaxy->projection.y = ((camera_h / 2) - point) * game_scale - offset * (((camera_h / 2) - point) / (camera_h / 2));
+                galaxy->projection.y = ((camera_h / 2) - point) * scale - offset * (((camera_h / 2) - point) / (camera_h / 2));
             }
             else if (planet)
             {
                 planet->projection.x = 0;
-                planet->projection.y = ((camera_h / 2) - point) * game_scale - offset * (((camera_h / 2) - point) / (camera_h / 2));
+                planet->projection.y = ((camera_h / 2) - point) * scale - offset * (((camera_h / 2) - point) / (camera_h / 2));
             }
             else if (ship)
             {
                 ship->projection->rect.x = 3 * PROJECTION_RADIUS;
-                ship->projection->rect.y = ((camera_h / 2) - point) * game_scale - offset * (((camera_h / 2) - point) / (camera_h / 2)) + 3 * PROJECTION_RADIUS;
+                ship->projection->rect.y = ((camera_h / 2) - point) * scale - offset * (((camera_h / 2) - point) / (camera_h / 2)) + 3 * PROJECTION_RADIUS;
             }
         }
         // Top
@@ -556,17 +564,17 @@ void update_projection_coordinates(void *ptr, int entity_type, const struct came
 
             if (galaxy)
             {
-                galaxy->projection.x = point * game_scale - offset * (point / (camera_w / 2));
+                galaxy->projection.x = point * scale - offset * (point / (camera_w / 2));
                 galaxy->projection.y = 0;
             }
             else if (planet)
             {
-                planet->projection.x = point * game_scale - offset * (point / (camera_w / 2));
+                planet->projection.x = point * scale - offset * (point / (camera_w / 2));
                 planet->projection.y = 0;
             }
             else if (ship)
             {
-                ship->projection->rect.x = point * game_scale - offset * (point / (camera_w / 2)) + 3 * PROJECTION_RADIUS;
+                ship->projection->rect.x = point * scale - offset * (point / (camera_w / 2)) + 3 * PROJECTION_RADIUS;
                 ship->projection->rect.y = 3 * PROJECTION_RADIUS;
             }
         }
@@ -607,7 +615,7 @@ void project_planet(struct planet_t *planet, const struct camera_t *camera, int 
 
     double x = camera->x + (camera->w / 2) / game_scale;
     double y = camera->y + (camera->h / 2) / game_scale;
-    float distance = sqrt(pow(fabs(x - planet->position.x), 2) + pow(fabs(y - planet->position.y), 2));
+    double distance = sqrt(pow(fabs(x - planet->position.x), 2) + pow(fabs(y - planet->position.y), 2));
     int opacity = 255;
 
     if (planet->level == LEVEL_STAR)
@@ -625,7 +633,7 @@ void project_planet(struct planet_t *planet, const struct camera_t *camera, int 
 /*
  * Draw galaxy projection on axis.
  */
-void project_galaxy(struct galaxy_t *galaxy, const struct camera_t *camera, int state)
+void project_galaxy(struct galaxy_t *galaxy, const struct camera_t *camera, int state, long double scale)
 {
     int scaling_factor = 1;
 
@@ -636,12 +644,12 @@ void project_galaxy(struct galaxy_t *galaxy, const struct camera_t *camera, int 
 
     galaxy->projection.w = 2 * PROJECTION_RADIUS;
     galaxy->projection.h = 2 * PROJECTION_RADIUS;
-    double x = camera->x + (camera->w / 2) / game_scale;
-    double y = camera->y + (camera->h / 2) / game_scale;
+    double x = camera->x + (camera->w / 2) / scale;
+    double y = camera->y + (camera->h / 2) / scale;
     double delta_x = fabs(x - galaxy->position.x * scaling_factor) / scaling_factor;
     double delta_y = fabs(y - galaxy->position.y * scaling_factor) / scaling_factor;
 
-    float distance = sqrt(pow(delta_x, 2) + pow(delta_y, 2));
+    double distance = sqrt(pow(delta_x, 2) + pow(delta_y, 2));
     int opacity = calculate_projection_opacity(distance, UNIVERSE_REGION_SIZE, UNIVERSE_SECTION_SIZE);
 
     SDL_SetRenderDrawColor(renderer, galaxy->color.r, galaxy->color.g, galaxy->color.b, opacity);
@@ -652,7 +660,7 @@ void project_galaxy(struct galaxy_t *galaxy, const struct camera_t *camera, int 
  * Calculate projection opacity according to object distance.
  * Opacity fades to 128 for <near_sections> and then fades linearly to 0.
  */
-int calculate_projection_opacity(float distance, int region_size, int section_size)
+int calculate_projection_opacity(double distance, int region_size, int section_size)
 {
     const int near_sections = 4;
     int a = (int)distance / section_size;
@@ -684,7 +692,7 @@ int calculate_projection_opacity(float distance, int region_size, int section_si
 /*
  * Find distance to nearest galaxy.
  */
-float nearest_galaxy_center_distance(struct point_t position)
+double nearest_galaxy_center_distance(struct point_t position)
 {
     // We use 5 * UNIVERSE_SECTION_SIZE as max, since a CLASS_6 galaxy needs 5 + 1 empty sections
     // We search inner circumferences of points first and work towards outward circumferences
@@ -699,9 +707,9 @@ float nearest_galaxy_center_distance(struct point_t position)
 
     for (int i = 1; i <= 5; i++)
     {
-        for (float ix = position.x - i * UNIVERSE_SECTION_SIZE; ix <= position.x + i * UNIVERSE_SECTION_SIZE; ix += UNIVERSE_SECTION_SIZE)
+        for (double ix = position.x - i * UNIVERSE_SECTION_SIZE; ix <= position.x + i * UNIVERSE_SECTION_SIZE; ix += UNIVERSE_SECTION_SIZE)
         {
-            for (float iy = position.y - i * UNIVERSE_SECTION_SIZE; iy <= position.y + i * UNIVERSE_SECTION_SIZE; iy += UNIVERSE_SECTION_SIZE)
+            for (double iy = position.y - i * UNIVERSE_SECTION_SIZE; iy <= position.y + i * UNIVERSE_SECTION_SIZE; iy += UNIVERSE_SECTION_SIZE)
             {
                 if (ix == position.x && iy == position.y)
                     continue;
@@ -723,7 +731,7 @@ float nearest_galaxy_center_distance(struct point_t position)
 
                 if (has_galaxy)
                 {
-                    float distance = sqrt(pow(ix - position.x, 2) + pow(iy - position.y, 2));
+                    double distance = sqrt(pow(ix - position.x, 2) + pow(iy - position.y, 2));
 
                     return distance;
                 }
@@ -798,7 +806,7 @@ struct galaxy_t *find_nearest_galaxy(struct point_t position, struct galaxy_t *g
 /*
  * Find distance to nearest star.
  */
-float nearest_star_distance(struct point_t position, struct galaxy_t *current_galaxy, uint64_t initseq)
+double nearest_star_distance(struct point_t position, struct galaxy_t *current_galaxy, uint64_t initseq)
 {
     // We use 5 * GALAXY_SECTION_SIZE as max, since a CLASS_6 star needs 5 + 1 empty sections
     // We search inner circumferences of points first and work towards outward circumferences
@@ -812,13 +820,13 @@ float nearest_star_distance(struct point_t position, struct galaxy_t *current_ga
     pcg32_random_t rng;
 
     // Density scaling parameter
-    float a = current_galaxy->radius * GALAXY_SCALE / 2.0f;
+    double a = current_galaxy->radius * GALAXY_SCALE / 2.0f;
 
     for (int i = 1; i <= 5; i++)
     {
-        for (float ix = position.x - i * GALAXY_SECTION_SIZE; ix <= position.x + i * GALAXY_SECTION_SIZE; ix += GALAXY_SECTION_SIZE)
+        for (double ix = position.x - i * GALAXY_SECTION_SIZE; ix <= position.x + i * GALAXY_SECTION_SIZE; ix += GALAXY_SECTION_SIZE)
         {
-            for (float iy = position.y - i * GALAXY_SECTION_SIZE; iy <= position.y + i * GALAXY_SECTION_SIZE; iy += GALAXY_SECTION_SIZE)
+            for (double iy = position.y - i * GALAXY_SECTION_SIZE; iy <= position.y + i * GALAXY_SECTION_SIZE; iy += GALAXY_SECTION_SIZE)
             {
                 if (ix == position.x && iy == position.y)
                     continue;
@@ -838,13 +846,13 @@ float nearest_star_distance(struct point_t position, struct galaxy_t *current_ga
 
                 // Calculate density based on distance from center
                 double distance_from_center = sqrt((ix - position.x) * (ix - position.x) + (iy - position.y) * (iy - position.y));
-                float density = (GALAXY_DENSITY / pow((distance_from_center / a + 1), 2));
+                double density = (GALAXY_DENSITY / pow((distance_from_center / a + 1), 6));
 
                 int has_star = abs(pcg32_random_r(&rng)) % 1000 < density;
 
                 if (has_star)
                 {
-                    float distance = sqrt(pow(ix - position.x, 2) + pow(iy - position.y, 2));
+                    double distance = sqrt(pow(ix - position.x, 2) + pow(iy - position.y, 2));
 
                     return distance;
                 }
@@ -976,12 +984,12 @@ int in_camera_relative(const struct camera_t *camera, int x, int y)
 
 /*
  * Check whether object with center (x,y) and radius r is in camera.
- * x, y are absolute full scale coordinates. Radius is full scale.
+ * x, y are absolute galaxy scale coordinates. Radius is galaxy scale.
  */
-int in_camera(const struct camera_t *camera, double x, double y, float radius)
+int in_camera(const struct camera_t *camera, double x, double y, float radius, long double scale)
 {
-    return x + radius >= camera->x && x - radius - camera->x < camera->w / game_scale &&
-           y + radius >= camera->y && y - radius - camera->y < camera->h / game_scale;
+    return x + radius >= camera->x && x - radius - camera->x < camera->w / scale &&
+           y + radius >= camera->y && y - radius - camera->y < camera->h / scale;
 }
 
 /*
@@ -1085,60 +1093,80 @@ bool line_intersects_viewport(const struct camera_t *camera, double x1, double y
     return false;
 }
 
-void draw_section_lines(struct camera_t *camera, int section_size, SDL_Color color)
+void draw_section_lines(struct camera_t *camera, int section_size, SDL_Color color, long double scale)
 {
     double bx = find_nearest_section_axis(camera->x, section_size);
     double by = find_nearest_section_axis(camera->y, section_size);
     SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a);
 
-    for (int ix = bx; ix <= bx + camera->w / game_scale; ix = ix + section_size)
+    for (int ix = bx; ix <= bx + camera->w / scale; ix = ix + section_size)
     {
-        SDL_RenderDrawLine(renderer, (ix - camera->x) * game_scale, 0, (ix - camera->x) * game_scale, camera->h);
+        SDL_RenderDrawLine(renderer, (ix - camera->x) * scale, 0, (ix - camera->x) * scale, camera->h);
     }
 
-    for (int iy = by; iy <= by + camera->h / game_scale; iy = iy + section_size)
+    for (int iy = by; iy <= by + camera->h / scale; iy = iy + section_size)
     {
-        SDL_RenderDrawLine(renderer, 0, (iy - camera->y) * game_scale, camera->w, (iy - camera->y) * game_scale);
+        SDL_RenderDrawLine(renderer, 0, (iy - camera->y) * scale, camera->w, (iy - camera->y) * scale);
     }
 }
 
-void create_galaxy_cloud(struct galaxy_t *galaxy)
+void create_galaxy_cloud(struct galaxy_t *galaxy, unsigned short high_definition)
 {
     float radius = galaxy->radius;
-    int section_size = 100;
-    float ix, iy;
+    double full_size_radius = radius * GALAXY_SCALE;
+    full_size_radius -= fmod(full_size_radius, GALAXY_SECTION_SIZE); // zero out any digits below 10,000
+    double full_size_diameter = full_size_radius * 2;
+
+    // Check whether MAX_GSTARS_ROW * GALAXY_SECTION_SIZE fit in full_size_diameter
+    // If they don't fit, we must group sections together
+    int grouped_sections = 1;
+    double total_sections = full_size_diameter / (grouped_sections * GALAXY_SECTION_SIZE);
+
+    // Scale max array size by galaxy class
+    int array_factor = 12;
+
+    if (!high_definition)
+        array_factor = galaxy->class;
+
+    while (total_sections > MAX_GSTARS_ROW * array_factor) // Allow <array_factor> times more than array size as density is low
+    {
+        grouped_sections++;
+        total_sections = full_size_diameter / (grouped_sections * GALAXY_SECTION_SIZE);
+    }
+
+    int section_size = grouped_sections * GALAXY_SECTION_SIZE;
+    double ix, iy;
     int i = 0;
-    int max_density = 150;
 
     // Use a local rng
     pcg32_random_t rng;
 
-    // Density scaling parameter
-    float a = radius / 2.0f;
+    // Set galaxy hash as initseq
+    uint64_t initseq = pair_hash_order_sensitive_2(galaxy->position);
 
-    for (ix = -radius; ix <= radius; ix += section_size)
+    // Density scaling parameter
+    double a = galaxy->radius * GALAXY_SCALE / 2.0f;
+
+    for (ix = -full_size_radius; ix <= full_size_radius; ix += section_size)
     {
-        for (iy = -radius; iy <= radius; iy += section_size)
+        for (iy = -full_size_radius; iy <= full_size_radius; iy += section_size)
         {
             // Calculate the distance from the center of the galaxy
-            float distance_from_center = sqrt(ix * ix + iy * iy);
+            double distance_from_center = sqrt(ix * ix + iy * iy);
 
             // Check that point is within galaxy radius
-            if (distance_from_center > radius)
+            if (distance_from_center > full_size_radius)
                 continue;
 
             // Create rng seed by combining x,y values
             struct point_t position = {.x = ix, .y = iy};
             uint64_t seed = pair_hash_order_sensitive(position);
 
-            // Set galaxy hash as initseq
-            uint64_t initseq = pair_hash_order_sensitive_2(galaxy->position);
-
             // Seed with a fixed constant
             pcg32_srandom_r(&rng, seed, initseq);
 
             // Calculate density based on distance from center
-            float density = (max_density / pow((distance_from_center / a + 1), 6));
+            double density = (GALAXY_DENSITY / pow((distance_from_center / a + 1), 6));
 
             int has_star = abs(pcg32_random_r(&rng)) % 1000 < density;
 
@@ -1147,25 +1175,47 @@ void create_galaxy_cloud(struct galaxy_t *galaxy)
                 struct gstar_t star;
                 star.position.x = ix;
                 star.position.y = iy;
-                star.opacity = ((rand() % 196) + 25); // Get a random color between 25 - 195
+
+                // Get a value between 25 - 195 (not efficient to look for actual star classes)
+                star.opacity = pcg32_random_r(&rng) % 196 + 25;
+
                 star.final_star = 1;
-                galaxy->gstars[i++] = star;
+
+                if (high_definition)
+                    galaxy->gstars_hd[i++] = star;
+                else
+                    galaxy->gstars[i++] = star;
             }
         }
     }
 
     // Set galaxy as initialized
-    galaxy->initialized = i;
+    if (high_definition)
+        galaxy->initialized_hd = i;
+    else
+        galaxy->initialized = i;
 }
 
-void draw_galaxy_cloud(struct galaxy_t *galaxy, const struct camera_t *camera, int gstars_count)
+void draw_galaxy_cloud(struct galaxy_t *galaxy, const struct camera_t *camera, int gstars_count, unsigned short high_definition)
 {
     for (int i = 0; i < gstars_count; i++)
     {
-        SDL_SetRenderDrawColor(renderer, 255, 255, 255, galaxy->gstars[i].opacity);
+        int x, y;
 
-        int x = (galaxy->position.x - camera->x + galaxy->gstars[i].position.x) * game_scale;
-        int y = (galaxy->position.y - camera->y + galaxy->gstars[i].position.y) * game_scale;
+        if (high_definition)
+        {
+            SDL_SetRenderDrawColor(renderer, 255, 255, 255, galaxy->gstars_hd[i].opacity);
+
+            x = (galaxy->position.x - camera->x + galaxy->gstars_hd[i].position.x / GALAXY_SCALE) * game_scale * GALAXY_SCALE;
+            y = (galaxy->position.y - camera->y + galaxy->gstars_hd[i].position.y / GALAXY_SCALE) * game_scale * GALAXY_SCALE;
+        }
+        else
+        {
+            SDL_SetRenderDrawColor(renderer, 255, 255, 255, galaxy->gstars[i].opacity);
+
+            x = (galaxy->position.x - camera->x + galaxy->gstars[i].position.x / GALAXY_SCALE) * game_scale * GALAXY_SCALE;
+            y = (galaxy->position.y - camera->y + galaxy->gstars[i].position.y / GALAXY_SCALE) * game_scale * GALAXY_SCALE;
+        }
 
         SDL_RenderDrawPoint(renderer, x, y);
     }
@@ -1205,7 +1255,7 @@ void draw_speed_arc(struct ship_t *ship, const struct camera_t *camera)
     float center_y = (ship->position.y - camera->y - vertical_offset * velocity_y) * game_scale;
 
     // Calculate opacity
-    float opacity = 5 + (velocity_length - GALAXY_SPEED_LIMIT) / 75;
+    float opacity = 5 + (velocity_length - GALAXY_SPEED_LIMIT) / 80;
     opacity = opacity > 255 ? 255 : opacity;
 
     // Set the renderer draw color to the circle color
@@ -1245,7 +1295,7 @@ void draw_speed_arc(struct ship_t *ship, const struct camera_t *camera)
         // Range: -50 < x < 50 (0 is half circle, positive is above diameter)
         // For v = 1800, velocity_factor = 50
         // For v = UNIVERSE_SPEED_LIMIT, velocity_factor = 10 (increase above 0 to make arc smaller)
-        float velocity_factor = 10 + (UNIVERSE_SPEED_LIMIT - velocity_length) / 30;
+        float velocity_factor = 20 + (UNIVERSE_SPEED_LIMIT - velocity_length) / 40;
 
         if (dot_product_3 >= velocity_factor)
         {
@@ -1267,7 +1317,7 @@ void draw_speed_arc(struct ship_t *ship, const struct camera_t *camera)
 /*
  * Delete stars outside region.
  */
-void delete_stars_outside_region(double bx, double by)
+void delete_stars_outside_region(double bx, double by, int region_size)
 {
     for (int s = 0; s < MAX_STARS; s++)
     {
@@ -1281,7 +1331,7 @@ void delete_stars_outside_region(double bx, double by)
             double dx = position.x - bx;
             double dy = position.y - by;
             double distance = sqrt(dx * dx + dy * dy);
-            double region_radius = sqrt((double)2 * ((galaxy_region_size + 1) / 2) * GALAXY_SECTION_SIZE * ((galaxy_region_size + 1) / 2) * GALAXY_SECTION_SIZE);
+            double region_radius = sqrt((double)2 * ((region_size + 1) / 2) * GALAXY_SECTION_SIZE * ((region_size + 1) / 2) * GALAXY_SECTION_SIZE);
 
             // If star outside region, delete it
             if (distance >= region_radius)

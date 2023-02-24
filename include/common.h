@@ -16,13 +16,14 @@
 #endif
 
 // Background stars
-#define BSTARS_MAX_SPEED 260     // Default: 260
-#define BSTARS_SPEED_FACTOR 0.10 // Default: 0.10
-#define BSTARS_SQUARE 10000      // Groups X pixels. Default: 10000
-#define BSTARS_PER_SQUARE 4      // X stars per square. Default: 4
-#define MAX_GSTARS 90000         // Default 90000. (300 * 300)
-#define GSTARS_SCALE 10          // Designates gstars scaling compared to universe mode. Default: 10
-#define SPEED_LINES_NUM 8        // Number of rows and columns for the speeding lines array. Default: 8
+#define BSTARS_MAX_SPEED 220                      // Default: 220
+#define BSTARS_SPEED_FACTOR 0.1                   // Default: 0.10
+#define BSTARS_SQUARE 10000                       // Groups X pixels. Default: 10000
+#define BSTARS_PER_SQUARE 4                       // X stars per square. Default: 4
+#define MAX_GSTARS_ROW 100                        // Default: 100
+#define MAX_GSTARS MAX_GSTARS_ROW *MAX_GSTARS_ROW // Default 10000. (100 * 100)
+#define GSTARS_SCALE 10                           // Designates gstars scaling compared to universe mode. Default: 10
+#define SPEED_LINES_NUM 8                         // Number of rows and columns for the speeding lines array. Default: 8
 
 // Game settings
 #define BSTARS_ON 1      // Default: 1
@@ -43,17 +44,28 @@
 #define BASE_SPEED_LIMIT 300      // Default: 300
 #define GALAXY_SPEED_LIMIT 1800   // Default: 1800
 #define UNIVERSE_SPEED_LIMIT 3000 // Default: 3000
-#define MAP_SPEED_MAX 30          // Zoom in. Default: 35
+#define MAP_SPEED_MAX 25          // Zoom in. Default: 30
 #define MAP_SPEED_MIN 10          // Zoom out. Default: 10
+#define UNIVERSE_SPEED_MAX 15     // Zoom in. Default: 15
+#define UNIVERSE_SPEED_MIN 4      // Zoom out. Default: 4
 
 // Zoom
-#define ZOOM_STEP 0.01         // Default: 0.01
-#define ZOOM_MAX 1             // Default: 1
-#define ZOOM_UNIVERSE 0.01     // Default: 0.01
+#define ZOOM_NAVIGATE 1.0      // Default: 1.0
 #define ZOOM_NAVIGATE_MIN 0.20 // Default: 0.20
-#define ZOOM_NAVIGATE 1        // Default: 1
-#define ZOOM_MAP_MIN 0.004     // Default: 0.004
-#define ZOOM_MAP 0.01          // Default: 0.01
+#define ZOOM_MAX 1.0           // Default: 1.0
+
+#define ZOOM_STEP 0.01      // Default: 0.01
+#define ZOOM_EPSILON 0.0001 // Default: 0.0001
+
+#define ZOOM_MAP 0.01                        // Default: 0.01
+#define ZOOM_MAP_REGION_SWITCH 0.01          // Default: 0.01
+#define ZOOM_MAP_SWITCH 0.005                // Default: 0.005
+#define ZOOM_MAP_MIN ZOOM_MAP_SWITCH - 0.001 // Default: 0.001
+
+#define ZOOM_UNIVERSE 0.01         // Universe scale. Default: 0.01
+#define ZOOM_UNIVERSE_MIN 0.01     // Universe scale. Default: 0.01
+#define ZOOM_UNIVERSE_STEP 0.001   // Default: 0.001
+#define ZOOM_UNIVERSE_STARS 0.0002 // Generate more stars over this limit. Default: 0.0002
 
 // Universe
 #define UNIVERSE_REGION_SIZE 30     // Sections per axis. Even number; Default: 30
@@ -66,8 +78,8 @@
 
 // Galaxy
 #define GALAXY_REGION_SIZE 30     // Sections per axis. Even number; Default: 30
-#define GALAXY_REGION_SIZE_MAX 70 // Region size for zoom < 0.01. Default:70
-#define GALAXY_DENSITY 30         // Maximum at galaxy center per 1000 sections. Default: 30
+#define GALAXY_REGION_SIZE_MAX 60 // Region size for zoom < ZOOM_MAP_REGION_SWITCH. Default:60
+#define GALAXY_DENSITY 30         // Maximum at galaxy center per 1000 sections. Default: 30 (max 150)
 #define MAX_STARS 907             // First prime number > (GALAXY_REGION_SIZE * GALAXY_REGION_SIZE). Default 907
                                   // We use this in the modulo operations of the hash function output
 #define GALAXY_SECTION_SIZE 10000 // Default: 10000
@@ -75,11 +87,11 @@
 // Starting position
 #define UNIVERSE_START_X -140000
 #define UNIVERSE_START_Y -70000
-#define GALAXY_START_X -700000 // Default: 0
-#define GALAXY_START_Y -0      // Default: 0
+#define GALAXY_START_X -7000000 // Default: 0
+#define GALAXY_START_Y -0       // Default: 0
 
 // Galaxies
-#define GALAXY_SCALE 10                 // We multiply radius by this factor to get galaxy full size radius in points. Default: 100 (min 10, max 10000)
+#define GALAXY_SCALE 10000              // We multiply radius by this factor to get galaxy full size radius in points. Default: 100 (min 100, max 10000)
                                         // Use a smaller number to generate smaller galaxies
 #define GALAXY_CLASS_1_RADIUS_MIN 3000  // Default: 3000
 #define GALAXY_CLASS_1_RADIUS_MAX 1000  // Default: 1000 (+ 3000 = 4000) (max 5000)

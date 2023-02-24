@@ -1,7 +1,7 @@
 /*
  * Gravity - An infinite procedural 2d universe that models gravity and orbital motion.
  *
- * v1.2.0
+ * v1.2.1
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 only,
@@ -48,7 +48,7 @@ static int speed_limit = BASE_SPEED_LIMIT;
 static int landing_stage = STAGE_OFF;
 struct vector_t velocity;
 int state = NAVIGATE;
-float game_scale = ZOOM_NAVIGATE;
+long double game_scale = ZOOM_NAVIGATE;
 static float save_scale = 0;
 
 // Keep track of keyboard inputs
@@ -70,9 +70,11 @@ int galaxy_region_size = GALAXY_REGION_SIZE;
 int map_enter = OFF;
 int map_exit = OFF;
 int map_center = OFF;
+int map_switch = OFF;
 int universe_enter = OFF;
 int universe_exit = OFF;
 int universe_center = OFF;
+int universe_switch = OFF;
 int exited_galaxy = OFF;
 int galaxy_found = OFF;
 
@@ -90,7 +92,7 @@ struct star_entry *stars[MAX_STARS];
 struct galaxy_entry *galaxies[MAX_GALAXIES];
 
 struct galaxy_t *current_galaxy;
-struct galaxy_t *buffer_galaxy;
+struct galaxy_t *buffer_galaxy; // Stores galaxy of current ship position
 struct galaxy_t *previous_galaxy;
 static struct point_t previous_ship_position = {.x = 0, .y = 0};
 
@@ -101,13 +103,13 @@ uint64_t initseq;
 // Function prototypes
 void onMenu(void);
 void onNavigate(struct bstar_t bstars[], struct ship_t *, struct camera_t *, struct point_t *, struct point_state *);
-void onMap(struct bstar_t bstars[], struct ship_t *, struct camera_t *, struct point_t *, struct point_state *);
-void onUniverse(struct ship_t *, struct camera_t *, struct point_t *, struct point_state *);
+void onMap(struct bstar_t bstars[], struct ship_t *, struct camera_t *, struct point_t *, struct point_t *, struct point_state *);
+void onUniverse(struct ship_t *, struct camera_t *, struct point_t *, struct point_t *, struct point_state *);
 void onPause(struct bstar_t bstars[], struct ship_t *, const struct camera_t *, unsigned int start_time);
 int init_sdl(void);
 void close_sdl(void);
 void poll_events(int *quit);
-void log_game_console(struct game_console_entry entries[], int index, float value);
+void log_game_console(struct game_console_entry entries[], int index, double value);
 void update_game_console(struct game_console_entry entries[]);
 void log_fps(unsigned int time_diff);
 void cleanup_resources(struct ship_t *, struct galaxy_t *, struct galaxy_t *, struct galaxy_t *);
@@ -115,7 +117,7 @@ void cleanup_stars(void);
 void calc_orbital_velocity(float height, float angle, float radius, float *vx, float *vy);
 void create_bstars(struct bstar_t bstars[], int max_bstars);
 void update_bstars(struct bstar_t bstars[], const struct camera_t *, struct speed_t, double distance);
-struct planet_t *create_star(struct point_t);
+struct planet_t *create_star(struct point_t, int preview);
 uint64_t pair_hash_order_sensitive(struct point_t);
 uint64_t pair_hash_order_sensitive_2(struct point_t);
 void create_system(struct planet_t *, struct point_t, pcg32_random_t rng);
@@ -123,7 +125,7 @@ struct ship_t create_ship(int radius, struct point_t);
 void update_system(struct planet_t *, struct ship_t *, const struct camera_t *, struct point_t, int state);
 void project_planet(struct planet_t *, const struct camera_t *, int state);
 void apply_gravity_to_ship(struct planet_t *, struct ship_t *, const struct camera_t *);
-void update_camera(struct camera_t *, struct point_t);
+void update_camera(struct camera_t *, struct point_t, long double scale);
 void update_ship(struct ship_t *, const struct camera_t *);
 void project_ship(struct ship_t *, const struct camera_t *, int state);
 double find_nearest_section_axis(double n, int size);
@@ -132,37 +134,44 @@ void put_star(struct point_t, struct planet_t *);
 struct planet_t *get_star(struct point_t);
 int star_exists(struct point_t);
 void delete_star(struct point_t);
-void update_velocity(struct ship_t *ship);
-float nearest_star_distance(struct point_t, struct galaxy_t *, uint64_t initseq);
+void update_velocity(struct ship_t *);
+double nearest_star_distance(struct point_t, struct galaxy_t *, uint64_t initseq);
 int get_star_class(float n);
 int get_planet_class(float n);
 void zoom_star(struct planet_t *);
 void SDL_DrawCircle(SDL_Renderer *, const struct camera_t *, int xc, int yc, int radius, SDL_Color);
-int in_camera(const struct camera_t *, double x, double y, float radius);
+int in_camera(const struct camera_t *, double x, double y, float radius, long double scale);
 void draw_screen_frame(struct camera_t *);
 void generate_galaxies(struct point_t);
 int galaxy_exists(struct point_t);
-float nearest_galaxy_center_distance(struct point_t);
+double nearest_galaxy_center_distance(struct point_t);
 int get_galaxy_class(float n);
 struct galaxy_t *create_galaxy(struct point_t);
 void put_galaxy(struct point_t, struct galaxy_t *);
 void delete_galaxy(struct point_t);
-void update_galaxy(struct galaxy_t *, const struct camera_t *, struct point_t);
+void update_galaxy(struct galaxy_t *, const struct camera_t *, struct point_t, struct point_state *);
 void SDL_DrawCircleApprox(SDL_Renderer *, const struct camera_t *, int x, int y, int r, SDL_Color);
-void draw_section_lines(struct camera_t *, int section_size, SDL_Color);
-void project_galaxy(struct galaxy_t *, const struct camera_t *, int state);
+void draw_section_lines(struct camera_t *, int section_size, SDL_Color, long double scale);
+void project_galaxy(struct galaxy_t *, const struct camera_t *, int state, long double scale);
 struct galaxy_t *get_galaxy(struct point_t);
 struct galaxy_t *find_nearest_galaxy(struct point_t, struct galaxy_t *, int exclude);
 double find_distance(double x1, double y1, double x2, double y2);
-void create_galaxy_cloud(struct galaxy_t *);
-void draw_galaxy_cloud(struct galaxy_t *, const struct camera_t *, int gstars_count);
+void create_galaxy_cloud(struct galaxy_t *, unsigned short);
+void draw_galaxy_cloud(struct galaxy_t *, const struct camera_t *, int gstars_count, unsigned short high_definition);
 void update_gstars(struct galaxy_t *, struct point_t, const struct camera_t *, double distance, double limit);
 void draw_speed_lines(const struct camera_t *, struct speed_t);
-void draw_speed_arc(struct ship_t *ship, const struct camera_t *camera);
-void delete_stars_outside_region(double bx, double by);
+void draw_speed_arc(struct ship_t *, const struct camera_t *camera);
+void delete_stars_outside_region(double bx, double by, int region_size);
+void generate_stars_preview(struct ship_t *, const struct camera_t *, struct point_t *, struct point_t *);
 
 int main(int argc, char *argv[])
 {
+    if (GALAXY_SCALE > 10000 || GALAXY_SCALE < 100)
+    {
+        fprintf(stderr, "Error: Invalid GALAXY_SCALE.\n");
+        return 1;
+    }
+
     int quit = 0;
 
     // Initialize SDL
@@ -172,9 +181,13 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    // Universe coordinates
+    // Galaxy coordinates
     // Retrieved from saved game or use default values if this is a new game
-    struct point_state universe_offset = {.current_x = UNIVERSE_START_X, .current_y = UNIVERSE_START_Y, .previous_x = UNIVERSE_START_X, .previous_y = UNIVERSE_START_Y};
+    struct point_state galaxy_offset = {
+        .current_x = UNIVERSE_START_X,
+        .current_y = UNIVERSE_START_Y,
+        .buffer_x = UNIVERSE_START_X,  // stores x of buffer galaxy
+        .buffer_y = UNIVERSE_START_Y}; // stores y of buffer galaxy
 
     // Navigation coordinates
     struct point_t navigate_offset = {.x = GALAXY_START_X, .y = GALAXY_START_Y};
@@ -182,8 +195,10 @@ int main(int argc, char *argv[])
     // Map coordinates
     struct point_t map_offset = {.x = GALAXY_START_X, .y = GALAXY_START_Y};
 
-    // Universe scroll coordinates
-    struct point_t scroll_offset = {.x = universe_offset.current_x, .y = universe_offset.current_y};
+    // Universe coordinates
+    struct point_t universe_offset = {
+        .x = galaxy_offset.current_x,
+        .y = galaxy_offset.current_y};
 
     // Create ship and ship projection
     struct ship_t ship = create_ship(SHIP_RADIUS, navigate_offset);
@@ -199,7 +214,9 @@ int main(int argc, char *argv[])
         .h = display_mode.h};
 
     // Generate galaxies
-    struct point_t initial_position = {.x = universe_offset.current_x, .y = universe_offset.current_y};
+    struct point_t initial_position = {
+        .x = galaxy_offset.current_x,
+        .y = galaxy_offset.current_y};
     generate_galaxies(initial_position);
 
     // Allocate memory for galaxies
@@ -208,11 +225,16 @@ int main(int argc, char *argv[])
     previous_galaxy = (struct galaxy_t *)malloc(sizeof(struct galaxy_t));
 
     // Get a copy of current galaxy from the hash table
-    struct point_t galaxy_position = {.x = universe_offset.current_x, .y = universe_offset.current_y};
+    struct point_t galaxy_position = {
+        .x = galaxy_offset.current_x,
+        .y = galaxy_offset.current_y};
     struct galaxy_t *current_galaxy_copy = get_galaxy(galaxy_position);
 
-    // Use memcpy to copy the contents of current_galaxy_copy to current_galaxy
+    // Copy current_galaxy_copy to current_galaxy
     memcpy(current_galaxy, current_galaxy_copy, sizeof(struct galaxy_t));
+
+    // Copy current_galaxy to buffer_galaxy
+    memcpy(buffer_galaxy, current_galaxy, sizeof(struct galaxy_t));
 
     // Create background stars
     int max_bstars = (int)(display_mode.w * display_mode.h * BSTARS_PER_SQUARE / BSTARS_SQUARE);
@@ -226,7 +248,7 @@ int main(int argc, char *argv[])
     create_bstars(bstars, max_bstars);
 
     // Generate stars
-    generate_stars(bstars, &ship, &navigate_offset, &universe_offset, state);
+    generate_stars(bstars, &ship, &navigate_offset, &galaxy_offset, state);
 
     // Put ship in orbit around a star
     if (START_IN_ORBIT)
@@ -245,8 +267,8 @@ int main(int argc, char *argv[])
     }
 
     // Initialize universe sections crossings
-    universe_cross_axis.x = universe_offset.current_x;
-    universe_cross_axis.y = universe_offset.current_x;
+    universe_cross_axis.x = galaxy_offset.current_x;
+    universe_cross_axis.y = galaxy_offset.current_x;
 
     // Initialize galaxy sections crossings
     cross_axis.x = ship.position.x;
@@ -275,13 +297,13 @@ int main(int argc, char *argv[])
             onMenu();
             break;
         case NAVIGATE:
-            onNavigate(bstars, &ship, &camera, &navigate_offset, &universe_offset);
+            onNavigate(bstars, &ship, &camera, &navigate_offset, &galaxy_offset);
             break;
         case MAP:
-            onMap(bstars, &ship, &camera, &map_offset, &universe_offset);
+            onMap(bstars, &ship, &camera, &map_offset, &universe_offset, &galaxy_offset);
             break;
         case UNIVERSE:
-            onUniverse(&ship, &camera, &scroll_offset, &universe_offset);
+            onUniverse(&ship, &camera, &map_offset, &universe_offset, &galaxy_offset);
             break;
         case PAUSE:
             onPause(bstars, &ship, &camera, start_time);
@@ -318,20 +340,20 @@ void onMenu(void)
     // printf("\nonMenu");
 }
 
-void onNavigate(struct bstar_t bstars[], struct ship_t *ship, struct camera_t *camera, struct point_t *navigate_offset, struct point_state *universe_offset)
+void onNavigate(struct bstar_t bstars[], struct ship_t *ship, struct camera_t *camera, struct point_t *navigate_offset, struct point_state *galaxy_offset)
 {
-    if (map_exit)
+    if (map_exit || universe_exit)
     {
-        // Reset stars
+        // Reset stars and galaxy to current position
         if (current_galaxy->position.x != buffer_galaxy->position.x && current_galaxy->position.y != buffer_galaxy->position.y)
+        {
             cleanup_stars();
+            memcpy(current_galaxy, buffer_galaxy, sizeof(struct galaxy_t));
 
-        // Reset current_galaxy from buffer_galaxy
-        memcpy(current_galaxy, buffer_galaxy, sizeof(struct galaxy_t));
-
-        // Reset universe_offset
-        universe_offset->current_x = universe_offset->previous_x;
-        universe_offset->current_y = universe_offset->previous_y;
+            // Reset galaxy_offset
+            galaxy_offset->current_x = galaxy_offset->buffer_x;
+            galaxy_offset->current_y = galaxy_offset->buffer_y;
+        }
 
         // Reset ship position
         ship->position.x = previous_ship_position.x;
@@ -344,11 +366,8 @@ void onNavigate(struct bstar_t bstars[], struct ship_t *ship, struct camera_t *c
         double bx = find_nearest_section_axis(ship->position.x, GALAXY_SECTION_SIZE);
         double by = find_nearest_section_axis(ship->position.y, GALAXY_SECTION_SIZE);
 
-        delete_stars_outside_region(bx, by);
-    }
+        delete_stars_outside_region(bx, by, galaxy_region_size);
 
-    if (map_exit || universe_exit)
-    {
         // Reset saved game_scale
         if (save_scale)
             game_scale = save_scale;
@@ -359,7 +378,7 @@ void onNavigate(struct bstar_t bstars[], struct ship_t *ship, struct camera_t *c
 
         // Update camera
         if (camera_on)
-            update_camera(camera, ship->position);
+            update_camera(camera, ship->position, game_scale);
 
         // Zoom in
         for (int s = 0; s < MAX_STARS; s++)
@@ -370,7 +389,7 @@ void onNavigate(struct bstar_t bstars[], struct ship_t *ship, struct camera_t *c
     }
 
     // Add small tolerance to account for floating-point precision errors
-    const float epsilon = 0.0001;
+    const double epsilon = ZOOM_EPSILON;
 
     if (zoom_in)
     {
@@ -410,11 +429,11 @@ void onNavigate(struct bstar_t bstars[], struct ship_t *ship, struct camera_t *c
 
     // Generate stars
     if (camera_on)
-        generate_stars(bstars, ship, navigate_offset, universe_offset, NAVIGATE);
+        generate_stars(bstars, ship, navigate_offset, galaxy_offset, NAVIGATE);
 
     // Update camera
     if (camera_on)
-        update_camera(camera, *navigate_offset);
+        update_camera(camera, *navigate_offset, game_scale);
 
     if (BSTARS_ON || GSTARS_ON || SPEED_LINES_ON)
     {
@@ -438,7 +457,7 @@ void onNavigate(struct bstar_t bstars[], struct ship_t *ship, struct camera_t *c
 
             update_gstars(current_galaxy, ship_position_current, camera, distance_current, limit_current);
 
-            if (exited_galaxy && previous_galaxy != NULL && previous_galaxy->initialized)
+            if (exited_galaxy && previous_galaxy != NULL && previous_galaxy->initialized_hd)
             {
                 // Convert ship position to universe coordinates
                 struct point_t universe_position;
@@ -538,16 +557,16 @@ void onNavigate(struct bstar_t bstars[], struct ship_t *ship, struct camera_t *c
         if (nearest_galaxy != NULL && nearest_galaxy->position.x != current_galaxy->position.x && nearest_galaxy->position.y != current_galaxy->position.y)
         {
             // Project nearest galaxy
-            project_galaxy(nearest_galaxy, &universe_camera, MAP);
+            project_galaxy(nearest_galaxy, &universe_camera, MAP, game_scale);
         }
 
         // Project current galaxy
-        project_galaxy(current_galaxy, &universe_camera, MAP);
+        project_galaxy(current_galaxy, &universe_camera, MAP, game_scale);
     }
 
     // Create galaxy cloud
-    if (!current_galaxy->initialized)
-        create_galaxy_cloud(current_galaxy);
+    if (!current_galaxy->initialized_hd)
+        create_galaxy_cloud(current_galaxy, TRUE);
 
     // Draw screen frame
     draw_screen_frame(camera);
@@ -575,20 +594,30 @@ void onNavigate(struct bstar_t bstars[], struct ship_t *ship, struct camera_t *c
         universe_exit = OFF;
 }
 
-void onMap(struct bstar_t bstars[], struct ship_t *ship, struct camera_t *camera, struct point_t *map_offset, struct point_state *universe_offset)
+void onMap(struct bstar_t bstars[], struct ship_t *ship, struct camera_t *camera, struct point_t *map_offset, struct point_t *universe_offset, struct point_state *galaxy_offset)
 {
     // Add small tolerance to account for floating-point precision errors
-    const float epsilon = 0.0001;
+    const double epsilon = ZOOM_EPSILON;
+
+    double zoom_step = ZOOM_STEP;
+
+    if (universe_switch)
+    {
+        cleanup_stars();
+    }
+
+    // Reset region_size
+    if (game_scale < ZOOM_MAP_REGION_SWITCH - epsilon)
+    {
+        if (universe_switch)
+            galaxy_region_size = GALAXY_REGION_SIZE_MAX;
+
+        // Generate new stars for new region size
+        stars_start = 1;
+    }
 
     if (map_enter)
     {
-        // Save current_galaxy
-        memcpy(buffer_galaxy, current_galaxy, sizeof(struct galaxy_t));
-
-        // Save universe_offset
-        universe_offset->previous_x = universe_offset->current_x;
-        universe_offset->previous_y = universe_offset->current_y;
-
         // Save ship position
         previous_ship_position.x = ship->position.x;
         previous_ship_position.y = ship->position.y;
@@ -599,7 +628,14 @@ void onMap(struct bstar_t bstars[], struct ship_t *ship, struct camera_t *camera
         if (map_enter && !save_scale)
             save_scale = game_scale;
 
-        game_scale = ZOOM_MAP;
+        if (!universe_switch)
+        {
+            game_scale = ZOOM_MAP;
+
+            // Reset map_offset
+            map_offset->x = previous_ship_position.x;
+            map_offset->y = previous_ship_position.y;
+        }
 
         // Zoom in
         for (int s = 0; s < MAX_STARS; s++)
@@ -608,51 +644,46 @@ void onMap(struct bstar_t bstars[], struct ship_t *ship, struct camera_t *camera
                 zoom_star(stars[s]->star);
         }
 
-        // Reset ship position
-        map_offset->x = previous_ship_position.x;
-        map_offset->y = previous_ship_position.y;
-
         // Update camera
-        update_camera(camera, *map_offset);
+        update_camera(camera, *map_offset, game_scale);
     }
 
     if (map_center)
     {
-        // Reset stars
+        // Reset stars and galaxy to current position
         if (current_galaxy->position.x != buffer_galaxy->position.x && current_galaxy->position.y != buffer_galaxy->position.y)
+        {
             cleanup_stars();
+            memcpy(current_galaxy, buffer_galaxy, sizeof(struct galaxy_t));
 
-        // Reset buffer_galaxy to current_galaxy
-        memcpy(current_galaxy, buffer_galaxy, sizeof(struct galaxy_t));
-
-        // Reset universe_offset
-        universe_offset->current_x = universe_offset->previous_x;
-        universe_offset->current_y = universe_offset->previous_y;
+            // Reset galaxy_offset
+            galaxy_offset->current_x = galaxy_offset->buffer_x;
+            galaxy_offset->current_y = galaxy_offset->buffer_y;
+        }
 
         // Reset ship position
         ship->position.x = previous_ship_position.x;
         ship->position.y = previous_ship_position.y;
 
+        // Reset region size
         galaxy_region_size = GALAXY_REGION_SIZE;
 
         // Delete stars that end up outside the region
-        if (game_scale <= 0.02 + epsilon)
+        if (game_scale - zoom_step <= ZOOM_MAP_REGION_SWITCH + epsilon)
         {
             double bx = find_nearest_section_axis(map_offset->x, GALAXY_SECTION_SIZE);
             double by = find_nearest_section_axis(map_offset->y, GALAXY_SECTION_SIZE);
 
-            delete_stars_outside_region(bx, by);
+            delete_stars_outside_region(bx, by, galaxy_region_size);
         }
 
         map_center = OFF;
     }
 
-    float zoom_step = ZOOM_STEP;
-
     if (zoom_in)
     {
-        if (game_scale + epsilon < 0.01)
-            zoom_step = 0.001;
+        if (game_scale <= ZOOM_MAP_REGION_SWITCH - epsilon)
+            zoom_step /= 10;
 
         if (game_scale + zoom_step <= ZOOM_MAX + epsilon)
         {
@@ -660,17 +691,17 @@ void onMap(struct bstar_t bstars[], struct ship_t *ship, struct camera_t *camera
             game_scale += zoom_step;
 
             // Reset region_size
-            if (game_scale + epsilon >= 0.01)
+            if (game_scale >= ZOOM_MAP_REGION_SWITCH - epsilon)
             {
                 galaxy_region_size = GALAXY_REGION_SIZE;
 
                 // Delete stars that end up outside the region
-                if (game_scale <= 0.02 + epsilon)
+                if (game_scale <= ZOOM_MAP_REGION_SWITCH + zoom_step + epsilon)
                 {
                     double bx = find_nearest_section_axis(map_offset->x, GALAXY_SECTION_SIZE);
                     double by = find_nearest_section_axis(map_offset->y, GALAXY_SECTION_SIZE);
 
-                    delete_stars_outside_region(bx, by);
+                    delete_stars_outside_region(bx, by, galaxy_region_size);
                 }
             }
 
@@ -687,8 +718,8 @@ void onMap(struct bstar_t bstars[], struct ship_t *ship, struct camera_t *camera
 
     if (zoom_out)
     {
-        if (game_scale - epsilon <= 0.01)
-            zoom_step = 0.001;
+        if (game_scale <= ZOOM_MAP_REGION_SWITCH + epsilon)
+            zoom_step = ZOOM_STEP / 10;
 
         if (game_scale - zoom_step >= ZOOM_MAP_MIN - epsilon)
         {
@@ -696,12 +727,25 @@ void onMap(struct bstar_t bstars[], struct ship_t *ship, struct camera_t *camera
             game_scale -= zoom_step;
 
             // Reset region_size
-            if (game_scale + epsilon < 0.01)
+            if (game_scale < ZOOM_MAP_REGION_SWITCH - epsilon)
             {
                 galaxy_region_size = GALAXY_REGION_SIZE_MAX;
 
                 // Generate new stars for new region size
                 stars_start = 1;
+            }
+
+            // Switch to Universe mode
+            if (game_scale <= ZOOM_MAP_SWITCH - epsilon)
+            {
+                map_exit = ON;
+                map_switch = ON;
+                universe_enter = ON;
+                state = UNIVERSE;
+
+                // Update universe_offset
+                universe_offset->x = current_galaxy->position.x + map_offset->x / GALAXY_SCALE;
+                universe_offset->y = current_galaxy->position.y + map_offset->y / GALAXY_SCALE;
             }
 
             // Zoom out
@@ -716,10 +760,21 @@ void onMap(struct bstar_t bstars[], struct ship_t *ship, struct camera_t *camera
     }
 
     // Generate stars
-    generate_stars(bstars, ship, map_offset, universe_offset, MAP);
+    generate_stars(bstars, ship, map_offset, galaxy_offset, MAP);
 
     // Update camera
-    update_camera(camera, *map_offset);
+    update_camera(camera, *map_offset, game_scale);
+
+    // Draw section lines
+    SDL_Color color = {255, 165, 0, 32};
+    int section_lines_grouping;
+
+    if (game_scale < 0.01 - epsilon)
+        section_lines_grouping = GALAXY_SECTION_SIZE * 10;
+    else
+        section_lines_grouping = GALAXY_SECTION_SIZE;
+
+    draw_section_lines(camera, section_lines_grouping, color, game_scale);
 
     // Check for nearest galaxy, excluding current galaxy
     if (exited_galaxy && PROJECTIONS_ON)
@@ -741,19 +796,19 @@ void onMap(struct bstar_t bstars[], struct ship_t *ship, struct camera_t *camera
         if (nearest_galaxy != NULL && nearest_galaxy->position.x != current_galaxy->position.x && nearest_galaxy->position.y != current_galaxy->position.y)
         {
             // Project nearest galaxy
-            project_galaxy(nearest_galaxy, &universe_camera, MAP);
+            project_galaxy(nearest_galaxy, &universe_camera, MAP, game_scale);
         }
 
         // Project current galaxy
-        project_galaxy(current_galaxy, &universe_camera, MAP);
+        project_galaxy(current_galaxy, &universe_camera, MAP, game_scale);
     }
 
     // Create galaxy cloud
-    if (!current_galaxy->initialized)
-        create_galaxy_cloud(current_galaxy);
+    if (!current_galaxy->initialized_hd)
+        create_galaxy_cloud(current_galaxy, TRUE);
 
     // Move through map
-    float rate_x = 0;
+    double rate_x = 0, rate_y = 0;
 
     if (right)
         rate_x = MAP_SPEED_MIN + (MAP_SPEED_MAX - MAP_SPEED_MIN) * (camera->w / 1000) / game_scale;
@@ -761,8 +816,6 @@ void onMap(struct bstar_t bstars[], struct ship_t *ship, struct camera_t *camera
         rate_x = -(MAP_SPEED_MIN + (MAP_SPEED_MAX - MAP_SPEED_MIN) * (camera->w / 1000) / game_scale);
 
     map_offset->x += rate_x;
-
-    float rate_y = 0;
 
     if (down)
         rate_y = MAP_SPEED_MIN + (MAP_SPEED_MAX - MAP_SPEED_MIN) * (camera->w / 1000) / game_scale;
@@ -772,7 +825,7 @@ void onMap(struct bstar_t bstars[], struct ship_t *ship, struct camera_t *camera
     map_offset->y += rate_y;
 
     // Update system
-    if ((!map_enter && !zoom_in && !zoom_out) || game_scale > 0)
+    if (!map_switch && !map_enter && !zoom_in && !zoom_out)
     {
         for (int i = 0; i < MAX_STARS; i++)
         {
@@ -805,13 +858,6 @@ void onMap(struct bstar_t bstars[], struct ship_t *ship, struct camera_t *camera
     else
         SDL_RenderCopyEx(renderer, ship->projection->texture, &ship->projection->main_img_rect, &ship->projection->rect, ship->projection->angle, &ship->projection->rotation_pt, SDL_FLIP_NONE);
 
-    // Draw section lines
-    if (game_scale >= 0.004 - epsilon)
-    {
-        SDL_Color color = {255, 165, 0, 32};
-        draw_section_lines(camera, GALAXY_SECTION_SIZE, color);
-    }
-
     // Draw galaxy radius circle
     int radius = current_galaxy->radius * GALAXY_SCALE * game_scale;
     int cx = -camera->x * game_scale;
@@ -840,24 +886,27 @@ void onMap(struct bstar_t bstars[], struct ship_t *ship, struct camera_t *camera
         update_game_console(game_console_entries);
     }
 
+    if (universe_switch)
+        universe_switch = OFF;
+
     if (map_enter)
         map_enter = OFF;
 }
 
-void onUniverse(struct ship_t *ship, struct camera_t *camera, struct point_t *scroll_offset, struct point_state *universe_offset)
+void onUniverse(struct ship_t *ship, struct camera_t *camera, struct point_t *map_offset, struct point_t *universe_offset, struct point_state *galaxy_offset)
 {
+    static int stars_preview_start = 1;
+    static struct point_t cross_point = {0.0, 0.0};
+
     if (map_exit)
     {
         // Reset stars
         if (current_galaxy->position.x != buffer_galaxy->position.x && current_galaxy->position.y != buffer_galaxy->position.y)
             cleanup_stars();
 
-        // Reset current_galaxy from buffer_galaxy
-        memcpy(current_galaxy, buffer_galaxy, sizeof(struct galaxy_t));
-
-        // Reset universe_offset
-        universe_offset->current_x = universe_offset->previous_x;
-        universe_offset->current_y = universe_offset->previous_y;
+        // Reset galaxy_offset
+        galaxy_offset->current_x = galaxy_offset->buffer_x;
+        galaxy_offset->current_y = galaxy_offset->buffer_y;
 
         // Reset ship position
         ship->position.x = previous_ship_position.x;
@@ -870,37 +919,129 @@ void onUniverse(struct ship_t *ship, struct camera_t *camera, struct point_t *sc
         double bx = find_nearest_section_axis(ship->position.x, GALAXY_SECTION_SIZE);
         double by = find_nearest_section_axis(ship->position.y, GALAXY_SECTION_SIZE);
 
-        delete_stars_outside_region(bx, by);
+        delete_stars_outside_region(bx, by, galaxy_region_size);
     }
 
     if (universe_enter || universe_center)
     {
+        // Save ship position
+        previous_ship_position.x = ship->position.x;
+        previous_ship_position.y = ship->position.y;
+
+        // Initialize cross points for stars preview
+        // Add GALAXY_SECTION_SIZE to map_offset so that stars generation is triggered on startup
+        if (cross_point.x == 0.0)
+            cross_point.x = find_nearest_section_axis(map_offset->x + GALAXY_SECTION_SIZE, GALAXY_SECTION_SIZE);
+
+        if (cross_point.y == 0.0)
+            cross_point.y = find_nearest_section_axis(map_offset->y + GALAXY_SECTION_SIZE, GALAXY_SECTION_SIZE);
+
         // Generate galaxies
-        struct point_t offset = {.x = universe_offset->current_x, .y = universe_offset->current_y};
+        struct point_t offset = {.x = galaxy_offset->current_x, .y = galaxy_offset->current_y};
         generate_galaxies(offset);
 
         if (universe_enter && !save_scale)
             save_scale = game_scale;
 
-        game_scale = ZOOM_UNIVERSE;
+        if (!map_switch)
+        {
+            game_scale = ZOOM_UNIVERSE / GALAXY_SCALE;
 
-        // Reset position in universe
-        scroll_offset->x = universe_offset->current_x + ship->position.x / GALAXY_SCALE;
-        scroll_offset->y = universe_offset->current_y + ship->position.y / GALAXY_SCALE;
+            // Reset universe_offset
+            universe_offset->x = galaxy_offset->current_x + ship->position.x / GALAXY_SCALE;
+            universe_offset->y = galaxy_offset->current_y + ship->position.y / GALAXY_SCALE;
+        }
 
         // Update camera
-        update_camera(camera, *scroll_offset);
+        update_camera(camera, *universe_offset, game_scale * GALAXY_SCALE);
+
+        // Generate stars preview
+        stars_preview_start = 1;
 
         if (universe_center)
             universe_center = OFF;
     }
     else
         // Generate galaxies
-        generate_galaxies(*scroll_offset);
+        generate_galaxies(*universe_offset);
 
-    if (!universe_enter || game_scale > 0)
+    // Add small tolerance to account for floating-point precision errors
+    const double epsilon = ZOOM_EPSILON / GALAXY_SCALE;
+
+    // Draw section lines
+    SDL_Color color = {255, 165, 0, 32};
+    int section_lines_grouping;
+
+    if (GALAXY_SCALE == 10000)
     {
-        // Update universe
+        if (game_scale >= 0.001 - epsilon)
+            section_lines_grouping = UNIVERSE_SECTION_SIZE / 1000;
+        else if (game_scale >= 0.0001 - epsilon)
+            section_lines_grouping = UNIVERSE_SECTION_SIZE / 100;
+        else if (game_scale >= 0.00001 - epsilon)
+            section_lines_grouping = UNIVERSE_SECTION_SIZE / 10;
+        else if (game_scale >= 0.000001 - epsilon)
+            section_lines_grouping = UNIVERSE_SECTION_SIZE;
+    }
+    else if (GALAXY_SCALE == 1000)
+    {
+        if (game_scale >= 0.001 - epsilon)
+            section_lines_grouping = UNIVERSE_SECTION_SIZE / 100;
+        else if (game_scale >= 0.0001 - epsilon)
+            section_lines_grouping = UNIVERSE_SECTION_SIZE / 10;
+        else if (game_scale >= 0.00001 - epsilon)
+            section_lines_grouping = UNIVERSE_SECTION_SIZE;
+    }
+    else if (GALAXY_SCALE == 100)
+    {
+        if (game_scale >= 0.001 - epsilon)
+            section_lines_grouping = UNIVERSE_SECTION_SIZE / 10;
+        else if (game_scale >= 0.0001 - epsilon)
+            section_lines_grouping = UNIVERSE_SECTION_SIZE;
+    }
+    else if (GALAXY_SCALE == 10)
+    {
+        section_lines_grouping = UNIVERSE_SECTION_SIZE;
+    }
+
+    draw_section_lines(camera, section_lines_grouping, color, game_scale * GALAXY_SCALE);
+
+    // Generate stars preview
+    if (game_scale >= ZOOM_UNIVERSE_STARS + epsilon)
+    {
+        if (stars_preview_start) // && !left && !right && !down && !up)
+        {
+            // Update map_offset
+            map_offset->x = (universe_offset->x - current_galaxy->position.x) * GALAXY_SCALE;
+            map_offset->y = (universe_offset->y - current_galaxy->position.y) * GALAXY_SCALE;
+
+            generate_stars_preview(ship, camera, map_offset, &cross_point);
+            stars_preview_start = 0;
+        }
+
+        for (int i = 0; i < MAX_STARS; i++)
+        {
+            if (stars[i] != NULL)
+            {
+                // Each index can have many entries, loop through all of them
+                struct star_entry *entry = stars[i];
+
+                while (entry != NULL)
+                {
+                    int opacity = entry->star->class * (255 / 6);
+                    SDL_SetRenderDrawColor(renderer, entry->star->color.r, entry->star->color.g, entry->star->color.b, opacity);
+                    int x = (current_galaxy->position.x - camera->x + entry->star->position.x / GALAXY_SCALE) * game_scale * GALAXY_SCALE;
+                    int y = (current_galaxy->position.y - camera->y + entry->star->position.y / GALAXY_SCALE) * game_scale * GALAXY_SCALE;
+                    SDL_RenderDrawPoint(renderer, x, y);
+                    entry = entry->next;
+                }
+            }
+        }
+    }
+
+    // Update galaxies
+    if (!universe_enter)
+    {
         for (int i = 0; i < MAX_GALAXIES; i++)
         {
             if (galaxies[i] != NULL)
@@ -910,7 +1051,7 @@ void onUniverse(struct ship_t *ship, struct camera_t *camera, struct point_t *sc
 
                 while (entry != NULL)
                 {
-                    update_galaxy(entry->galaxy, camera, *scroll_offset);
+                    update_galaxy(entry->galaxy, camera, *universe_offset, galaxy_offset);
                     entry = entry->next;
                 }
             }
@@ -918,55 +1059,104 @@ void onUniverse(struct ship_t *ship, struct camera_t *camera, struct point_t *sc
     }
 
     // Move through map
-    float rate_x = 0;
+    double rate_x = 0, rate_y = 0;
+    double speed_universe_step = 700;
+
+    if (game_scale >= 0.004 - epsilon)
+        speed_universe_step = 10000;
+    else if (game_scale >= 0.003 - epsilon)
+        speed_universe_step = 3000;
+    else if (game_scale >= 0.002 - epsilon)
+        speed_universe_step = 1000;
+    else if (game_scale >= 0.001 - epsilon)
+        speed_universe_step = 800;
+    else if (game_scale >= 0.00001 - epsilon)
+        speed_universe_step = 700;
+
+    if (right || left || down || up)
+        stars_preview_start = 1;
 
     if (right)
-        rate_x = MAP_SPEED_MIN + (MAP_SPEED_MAX - MAP_SPEED_MIN) * (camera->w / 1000) / game_scale;
+        rate_x = UNIVERSE_SPEED_MIN + (UNIVERSE_SPEED_MAX - UNIVERSE_SPEED_MIN) * (camera->w / 1000) / (game_scale * speed_universe_step);
     else if (left)
-        rate_x = -(MAP_SPEED_MIN + (MAP_SPEED_MAX - MAP_SPEED_MIN) * (camera->w / 1000) / game_scale);
+        rate_x = -(UNIVERSE_SPEED_MIN + (UNIVERSE_SPEED_MAX - UNIVERSE_SPEED_MIN) * (camera->w / 1000) / (game_scale * speed_universe_step));
 
-    scroll_offset->x += rate_x;
-
-    float rate_y = 0;
+    rate_x /= (double)GALAXY_SCALE / 1000;
+    universe_offset->x += rate_x;
 
     if (down)
-        rate_y = MAP_SPEED_MIN + (MAP_SPEED_MAX - MAP_SPEED_MIN) * (camera->w / 1000) / game_scale;
+        rate_y = UNIVERSE_SPEED_MIN + (UNIVERSE_SPEED_MAX - UNIVERSE_SPEED_MIN) * (camera->w / 1000) / (game_scale * speed_universe_step);
     else if (up)
-        rate_y = -(MAP_SPEED_MIN + (MAP_SPEED_MAX - MAP_SPEED_MIN) * (camera->w / 1000) / game_scale);
+        rate_y = -(UNIVERSE_SPEED_MIN + (UNIVERSE_SPEED_MAX - UNIVERSE_SPEED_MIN) * (camera->w / 1000) / (game_scale * speed_universe_step));
 
-    scroll_offset->y += rate_y;
+    rate_y /= (double)GALAXY_SCALE / 1000;
+    universe_offset->y += rate_y;
 
-    // Add small tolerance to account for floating-point precision errors
-    const float epsilon = 0.0001;
+    // Zoom
+    double zoom_universe_step = ZOOM_UNIVERSE_STEP;
 
     if (zoom_in)
     {
-        if (game_scale + ZOOM_STEP <= ZOOM_MAX + epsilon)
+        if (game_scale >= 0.001 - epsilon)
+            zoom_universe_step = ZOOM_UNIVERSE_STEP;
+        else if (game_scale >= 0.0001 - epsilon)
+            zoom_universe_step = ZOOM_UNIVERSE_STEP / 10;
+        else if (game_scale >= 0.00001 - epsilon)
+            zoom_universe_step = ZOOM_UNIVERSE_STEP / 100;
+        else if (game_scale > 0)
+            zoom_universe_step = ZOOM_UNIVERSE_STEP / 1000;
+
+        if (game_scale + zoom_universe_step <= ZOOM_MAP_SWITCH + epsilon)
         {
             // Reset scale
-            game_scale += ZOOM_STEP;
+            game_scale += zoom_universe_step;
+
+            // Switch to Map mode
+            if (game_scale >= ZOOM_MAP_SWITCH - epsilon)
+            {
+                universe_switch = ON;
+                map_enter = ON;
+                state = MAP;
+
+                // Update map_offset
+                map_offset->x = (universe_offset->x - current_galaxy->position.x) * GALAXY_SCALE;
+                map_offset->y = (universe_offset->y - current_galaxy->position.y) * GALAXY_SCALE;
+            }
         }
 
         zoom_in = OFF;
+        stars_preview_start = ON;
+        cross_point.x += GALAXY_SCALE;
+        cross_point.y += GALAXY_SCALE;
     }
 
     if (zoom_out)
     {
-        if (game_scale - ZOOM_STEP >= ZOOM_MAP_MIN - epsilon)
+        if (game_scale <= 0.00001 + epsilon)
+            zoom_universe_step = ZOOM_UNIVERSE_STEP / 1000;
+        else if (game_scale <= 0.0001 + epsilon)
+            zoom_universe_step = ZOOM_UNIVERSE_STEP / 100;
+        else if (game_scale <= 0.001 + epsilon)
+            zoom_universe_step = ZOOM_UNIVERSE_STEP / 10;
+
+        if (game_scale - zoom_universe_step >= ZOOM_UNIVERSE_MIN / GALAXY_SCALE - epsilon)
         {
             // Reset scale
-            game_scale -= ZOOM_STEP;
+            game_scale -= zoom_universe_step;
         }
 
         zoom_out = OFF;
+        stars_preview_start = ON;
+        cross_point.x += GALAXY_SCALE;
+        cross_point.y += GALAXY_SCALE;
     }
 
     // Update camera
-    update_camera(camera, *scroll_offset);
+    update_camera(camera, *universe_offset, game_scale * GALAXY_SCALE);
 
     // Draw ship projection
-    ship->projection->rect.x = (universe_offset->current_x + ship->position.x / GALAXY_SCALE - camera->x) * game_scale - SHIP_PROJECTION_RADIUS;
-    ship->projection->rect.y = (universe_offset->current_y + ship->position.y / GALAXY_SCALE - camera->y) * game_scale - SHIP_PROJECTION_RADIUS;
+    ship->projection->rect.x = (galaxy_offset->current_x + ship->position.x / GALAXY_SCALE - camera->x) * (game_scale * GALAXY_SCALE) - SHIP_PROJECTION_RADIUS;
+    ship->projection->rect.y = (galaxy_offset->current_y + ship->position.y / GALAXY_SCALE - camera->y) * (game_scale * GALAXY_SCALE) - SHIP_PROJECTION_RADIUS;
     ship->projection->angle = ship->angle;
 
     if (ship->projection->rect.x + ship->projection->radius < 0 ||
@@ -978,10 +1168,6 @@ void onUniverse(struct ship_t *ship, struct camera_t *camera, struct point_t *sc
     }
     else
         SDL_RenderCopyEx(renderer, ship->projection->texture, &ship->projection->main_img_rect, &ship->projection->rect, ship->projection->angle, &ship->projection->rotation_pt, SDL_FLIP_NONE);
-
-    // Draw section lines
-    SDL_Color color = {255, 255, 255, 25};
-    draw_section_lines(camera, UNIVERSE_SECTION_SIZE, color);
 
     // Draw cross at position
     SDL_SetRenderDrawColor(renderer, 255, 255, 255, 128);
@@ -995,8 +1181,8 @@ void onUniverse(struct ship_t *ship, struct camera_t *camera, struct point_t *sc
     if (console && CONSOLE_ON)
     {
         // Log coordinates (relative to (0,0))
-        log_game_console(game_console_entries, X_INDEX, scroll_offset->x);
-        log_game_console(game_console_entries, Y_INDEX, scroll_offset->y);
+        log_game_console(game_console_entries, X_INDEX, universe_offset->x);
+        log_game_console(game_console_entries, Y_INDEX, universe_offset->y);
 
         // Log game scale
         log_game_console(game_console_entries, SCALE_INDEX, game_scale);
@@ -1006,6 +1192,9 @@ void onUniverse(struct ship_t *ship, struct camera_t *camera, struct point_t *sc
 
     if (map_exit)
         map_exit = OFF;
+
+    if (map_switch)
+        map_switch = OFF;
 
     if (universe_enter)
         universe_enter = OFF;
@@ -1041,9 +1230,99 @@ void onPause(struct bstar_t bstars[], struct ship_t *ship, const struct camera_t
 /*
  * Probe region for stars and create them procedurally.
  * The region has intervals of size GALAXY_SECTION_SIZE.
+ */
+void generate_stars_preview(struct ship_t *ship, const struct camera_t *camera, struct point_t *offset, struct point_t *cross_point)
+{
+    // Convert section size to universe scale and then to game_scale
+    float section_size_scaled = (GALAXY_SECTION_SIZE / GALAXY_SCALE) * game_scale * GALAXY_SCALE;
+
+    // Check how many sections fit in camera
+    int sections_in_camera_x = (int)camera->w / section_size_scaled;
+    int sections_in_camera_y = (int)camera->h / section_size_scaled;
+
+    // Scale section_size with game_scale
+    int section_size = GALAXY_SECTION_SIZE;
+
+    // Keep track of current nearest section axis coordinates
+    double bx = find_nearest_section_axis(offset->x, section_size);
+    double by = find_nearest_section_axis(offset->y, section_size);
+
+    // Check whether nearest section axis have changed
+    if ((int)bx == (int)cross_point->x && (int)by == (int)cross_point->y)
+        return;
+
+    // Keep track of new axis
+    if ((int)bx != (int)cross_point->x)
+        cross_point->x = (int)bx;
+
+    if ((int)by != (int)cross_point->y)
+        cross_point->y = (int)by;
+
+    double ix, iy;
+    double left_boundary = bx - ((sections_in_camera_x / 2) * section_size);
+    double right_boundary = bx + ((sections_in_camera_x / 2) * section_size);
+    double top_boundary = by - ((sections_in_camera_y / 2) * section_size);
+    double bottom_boundary = by + ((sections_in_camera_y / 2) * section_size);
+
+    // Use a local rng
+    pcg32_random_t rng;
+
+    // Density scaling parameter
+    double a = current_galaxy->radius * GALAXY_SCALE / 2.0f;
+
+    // Set galaxy hash as initseq
+    initseq = pair_hash_order_sensitive_2(current_galaxy->position);
+
+    for (ix = left_boundary; ix < right_boundary; ix += section_size)
+    {
+        for (iy = top_boundary; iy < bottom_boundary; iy += section_size)
+        {
+            // Check that point is within galaxy radius
+            double distance_from_center = sqrt(ix * ix + iy * iy);
+
+            if (distance_from_center > (current_galaxy->radius * GALAXY_SCALE))
+                continue;
+
+            // Create rng seed by combining x,y values
+            struct point_t position = {.x = ix, .y = iy};
+            uint64_t seed = pair_hash_order_sensitive(position);
+
+            // Seed with a fixed constant
+            pcg32_srandom_r(&rng, seed, initseq);
+
+            // Calculate density based on distance from center
+            double density = (GALAXY_DENSITY / pow((distance_from_center / a + 1), 6));
+
+            int has_star = abs(pcg32_random_r(&rng)) % 1000 < density;
+
+            if (has_star)
+            {
+                // Check whether star exists in hash table
+                if (star_exists(position))
+                    continue;
+                else
+                {
+                    // Create star
+                    struct planet_t *star = create_star(position, TRUE);
+
+                    // Add star to hash table
+                    put_star(position, star);
+                }
+            }
+        }
+    }
+
+    // Delete stars that end up outside the region
+    int region_size = sections_in_camera_x;
+    delete_stars_outside_region(bx, by, region_size);
+}
+
+/*
+ * Probe region for stars and create them procedurally.
+ * The region has intervals of size GALAXY_SECTION_SIZE.
  * The function checks for galaxy boundaries and switches to a new galaxy if close enough.
  */
-void generate_stars(struct bstar_t bstars[], struct ship_t *ship, struct point_t *offset, struct point_state *universe_offset, int state)
+void generate_stars(struct bstar_t bstars[], struct ship_t *ship, struct point_t *offset, struct point_state *galaxy_offset, int state)
 {
     // Keep track of current nearest section axis coordinates
     double bx = find_nearest_section_axis(offset->x, GALAXY_SECTION_SIZE);
@@ -1113,9 +1392,9 @@ void generate_stars(struct bstar_t bstars[], struct ship_t *ship, struct point_t
             double px = d * cos(angle) * GALAXY_SCALE;
             double py = d * sin(angle) * GALAXY_SCALE;
 
-            // Update universe_offset
-            universe_offset->current_x = next_galaxy->position.x;
-            universe_offset->current_y = next_galaxy->position.y;
+            // Update galaxy_offset
+            galaxy_offset->current_x = next_galaxy->position.x;
+            galaxy_offset->current_y = next_galaxy->position.y;
 
             if (state == NAVIGATE)
             {
@@ -1127,9 +1406,12 @@ void generate_stars(struct bstar_t bstars[], struct ship_t *ship, struct point_t
                 offset->x = px;
                 offset->y = py;
 
-                // Permanently in a new galaxy, don't need previous universe_offset anymore
-                universe_offset->previous_x = universe_offset->current_x;
-                universe_offset->previous_y = universe_offset->current_y;
+                // Permanently in a new galaxy, update buffer galaxy_offset
+                galaxy_offset->buffer_x = galaxy_offset->current_x;
+                galaxy_offset->buffer_y = galaxy_offset->current_y;
+
+                // Update buffer_galaxy
+                memcpy(buffer_galaxy, current_galaxy, sizeof(struct galaxy_t));
 
                 // Create new background stars
                 int max_bstars = (int)(display_mode.w * display_mode.h * BSTARS_PER_SQUARE / BSTARS_SQUARE);
@@ -1149,8 +1431,8 @@ void generate_stars(struct bstar_t bstars[], struct ship_t *ship, struct point_t
 
                 // Update ship position so that it always points to original location
                 // First find absolute coordinates for original ship position in universe scale
-                double src_ship_position_x = universe_offset->previous_x + previous_ship_position.x / GALAXY_SCALE;
-                double src_ship_position_y = universe_offset->previous_y + previous_ship_position.y / GALAXY_SCALE;
+                double src_ship_position_x = galaxy_offset->buffer_x + previous_ship_position.x / GALAXY_SCALE;
+                double src_ship_position_y = galaxy_offset->buffer_y + previous_ship_position.y / GALAXY_SCALE;
                 // Then set new galaxy as center
                 double src_ship_distance_x = src_ship_position_x - next_galaxy->position.x;
                 double src_ship_distance_y = src_ship_position_y - next_galaxy->position.y;
@@ -1176,6 +1458,9 @@ void generate_stars(struct bstar_t bstars[], struct ship_t *ship, struct point_t
     // Density scaling parameter
     double a = current_galaxy->radius * GALAXY_SCALE / 2.0f;
 
+    // Set galaxy hash as initseq
+    initseq = pair_hash_order_sensitive_2(current_galaxy->position);
+
     for (ix = left_boundary; ix < right_boundary && in_horizontal_bounds; ix += GALAXY_SECTION_SIZE)
     {
         for (iy = top_boundary; iy < bottom_boundary && in_vertical_bounds; iy += GALAXY_SECTION_SIZE)
@@ -1190,14 +1475,11 @@ void generate_stars(struct bstar_t bstars[], struct ship_t *ship, struct point_t
             struct point_t position = {.x = ix, .y = iy};
             uint64_t seed = pair_hash_order_sensitive(position);
 
-            // Set galaxy hash as initseq
-            initseq = pair_hash_order_sensitive_2(current_galaxy->position);
-
             // Seed with a fixed constant
             pcg32_srandom_r(&rng, seed, initseq);
 
             // Calculate density based on distance from center
-            float density = (GALAXY_DENSITY / pow((distance_from_center / a + 1), 2));
+            double density = (GALAXY_DENSITY / pow((distance_from_center / a + 1), 6));
 
             int has_star = abs(pcg32_random_r(&rng)) % 1000 < density;
 
@@ -1209,7 +1491,7 @@ void generate_stars(struct bstar_t bstars[], struct ship_t *ship, struct point_t
                 else
                 {
                     // Create star
-                    struct planet_t *star = create_star(position);
+                    struct planet_t *star = create_star(position, FALSE);
 
                     // Add star to hash table
                     put_star(position, star);
@@ -1219,7 +1501,7 @@ void generate_stars(struct bstar_t bstars[], struct ship_t *ship, struct point_t
     }
 
     // Delete stars that end up outside the region
-    delete_stars_outside_region(bx, by);
+    delete_stars_outside_region(bx, by, galaxy_region_size);
 
     // First star generation complete
     stars_start = 0;
@@ -1462,14 +1744,14 @@ void update_gstars(struct galaxy_t *galaxy, struct point_t ship_position, const 
     float scaling_factor = galaxy->class / 2;
     float galaxy_radius = galaxy->radius * GALAXY_SCALE;
 
-    while (i < MAX_GSTARS && galaxy->gstars[i].final_star == 1)
+    while (i < MAX_GSTARS && galaxy->gstars_hd[i].final_star == 1)
     {
         // Calculate position in galaxy
-        float delta_x = ship_position.x / (galaxy->cutoff * GALAXY_SCALE);
-        float delta_y = ship_position.y / (galaxy->cutoff * GALAXY_SCALE);
+        double delta_x = ship_position.x / (galaxy->cutoff * GALAXY_SCALE);
+        double delta_y = ship_position.y / (galaxy->cutoff * GALAXY_SCALE);
 
-        int x = (galaxy->gstars[i].position.x / GSTARS_SCALE) / scaling_factor + camera->w / 2 - delta_x * (camera->w / 2);
-        int y = (galaxy->gstars[i].position.y / GSTARS_SCALE) / scaling_factor + camera->h / 2 - delta_y * (camera->h / 2);
+        int x = (galaxy->gstars_hd[i].position.x / (GALAXY_SCALE * GSTARS_SCALE)) / scaling_factor + camera->w / 2 - delta_x * (camera->w / 2);
+        int y = (galaxy->gstars_hd[i].position.y / (GALAXY_SCALE * GSTARS_SCALE)) / scaling_factor + camera->h / 2 - delta_y * (camera->h / 2);
 
         float opacity;
 
@@ -1480,13 +1762,13 @@ void update_gstars(struct galaxy_t *galaxy, struct point_t ship_position, const 
         else if (distance <= limit && distance > galaxy_radius)
         {
             // Fade in opacity as we move in towards galaxy radius
-            opacity = (float)galaxy->gstars[i].opacity * max_opacity_factor * (limit - distance) / (limit - galaxy_radius);
+            opacity = (float)galaxy->gstars_hd[i].opacity * max_opacity_factor * (limit - distance) / (limit - galaxy_radius);
             opacity = opacity < 0 ? 0 : opacity;
         }
         else if (distance <= galaxy_radius)
         {
             // Fade out opacity as we move towards galaxy center
-            opacity = max_opacity_factor * (float)galaxy->gstars[i].opacity * (min_opacity_factor + max_opacity_factor * (distance / galaxy_radius));
+            opacity = max_opacity_factor * (float)galaxy->gstars_hd[i].opacity * (min_opacity_factor + max_opacity_factor * (distance / galaxy_radius));
         }
 
         if (opacity > 255)
@@ -1504,10 +1786,10 @@ void update_gstars(struct galaxy_t *galaxy, struct point_t ship_position, const 
 /*
  * Update camera position.
  */
-void update_camera(struct camera_t *camera, struct point_t position)
+void update_camera(struct camera_t *camera, struct point_t position, long double scale)
 {
-    camera->x = position.x - (camera->w / 2) / game_scale;
-    camera->y = position.y - (camera->h / 2) / game_scale;
+    camera->x = position.x - (camera->w / 2) / scale;
+    camera->y = position.y - (camera->h / 2) / scale;
 }
 
 /*
@@ -1557,7 +1839,7 @@ struct ship_t create_ship(int radius, struct point_t position)
 struct galaxy_t *create_galaxy(struct point_t position)
 {
     // Find distance to nearest galaxy
-    float distance = nearest_galaxy_center_distance(position);
+    double distance = nearest_galaxy_center_distance(position);
 
     // Get galaxy class
     int class = get_galaxy_class(distance);
@@ -1605,6 +1887,7 @@ struct galaxy_t *create_galaxy(struct point_t position)
     uint64_t index = pair_hash_order_sensitive_2(position);
 
     galaxy->initialized = 0;
+    galaxy->initialized_hd = 0;
     sprintf(galaxy->name, "%s-%lu", "G", index);
     galaxy->class = get_galaxy_class(distance);
     galaxy->radius = radius;
@@ -1618,6 +1901,7 @@ struct galaxy_t *create_galaxy(struct point_t position)
     for (int i = 0; i < MAX_GSTARS; i++)
     {
         galaxy->gstars[i].final_star = 0;
+        galaxy->gstars_hd[i].final_star = 0;
     }
 
     return galaxy;
@@ -1626,10 +1910,10 @@ struct galaxy_t *create_galaxy(struct point_t position)
 /*
  * Create a star.
  */
-struct planet_t *create_star(struct point_t position)
+struct planet_t *create_star(struct point_t position, int preview)
 {
     // Find distance to nearest star
-    float distance = nearest_star_distance(position, current_galaxy, initseq);
+    double distance = nearest_star_distance(position, current_galaxy, initseq);
 
     // Get star class
     int class = get_star_class(distance);
@@ -1688,16 +1972,25 @@ struct planet_t *create_star(struct point_t position)
     star->vy = 0.0;
     star->dx = 0.0;
     star->dy = 0.0;
-    SDL_Surface *surface = IMG_Load(star->image);
-    star->texture = SDL_CreateTextureFromSurface(renderer, surface);
-    SDL_FreeSurface(surface);
+
+    if (preview)
+    {
+        star->texture = NULL;
+    }
+    else
+    {
+        SDL_Surface *surface = IMG_Load(star->image);
+        star->texture = SDL_CreateTextureFromSurface(renderer, surface);
+        SDL_FreeSurface(surface);
+    }
+
     star->rect.x = (star->position.x - star->radius) * game_scale;
     star->rect.y = (star->position.y - star->radius) * game_scale;
     star->rect.w = 2 * star->radius * game_scale;
     star->rect.h = 2 * star->radius * game_scale;
     star->color.r = 255;
     star->color.g = 255;
-    star->color.b = 0;
+    star->color.b = 255;
     star->planets[0] = NULL;
     star->parent = NULL;
     star->level = LEVEL_STAR;
@@ -1980,34 +2273,57 @@ void create_system(struct planet_t *planet, struct point_t position, pcg32_rando
 /*
  * Update and draw galaxy.
  */
-void update_galaxy(struct galaxy_t *galaxy, const struct camera_t *camera, struct point_t position)
+void update_galaxy(struct galaxy_t *galaxy, const struct camera_t *camera, struct point_t position, struct point_state *galaxy_offset)
 {
     // Get galaxy distance from position
-    float delta_x = galaxy->position.x - position.x;
-    float delta_y = galaxy->position.y - position.y;
-    float distance = sqrt(delta_x * delta_x + delta_y * delta_y);
+    double delta_x = galaxy->position.x - position.x;
+    double delta_y = galaxy->position.y - position.y;
+    double distance = sqrt(delta_x * delta_x + delta_y * delta_y);
 
     // Draw radius circle
     if (distance < galaxy->cutoff)
     {
-        int radius = galaxy->radius * game_scale;
-        int rx = (galaxy->position.x - camera->x) * game_scale;
-        int ry = (galaxy->position.y - camera->y) * game_scale;
-        SDL_Color radius_color = {255, 0, 255, 80};
+        // Reset stars and update current_galaxy
+        if (current_galaxy->position.x != galaxy->position.x && current_galaxy->position.y != galaxy->position.y)
+        {
+            cleanup_stars();
+            memcpy(current_galaxy, galaxy, sizeof(struct galaxy_t));
+        }
+
+        int radius = galaxy->radius * game_scale * GALAXY_SCALE;
+        int rx = (galaxy->position.x - camera->x) * game_scale * GALAXY_SCALE;
+        int ry = (galaxy->position.y - camera->y) * game_scale * GALAXY_SCALE;
+
+        SDL_Color radius_color = {0, 255, 255, 70};
         SDL_DrawCircle(renderer, camera, rx, ry, radius, radius_color);
-    }
 
-    // Draw galaxy cloud
-    if (in_camera(camera, galaxy->position.x, galaxy->position.y, galaxy->radius))
+        // Show gstars_hd
+        if (!galaxy->initialized_hd)
+            create_galaxy_cloud(galaxy, TRUE);
+
+        const double epsilon = ZOOM_EPSILON / GALAXY_SCALE;
+
+        if (game_scale < ZOOM_UNIVERSE_STARS + epsilon)
+            draw_galaxy_cloud(galaxy, camera, galaxy->initialized_hd, TRUE);
+    }
+    else
     {
-        if (!galaxy->initialized)
-            create_galaxy_cloud(galaxy);
+        // Draw galaxy cloud
+        if (in_camera(camera, galaxy->position.x, galaxy->position.y, galaxy->radius, game_scale * GALAXY_SCALE))
+        {
+            if (!galaxy->initialized)
+                create_galaxy_cloud(galaxy, FALSE);
 
-        draw_galaxy_cloud(galaxy, camera, galaxy->initialized);
+            draw_galaxy_cloud(galaxy, camera, galaxy->initialized, FALSE);
+        }
+        // Draw galaxy projection
+        else if (PROJECTIONS_ON)
+        {
+            // Show projections only if game scale < 50 * ZOOM_UNIVERSE_MIN
+            if (game_scale / (ZOOM_UNIVERSE_MIN / GALAXY_SCALE) < 50)
+                project_galaxy(galaxy, camera, state, game_scale * GALAXY_SCALE);
+        }
     }
-    // Draw galaxy projection
-    else if (PROJECTIONS_ON)
-        project_galaxy(galaxy, camera, state);
 }
 
 /*
@@ -2018,7 +2334,7 @@ void update_system(struct planet_t *planet, struct ship_t *ship, const struct ca
     // Update planets & moons
     if (planet->level != LEVEL_STAR)
     {
-        float distance;
+        double distance;
         float orbit_opacity;
 
         if (state == NAVIGATE)
@@ -2028,8 +2344,8 @@ void update_system(struct planet_t *planet, struct ship_t *ship, const struct ca
             planet->position.y += planet->parent->dy;
 
             // Find distance from parent
-            float delta_x = planet->parent->position.x - planet->position.x;
-            float delta_y = planet->parent->position.y - planet->position.y;
+            double delta_x = planet->parent->position.x - planet->position.x;
+            double delta_y = planet->parent->position.y - planet->position.y;
             distance = sqrt(delta_x * delta_x + delta_y * delta_y);
 
             // Determine speed and position shift
@@ -2052,8 +2368,8 @@ void update_system(struct planet_t *planet, struct ship_t *ship, const struct ca
         else if (state == MAP)
         {
             // Find distance from parent
-            float delta_x = planet->parent->position.x - planet->position.x;
-            float delta_y = planet->parent->position.y - planet->position.y;
+            double delta_x = planet->parent->position.x - planet->position.x;
+            double delta_y = planet->parent->position.y - planet->position.y;
             distance = sqrt(delta_x * delta_x + delta_y * delta_y);
 
             orbit_opacity = 32;
@@ -2081,9 +2397,9 @@ void update_system(struct planet_t *planet, struct ship_t *ship, const struct ca
     else if (planet->level == LEVEL_STAR)
     {
         // Get star distance from position
-        float delta_x_star = planet->position.x - position.x;
-        float delta_y_star = planet->position.y - position.y;
-        float distance_star = sqrt(delta_x_star * delta_x_star + delta_y_star * delta_y_star);
+        double delta_x_star = planet->position.x - position.x;
+        double delta_y_star = planet->position.y - position.y;
+        double distance_star = sqrt(delta_x_star * delta_x_star + delta_y_star * delta_y_star);
 
         if (state == MAP)
         {
@@ -2173,7 +2489,7 @@ void update_system(struct planet_t *planet, struct ship_t *ship, const struct ca
     }
 
     // Draw planet
-    if (in_camera(camera, planet->position.x, planet->position.y, planet->radius))
+    if (in_camera(camera, planet->position.x, planet->position.y, planet->radius, game_scale))
     {
         planet->rect.x = (int)(planet->position.x - planet->radius - camera->x) * game_scale;
         planet->rect.y = (int)(planet->position.y - planet->radius - camera->y) * game_scale;
@@ -2185,9 +2501,9 @@ void update_system(struct planet_t *planet, struct ship_t *ship, const struct ca
     {
         if (planet->level == LEVEL_MOON)
         {
-            float delta_x = planet->parent->position.x - position.x;
-            float delta_y = planet->parent->position.y - position.y;
-            float distance = sqrt(delta_x * delta_x + delta_y * delta_y);
+            double delta_x = planet->parent->position.x - position.x;
+            double delta_y = planet->parent->position.y - position.y;
+            double distance = sqrt(delta_x * delta_x + delta_y * delta_y);
 
             if (distance < 2 * planet->parent->cutoff)
                 project_planet(planet, camera, state);
@@ -2206,9 +2522,9 @@ void update_system(struct planet_t *planet, struct ship_t *ship, const struct ca
  */
 void apply_gravity_to_ship(struct planet_t *planet, struct ship_t *ship, const struct camera_t *camera)
 {
-    float delta_x = planet->position.x - ship->position.x;
-    float delta_y = planet->position.y - ship->position.y;
-    float distance = sqrt(delta_x * delta_x + delta_y * delta_y);
+    double delta_x = planet->position.x - ship->position.x;
+    double delta_y = planet->position.y - ship->position.y;
+    double distance = sqrt(delta_x * delta_x + delta_y * delta_y);
     float g_planet = 0;
     int is_star = planet->level == LEVEL_STAR;
     int collision_point = planet->radius;
@@ -2386,7 +2702,7 @@ void update_ship(struct ship_t *ship, const struct camera_t *camera)
     }
 
     // Draw ship if in camera
-    if (in_camera(camera, ship->position.x, ship->position.y, ship->radius))
+    if (in_camera(camera, ship->position.x, ship->position.y, ship->radius, game_scale))
     {
         SDL_RenderCopyEx(renderer, ship->texture, &ship->main_img_rect, &ship->rect, ship->angle, &ship->rotation_pt, SDL_FLIP_NONE);
     }

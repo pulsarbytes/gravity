@@ -16,7 +16,7 @@ extern SDL_Renderer *renderer;
 extern TTF_Font *font;
 extern SDL_Color text_color;
 
-void log_game_console(struct game_console_entry entries[], int index, float value);
+void log_game_console(struct game_console_entry entries[], int index, double value);
 
 /*
  * Calculate and log FPS to game console.
@@ -40,13 +40,13 @@ void log_fps(unsigned int time_diff)
 /*
  * Save data to game_console_entries array.
  */
-void log_game_console(struct game_console_entry entries[], int index, float value)
+void log_game_console(struct game_console_entry entries[], int index, double value)
 {
     char text[16];
     float rounded_value;
 
     if (index == SCALE_INDEX)
-        rounded_value = 100 * roundf(value * 1000) / 1000;
+        rounded_value = value; // value100 * roundf(value * 1000) / 1000;
     else
         rounded_value = (int)value;
 

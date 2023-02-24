@@ -16,7 +16,7 @@ extern SDL_DisplayMode display_mode;
 extern SDL_Renderer *renderer;
 extern TTF_Font *font;
 extern SDL_Color text_color;
-extern float game_scale;
+extern long double game_scale;
 
 int in_camera_relative(const struct camera_t *camera, int x, int y);
 bool line_intersects_viewport(const struct camera_t *camera, double x1, double y1, double x2, double y2);
