@@ -157,3 +157,28 @@ uint64_t unique_index(struct point_t position, int modulo, int entity_type)
 
     return index % modulo;
 }
+
+/*
+ * Check whether point p is in rectangular rect.
+ */
+int point_in_rect(struct point_t p, struct point_t rect[])
+{
+    int i, j;
+    int sign = 0;
+    int n = 4;
+
+    for (i = 0, j = n - 1; i < n; j = i++)
+    {
+        double dx1 = p.x - rect[i].x;
+        double dy1 = p.y - rect[i].y;
+        double dx2 = rect[j].x - rect[i].x;
+        double dy2 = rect[j].y - rect[i].y;
+        double cross_prod = dx1 * dy2 - dy1 * dx2;
+
+        if (i == 0)
+            sign = cross_prod > 0 ? 1 : -1;
+        else if ((cross_prod > 0) != (sign > 0))
+            return 0; // point is outside the rectangle
+    }
+    return 1; // point is inside the rectangle
+}

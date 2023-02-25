@@ -617,6 +617,7 @@ void project_planet(struct planet_t *planet, const struct camera_t *camera, int 
     double y = camera->y + (camera->h / 2) / game_scale;
     double distance = sqrt(pow(fabs(x - planet->position.x), 2) + pow(fabs(y - planet->position.y), 2));
     int opacity = 255;
+    SDL_Color color;
 
     if (planet->level == LEVEL_STAR)
     {
@@ -624,9 +625,15 @@ void project_planet(struct planet_t *planet, const struct camera_t *camera, int 
             opacity = calculate_projection_opacity(distance, GALAXY_REGION_SIZE, GALAXY_SECTION_SIZE);
         else if (state == MAP)
             opacity = calculate_projection_opacity(distance, galaxy_region_size, GALAXY_SECTION_SIZE);
-    }
 
-    SDL_SetRenderDrawColor(renderer, planet->color.r, planet->color.g, planet->color.b, opacity);
+        color.r = 255;
+        color.g = 255;
+        color.b = 0;
+    }
+    else
+        color = planet->color;
+
+    SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, opacity);
     SDL_RenderFillRect(renderer, &planet->projection);
 }
 
@@ -1176,8 +1183,9 @@ void create_galaxy_cloud(struct galaxy_t *galaxy, unsigned short high_definition
                 star.position.x = ix;
                 star.position.y = iy;
 
-                // Get a value between 25 - 195 (not efficient to look for actual star classes)
-                star.opacity = pcg32_random_r(&rng) % 196 + 25;
+                double distance = nearest_star_distance(position, galaxy, initseq);
+                int class = get_star_class(distance);
+                star.opacity = class * (255 / 6);
 
                 star.final_star = 1;
 

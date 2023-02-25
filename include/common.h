@@ -62,14 +62,14 @@
 #define ZOOM_MAP_SWITCH 0.005                // Default: 0.005
 #define ZOOM_MAP_MIN ZOOM_MAP_SWITCH - 0.001 // Default: 0.001
 
-#define ZOOM_UNIVERSE 0.01         // Universe scale. Default: 0.01
-#define ZOOM_UNIVERSE_MIN 0.01     // Universe scale. Default: 0.01
-#define ZOOM_UNIVERSE_STEP 0.001   // Default: 0.001
-#define ZOOM_UNIVERSE_STARS 0.0002 // Generate more stars over this limit. Default: 0.0002
+#define ZOOM_UNIVERSE 0.01          // Universe scale. Default: 0.01
+#define ZOOM_UNIVERSE_MIN 0.01      // Universe scale. Default: 0.01
+#define ZOOM_UNIVERSE_STEP 0.001    // Default: 0.001
+#define ZOOM_UNIVERSE_STARS 0.00001 // Generate more stars over this limit. Default: 0.00001
 
 // Universe
-#define UNIVERSE_REGION_SIZE 30     // Sections per axis. Even number; Default: 30
-#define UNIVERSE_DENSITY 10         // Per 1000 sections. Default: 20
+#define UNIVERSE_REGION_SIZE 40     // Sections per axis. Even number; Default: 30
+#define UNIVERSE_DENSITY 20         // Per 1000 sections. Default: 10
 #define MAX_GALAXIES 907            // First prime number > (UNIVERSE_REGION_SIZE * UNIVERSE_REGION_SIZE). Default 907
                                     // We use this in the modulo operations of the hash function output
 #define UNIVERSE_SECTION_SIZE 10000 // Default: 10000
@@ -79,7 +79,7 @@
 // Galaxy
 #define GALAXY_REGION_SIZE 30     // Sections per axis. Even number; Default: 30
 #define GALAXY_REGION_SIZE_MAX 60 // Region size for zoom < ZOOM_MAP_REGION_SWITCH. Default:60
-#define GALAXY_DENSITY 30         // Maximum at galaxy center per 1000 sections. Default: 30 (max 150)
+#define GALAXY_DENSITY 20         // Maximum at galaxy center per 1000 sections. Default: 30 (max 150)
 #define MAX_STARS 907             // First prime number > (GALAXY_REGION_SIZE * GALAXY_REGION_SIZE). Default 907
                                   // We use this in the modulo operations of the hash function output
 #define GALAXY_SECTION_SIZE 10000 // Default: 10000
@@ -87,11 +87,11 @@
 // Starting position
 #define UNIVERSE_START_X -140000
 #define UNIVERSE_START_Y -70000
-#define GALAXY_START_X -7000000 // Default: 0
-#define GALAXY_START_Y -0       // Default: 0
+#define GALAXY_START_X -0 // Default: 0
+#define GALAXY_START_Y -0 // Default: 0
 
 // Galaxies
-#define GALAXY_SCALE 10000              // We multiply radius by this factor to get galaxy full size radius in points. Default: 100 (min 100, max 10000)
+#define GALAXY_SCALE 10000              // We multiply by this factor to get values in galaxy scale. Default: 10000
                                         // Use a smaller number to generate smaller galaxies
 #define GALAXY_CLASS_1_RADIUS_MIN 3000  // Default: 3000
 #define GALAXY_CLASS_1_RADIUS_MAX 1000  // Default: 1000 (+ 3000 = 4000) (max 5000)

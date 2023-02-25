@@ -3,6 +3,7 @@
         "sdl_ttf.h": "c",
         "structs.h": "c",
         "type_traits": "c",
-        "cmath": "c"
+        "cmath": "c",
+        "limits": "c"
     }
 }
