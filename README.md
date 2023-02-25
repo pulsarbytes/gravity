@@ -62,18 +62,20 @@ make
 |            | `[`     | Zoom out            |
 |            | `]`     | Zoom in             |
 |            | `Space` | Reset Map           |
-|            | `Esc`   | Exit Map mode       |
+|            | `N`     | Exit Map mode       |
 | Universe   |         |                     |
 |            | `U`     | Enter Universe mode |
 |            | `Up`    | Scroll up           |
 |            | `Down`  | Scroll down         |
 |            | `Right` | Scroll right        |
 |            | `Left`  | Scroll left         |
+|            | `[`     | Zoom out            |
+|            | `]`     | Zoom in             |
 |            | `Space` | Reset Universe      |
-|            | `Esc`   | Exit Universe mode  |
+|            | `N`     | Exit Universe mode  |
 | `K`        |         | Toggle console      |
-| `P`        |         | Pause game          |
-| `Esc`      |         | Exit program        |
+| `Q`        |         | Exit program        |
+| `Esc`      |         | Show menu / Pause   |
 
 ## Console contents
 

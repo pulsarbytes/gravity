@@ -7,6 +7,7 @@
 #include "../include/common.h"
 
 extern int state;
+extern int save_state;
 extern int left;
 extern int right;
 extern int up;
@@ -62,14 +63,23 @@ void poll_events(int *quit)
                     camera_on = ON;
                 }
                 break;
+            case SDL_SCANCODE_N:
+                if (state == MAP)
+                {
+                    state = NAVIGATE;
+                    map_exit = ON;
+                }
+                else if (state == UNIVERSE)
+                {
+                    state = NAVIGATE;
+                    universe_exit = ON;
+                }
+                break;
             case SDL_SCANCODE_O:
                 orbits_on = !orbits_on;
                 break;
-            case SDL_SCANCODE_P:
-                if (state == NAVIGATE)
-                    state = PAUSE;
-                else if (state == PAUSE)
-                    state = NAVIGATE;
+            case SDL_SCANCODE_Q:
+                *quit = 1;
                 break;
             case SDL_SCANCODE_S:
                 if (state == NAVIGATE)
@@ -112,18 +122,13 @@ void poll_events(int *quit)
                     universe_center = ON;
                 break;
             case SDL_SCANCODE_ESCAPE:
-                if (state == MAP)
+                if (state != MENU)
                 {
-                    state = NAVIGATE;
-                    map_exit = ON;
+                    save_state = state;
+                    state = MENU;
                 }
-                else if (state == UNIVERSE)
-                {
-                    state = NAVIGATE;
-                    universe_exit = ON;
-                }
-                else if (state == NAVIGATE)
-                    *quit = 1;
+                else if (state == MENU)
+                    state = save_state;
                 break;
             case SDL_SCANCODE_LEFTBRACKET:
                 zoom_in = OFF;

@@ -48,6 +48,7 @@ static int speed_limit = BASE_SPEED_LIMIT;
 static int landing_stage = STAGE_OFF;
 struct vector_t velocity;
 int state = NAVIGATE;
+int save_state;
 long double game_scale = ZOOM_NAVIGATE;
 static float save_scale = OFF;
 
@@ -101,11 +102,10 @@ static struct point_t previous_ship_position = {.x = 0, .y = 0};
 uint64_t initseq;
 
 // Function prototypes
-void onMenu(void);
+void onMenu(struct bstar_t bstars[], struct camera_t *);
 void onNavigate(struct bstar_t bstars[], struct ship_t *, struct camera_t *, struct point_t *, struct point_state *);
 void onMap(struct bstar_t bstars[], struct ship_t *, struct camera_t *, struct point_t *, struct point_t *, struct point_state *);
 void onUniverse(struct ship_t *, struct camera_t *, struct point_t *, struct point_t *, struct point_state *);
-void onPause(struct bstar_t bstars[], struct ship_t *, const struct camera_t *, unsigned int start_time);
 int init_sdl(void);
 void close_sdl(void);
 void poll_events(int *quit);
@@ -295,7 +295,7 @@ int main(int argc, char *argv[])
         switch (state)
         {
         case MENU:
-            onMenu();
+            onMenu(bstars, &camera);
             break;
         case NAVIGATE:
             onNavigate(bstars, &ship, &camera, &navigate_offset, &galaxy_offset);
@@ -306,11 +306,8 @@ int main(int argc, char *argv[])
         case UNIVERSE:
             onUniverse(&ship, &camera, &map_offset, &universe_offset, &galaxy_offset);
             break;
-        case PAUSE:
-            onPause(bstars, &ship, &camera, start_time);
-            continue;
         default:
-            onMenu();
+            onMenu(bstars, &camera);
             break;
         }
 
@@ -336,9 +333,11 @@ int main(int argc, char *argv[])
     return 0;
 }
 
-void onMenu(void)
+void onMenu(struct bstar_t bstars[], struct camera_t *camera)
 {
-    // printf("\nonMenu");
+    // Draw background stars
+    struct speed_t speed = {.vx = 0, .vy = 0};
+    update_bstars(bstars, camera, speed, 0);
 }
 
 void onNavigate(struct bstar_t bstars[], struct ship_t *ship, struct camera_t *camera, struct point_t *navigate_offset, struct point_state *galaxy_offset)
@@ -1211,33 +1210,6 @@ void onUniverse(struct ship_t *ship, struct camera_t *camera, struct point_t *ma
         universe_enter = OFF;
 }
 
-void onPause(struct bstar_t bstars[], struct ship_t *ship, const struct camera_t *camera, unsigned int start_time)
-{
-    // Update game console
-    if (console)
-        update_game_console(game_console_entries);
-
-    // Draw background stars
-    if (BSTARS_ON)
-    {
-        struct speed_t speed = {.vx = 0, .vy = 0};
-        double distance = find_distance(ship->position.x, ship->position.y, 0, 0);
-        update_bstars(bstars, camera, speed, distance);
-    }
-
-    // Switch buffers, display back buffer
-    SDL_RenderPresent(renderer);
-
-    // Set FPS
-    unsigned int end_time;
-
-    if ((1000 / FPS) > ((end_time = SDL_GetTicks()) - start_time))
-        SDL_Delay((1000 / FPS) - (end_time - start_time));
-
-    // Log FPS
-    log_fps(end_time - start_time);
-}
-
 /*
  * Probe region for stars and create them procedurally.
  * The region has intervals of size GALAXY_SECTION_SIZE.
@@ -1800,7 +1772,7 @@ void update_bstars(struct bstar_t bstars[], const struct camera_t *camera, struc
 
     while (i < max_bstars && bstars[i].final_star == 1)
     {
-        if (camera_on)
+        if (camera_on && state != MENU)
         {
             float dx, dy;
 
@@ -1843,7 +1815,12 @@ void update_bstars(struct bstar_t bstars[], const struct camera_t *camera, struc
 
         // Update opacity with game_scale and fade as we move away from galaxy center.
         float max_distance = 1.5 * current_galaxy->radius;
-        float opacity = (double)bstars[i].opacity * (1 - pow(1 - game_scale, 2)) * (1 - (distance / (max_distance * GALAXY_SCALE)));
+        float opacity;
+
+        if (state == MENU)
+            opacity = (double)bstars[i].opacity;
+        else
+            opacity = (double)bstars[i].opacity * (1 - pow(1 - game_scale, 2)) * (1 - (distance / (max_distance * GALAXY_SCALE)));
 
         if (opacity > 255)
             opacity = 255;

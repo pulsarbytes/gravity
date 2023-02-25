@@ -182,8 +182,7 @@ enum
     MENU,
     NAVIGATE,
     MAP,
-    UNIVERSE,
-    PAUSE
+    UNIVERSE
 };
 
 enum
