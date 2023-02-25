@@ -79,7 +79,7 @@
 // Galaxy
 #define GALAXY_REGION_SIZE 30     // Sections per axis. Even number; Default: 30
 #define GALAXY_REGION_SIZE_MAX 60 // Region size for zoom < ZOOM_MAP_REGION_SWITCH. Default:60
-#define GALAXY_DENSITY 20         // Maximum at galaxy center per 1000 sections. Default: 30 (max 150)
+#define GALAXY_DENSITY 30         // Maximum at galaxy center per 1000 sections. Default: 30 (max 150)
 #define MAX_STARS 907             // First prime number > (GALAXY_REGION_SIZE * GALAXY_REGION_SIZE). Default 907
                                   // We use this in the modulo operations of the hash function output
 #define GALAXY_SECTION_SIZE 10000 // Default: 10000

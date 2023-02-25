@@ -347,8 +347,8 @@ void update_projection_coordinates(void *ptr, int entity_type, const struct came
     else if (state == UNIVERSE)
         scale = game_scale * GALAXY_SCALE;
 
-    int camera_w = camera->w / scale;
-    int camera_h = camera->h / scale;
+    float camera_w = camera->w / scale;
+    float camera_h = camera->h / scale;
 
     // Find screen quadrant for object exit from screen; 0, 0 is screen center, negative y is up
     if (galaxy)
