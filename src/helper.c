@@ -701,18 +701,18 @@ int calculate_projection_opacity(double distance, int region_size, int section_s
  */
 double nearest_galaxy_center_distance(struct point_t position)
 {
-    // We use 5 * UNIVERSE_SECTION_SIZE as max, since a CLASS_6 galaxy needs 5 + 1 empty sections
+    // We use 6 * UNIVERSE_SECTION_SIZE as max, since a CLASS_6 galaxy needs 6 + 1 empty sections
     // We search inner circumferences of points first and work towards outward circumferences
     // If we find a galaxy, the function returns.
 
     // Keep track of checked points
-    struct point_t checked_points[169];
+    struct point_t checked_points[196];
     int num_checked_points = 0;
 
     // Use a local rng
     pcg32_random_t rng;
 
-    for (int i = 1; i <= 5; i++)
+    for (int i = 1; i <= 6; i++)
     {
         for (double ix = position.x - i * UNIVERSE_SECTION_SIZE; ix <= position.x + i * UNIVERSE_SECTION_SIZE; ix += UNIVERSE_SECTION_SIZE)
         {
@@ -746,7 +746,7 @@ double nearest_galaxy_center_distance(struct point_t position)
         }
     }
 
-    return 6 * UNIVERSE_SECTION_SIZE;
+    return 7 * UNIVERSE_SECTION_SIZE;
 }
 
 /*
@@ -815,12 +815,12 @@ struct galaxy_t *find_nearest_galaxy(struct point_t position, struct galaxy_t *g
  */
 double nearest_star_distance(struct point_t position, struct galaxy_t *current_galaxy, uint64_t initseq)
 {
-    // We use 5 * GALAXY_SECTION_SIZE as max, since a CLASS_6 star needs 5 + 1 empty sections
+    // We use 6 * GALAXY_SECTION_SIZE as max, since a CLASS_6 star needs 6 + 1 empty sections
     // We search inner circumferences of points first and work towards outward circumferences
     // If we find a star, the function returns.
 
     // Keep track of checked points
-    struct point_t checked_points[169];
+    struct point_t checked_points[196];
     int num_checked_points = 0;
 
     // Use a local rng
@@ -829,7 +829,7 @@ double nearest_star_distance(struct point_t position, struct galaxy_t *current_g
     // Density scaling parameter
     double a = current_galaxy->radius * GALAXY_SCALE / 2.0f;
 
-    for (int i = 1; i <= 5; i++)
+    for (int i = 1; i <= 6; i++)
     {
         for (double ix = position.x - i * GALAXY_SECTION_SIZE; ix <= position.x + i * GALAXY_SECTION_SIZE; ix += GALAXY_SECTION_SIZE)
         {
@@ -867,7 +867,7 @@ double nearest_star_distance(struct point_t position, struct galaxy_t *current_g
         }
     }
 
-    return 6 * GALAXY_SECTION_SIZE;
+    return 7 * GALAXY_SECTION_SIZE;
 }
 
 /*
@@ -876,17 +876,17 @@ double nearest_star_distance(struct point_t position, struct galaxy_t *current_g
  */
 int get_galaxy_class(float n)
 {
-    if (n < 2 * UNIVERSE_SECTION_SIZE)
+    if (n < 3 * UNIVERSE_SECTION_SIZE)
         return GALAXY_CLASS_1;
-    else if (n < 3 * UNIVERSE_SECTION_SIZE)
-        return GALAXY_CLASS_2;
     else if (n < 4 * UNIVERSE_SECTION_SIZE)
-        return GALAXY_CLASS_3;
+        return GALAXY_CLASS_2;
     else if (n < 5 * UNIVERSE_SECTION_SIZE)
-        return GALAXY_CLASS_4;
+        return GALAXY_CLASS_3;
     else if (n < 6 * UNIVERSE_SECTION_SIZE)
+        return GALAXY_CLASS_4;
+    else if (n < 7 * UNIVERSE_SECTION_SIZE)
         return GALAXY_CLASS_5;
-    else if (n >= 6 * UNIVERSE_SECTION_SIZE)
+    else if (n >= 7 * UNIVERSE_SECTION_SIZE)
         return GALAXY_CLASS_6;
     else
         return GALAXY_CLASS_1;

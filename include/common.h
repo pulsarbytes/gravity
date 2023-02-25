@@ -69,7 +69,7 @@
 
 // Universe
 #define UNIVERSE_REGION_SIZE 40     // Sections per axis. Even number; Default: 30
-#define UNIVERSE_DENSITY 20         // Per 1000 sections. Default: 10
+#define UNIVERSE_DENSITY 10         // Per 1000 sections. Default: 10
 #define MAX_GALAXIES 907            // First prime number > (UNIVERSE_REGION_SIZE * UNIVERSE_REGION_SIZE). Default 907
                                     // We use this in the modulo operations of the hash function output
 #define UNIVERSE_SECTION_SIZE 10000 // Default: 10000
@@ -86,9 +86,14 @@
 
 // Starting position
 #define UNIVERSE_START_X -140000
-#define UNIVERSE_START_Y -70000
-#define GALAXY_START_X -0 // Default: 0
-#define GALAXY_START_Y -0 // Default: 0
+#define UNIVERSE_START_Y -70000  // Class 1: -140000, -70000
+                                 // Class 2: -280000, 520000
+                                 // Class 3: -240000, -210000
+                                 // Class 4: -100000, -40000
+                                 // Class 5: -110000, -120000
+                                 // Class 6: -250000, -60000
+#define GALAXY_START_X -00000000 // Default: 0
+#define GALAXY_START_Y -0        // Default: 0
 
 // Galaxies
 #define GALAXY_SCALE 10000              // We multiply by this factor to get values in galaxy scale. Default: 10000

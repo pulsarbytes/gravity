@@ -1034,11 +1034,12 @@ void onUniverse(struct ship_t *ship, struct camera_t *camera, struct point_t *ma
 
                 while (entry != NULL)
                 {
-                    int opacity = entry->star->class * (255 / 6);
-                    SDL_SetRenderDrawColor(renderer, entry->star->color.r, entry->star->color.g, entry->star->color.b, opacity);
                     int x = (current_galaxy->position.x - camera->x + entry->star->position.x / GALAXY_SCALE) * game_scale * GALAXY_SCALE;
                     int y = (current_galaxy->position.y - camera->y + entry->star->position.y / GALAXY_SCALE) * game_scale * GALAXY_SCALE;
+                    int opacity = entry->star->class * (255 / 6);
+                    SDL_SetRenderDrawColor(renderer, entry->star->color.r, entry->star->color.g, entry->star->color.b, opacity);
                     SDL_RenderDrawPoint(renderer, x, y);
+
                     entry = entry->next;
                 }
             }
@@ -1385,7 +1386,7 @@ void generate_stars_preview(const struct camera_t *camera, struct point_t *offse
 
             // If this point has been checked in previous function call,
             // check that point is not within previous boundaries
-            if (initialized && !zoom_preview)
+            if (initialized && !zoom_preview && game_scale <= 0.001 + epsilon)
             {
                 if (point_in_rect(position, rect))
                     continue;
@@ -1778,8 +1779,8 @@ void create_bstars(struct bstar_t bstars[], int max_bstars)
                     star.rect.h = 1;
                 }
 
-                // Get a color between 15 - 165
-                star.opacity = ((rand() % 166) + 15);
+                // Get a color between 15 - 155
+                star.opacity = ((rand() % 156) + 15);
 
                 star.final_star = 1;
                 bstars[i++] = star;
@@ -1859,17 +1860,19 @@ void update_bstars(struct bstar_t bstars[], const struct camera_t *camera, struc
 void update_gstars(struct galaxy_t *galaxy, struct point_t ship_position, const struct camera_t *camera, double distance, double limit)
 {
     int i = 0;
-    float min_opacity_factor = 0.4;
-    float max_opacity_factor = 0.6;
-    float scaling_factor = galaxy->class / 2;
+    float min_opacity_factor = 0.35;
+    float max_opacity_factor = 0.5;
     float galaxy_radius = galaxy->radius * GALAXY_SCALE;
+
+    // Calculate position in galaxy
+    double delta_x = ship_position.x / (galaxy->cutoff * GALAXY_SCALE);
+    double delta_y = ship_position.y / (galaxy->cutoff * GALAXY_SCALE);
+
+    // Galaxy has double size when we are at center
+    float scaling_factor = (float)galaxy->class / (2 + 2 * (1 - distance / galaxy_radius));
 
     while (i < MAX_GSTARS && galaxy->gstars_hd[i].final_star == 1)
     {
-        // Calculate position in galaxy
-        double delta_x = ship_position.x / (galaxy->cutoff * GALAXY_SCALE);
-        double delta_y = ship_position.y / (galaxy->cutoff * GALAXY_SCALE);
-
         int x = (galaxy->gstars_hd[i].position.x / (GALAXY_SCALE * GSTARS_SCALE)) / scaling_factor + camera->w / 2 - delta_x * (camera->w / 2);
         int y = (galaxy->gstars_hd[i].position.y / (GALAXY_SCALE * GSTARS_SCALE)) / scaling_factor + camera->h / 2 - delta_y * (camera->h / 2);
 
@@ -1888,7 +1891,9 @@ void update_gstars(struct galaxy_t *galaxy, struct point_t ship_position, const 
         else if (distance <= galaxy_radius)
         {
             // Fade out opacity as we move towards galaxy center
-            opacity = max_opacity_factor * (float)galaxy->gstars_hd[i].opacity * (min_opacity_factor + max_opacity_factor * (distance / galaxy_radius));
+            float factor = 1.0 - distance / galaxy_radius;
+            factor = factor < 0 ? 0 : factor;
+            opacity = galaxy->gstars_hd[i].opacity * (max_opacity_factor - (max_opacity_factor - min_opacity_factor) * factor);
         }
 
         if (opacity > 255)
@@ -2404,7 +2409,7 @@ void update_galaxy(struct galaxy_t *galaxy, const struct camera_t *camera, struc
     if (distance < galaxy->cutoff)
     {
         // Reset stars and update current_galaxy
-        if (current_galaxy->position.x != galaxy->position.x && current_galaxy->position.y != galaxy->position.y)
+        if (strcmp(current_galaxy->name, galaxy->name) != 0)
         {
             cleanup_stars();
             memcpy(current_galaxy, galaxy, sizeof(struct galaxy_t));
