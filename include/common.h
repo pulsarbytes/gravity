@@ -4,7 +4,8 @@
 // System settings
 #define FPS 60 // Default: 60
 #define FULLSCREEN 1
-#define FONT_SIZE 14 // Default: 14
+#define FONT_SIZE_SMALL 14 // Default: 14
+#define FONT_SIZE_LARGE 36 // Default: 36
 #define MAX(x, y) ((x) > (y) ? (x) : (y))
 #define MAX_OBJECT_NAME 64 // Default: 64
 
@@ -16,14 +17,14 @@
 #endif
 
 // Background stars
-#define BSTARS_MAX_SPEED 220                      // Default: 220
-#define BSTARS_SPEED_FACTOR 0.1                   // Default: 0.10
-#define BSTARS_SQUARE 10000                       // Groups X pixels. Default: 10000
-#define BSTARS_PER_SQUARE 4                       // X stars per square. Default: 4
-#define MAX_GSTARS_ROW 100                        // Default: 100
-#define MAX_GSTARS MAX_GSTARS_ROW *MAX_GSTARS_ROW // Default 10000. (100 * 100)
-#define GSTARS_SCALE 10                           // Designates gstars scaling compared to universe mode. Default: 10
-#define SPEED_LINES_NUM 8                         // Number of rows and columns for the speeding lines array. Default: 8
+#define BSTARS_SPEED_FACTOR 0.012 // Default: 0.012
+#define BSTARS_OPACITY 185        // Default: 185
+#define BSTARS_SQUARE 10000       // Groups X pixels. Default: 10000
+#define BSTARS_PER_SQUARE 2       // X stars per square. Default: 1
+#define MAX_GSTARS_ROW 100        // Default: 100
+#define MAX_GSTARS MAX_GSTARS_ROW *MAX_GSTARS_ROW
+#define GSTARS_SCALE 10   // Designates gstars scaling compared to universe mode. Default: 10
+#define SPEED_LINES_NUM 8 // Number of rows and columns for the speeding lines array. Default: 8
 
 // Game settings
 #define BSTARS_ON 1      // Default: 1
@@ -44,10 +45,13 @@
 #define BASE_SPEED_LIMIT 300      // Default: 300
 #define GALAXY_SPEED_LIMIT 1800   // Default: 1800
 #define UNIVERSE_SPEED_LIMIT 3000 // Default: 3000
-#define MAP_SPEED_MAX 25          // Zoom in. Default: 30
+#define MAP_SPEED_MAX 25          // Zoom in. Default: 25
 #define MAP_SPEED_MIN 10          // Zoom out. Default: 10
 #define UNIVERSE_SPEED_MAX 15     // Zoom in. Default: 15
 #define UNIVERSE_SPEED_MIN 4      // Zoom out. Default: 4
+
+// Menu
+#define MENU_GALAXY_CLOUD_DENSITY 300 // Default: 300 (max 500)
 
 // Zoom
 #define ZOOM_NAVIGATE 1.0      // Default: 1.0
@@ -68,7 +72,7 @@
 #define ZOOM_UNIVERSE_STARS 0.00001 // Generate more stars over this limit. Default: 0.00001
 
 // Universe
-#define UNIVERSE_REGION_SIZE 40     // Sections per axis. Even number; Default: 30
+#define UNIVERSE_REGION_SIZE 40     // Sections per axis. Even number; Default: 40
 #define UNIVERSE_DENSITY 10         // Per 1000 sections. Default: 10
 #define MAX_GALAXIES 907            // First prime number > (UNIVERSE_REGION_SIZE * UNIVERSE_REGION_SIZE). Default 907
                                     // We use this in the modulo operations of the hash function output
@@ -80,6 +84,7 @@
 #define GALAXY_REGION_SIZE 30     // Sections per axis. Even number; Default: 30
 #define GALAXY_REGION_SIZE_MAX 60 // Region size for zoom < ZOOM_MAP_REGION_SWITCH. Default:60
 #define GALAXY_DENSITY 30         // Maximum at galaxy center per 1000 sections. Default: 30 (max 150)
+#define GALAXY_CLOUD_DENSITY 30   // Default: 30 (max 150)
 #define MAX_STARS 907             // First prime number > (GALAXY_REGION_SIZE * GALAXY_REGION_SIZE). Default 907
                                   // We use this in the modulo operations of the hash function output
 #define GALAXY_SECTION_SIZE 10000 // Default: 10000
@@ -92,7 +97,7 @@
                                  // Class 4: -100000, -40000
                                  // Class 5: -110000, -120000
                                  // Class 6: -250000, -60000
-#define GALAXY_START_X -00000000 // Default: 0
+#define GALAXY_START_X -30000000 // Default: 0
 #define GALAXY_START_Y -0        // Default: 0
 
 // Galaxies
@@ -169,11 +174,11 @@
 #define PLANET_CLASS_6_ORBIT_MAX 4 // Default: 4 (+ 5 = 9)
 
 #define MOON_RADIUS_MIN 3                  // Default: 3
-#define PLANET_CLASS_1_MOON_RADIUS_MAX 12  // Default: 15
-#define PLANET_CLASS_2_MOON_RADIUS_MAX 24  // Default: 25
-#define PLANET_CLASS_3_MOON_RADIUS_MAX 32  // Default: 35
-#define PLANET_CLASS_4_MOON_RADIUS_MAX 48  // Default: 50
-#define PLANET_CLASS_5_MOON_RADIUS_MAX 72  // Default: 75
+#define PLANET_CLASS_1_MOON_RADIUS_MAX 12  // Default: 12
+#define PLANET_CLASS_2_MOON_RADIUS_MAX 24  // Default: 24
+#define PLANET_CLASS_3_MOON_RADIUS_MAX 32  // Default: 32
+#define PLANET_CLASS_4_MOON_RADIUS_MAX 48  // Default: 48
+#define PLANET_CLASS_5_MOON_RADIUS_MAX 72  // Default: 72
 #define PLANET_CLASS_6_MOON_RADIUS_MAX 100 // Default: 100
 
 // States
@@ -182,7 +187,20 @@ enum
     MENU,
     NAVIGATE,
     MAP,
-    UNIVERSE
+    UNIVERSE,
+    RESUME,
+    NEW,
+    QUIT,
+};
+
+// Menu buttons
+enum
+{
+    MENU_BUTTON_START,
+    MENU_BUTTON_RESUME,
+    MENU_BUTTON_NEW,
+    MENU_BUTTON_EXIT,
+    MENU_BUTTON_COUNT
 };
 
 enum

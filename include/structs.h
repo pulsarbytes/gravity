@@ -1,10 +1,21 @@
 #ifndef STRUCTS_H
 #define STRUCTS_H
 
+// Struct for a menu button
+struct menu_button
+{
+    char text[32];
+    int state;
+    SDL_Rect rect;
+    SDL_Texture *texture;
+    SDL_Rect texture_rect;
+    unsigned short disabled;
+};
+
 // Struct for a game console entry
 struct game_console_entry
 {
-    char title[30];
+    char title[32];
     char value[16];
     SDL_Surface *surface;
     SDL_Texture *texture;

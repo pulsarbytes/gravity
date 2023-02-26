@@ -14,7 +14,8 @@
 extern SDL_Window *window;
 extern SDL_DisplayMode display_mode;
 extern SDL_Renderer *renderer;
-extern TTF_Font *font;
+extern TTF_Font *font_small;
+extern TTF_Font *font_large;
 extern SDL_Color text_color;
 extern long double game_scale;
 
@@ -82,10 +83,10 @@ int init_sdl()
         return FALSE;
     }
 
-    // Load a font into memory
-    font = TTF_OpenFont("../assets/fonts/consola.ttf", FONT_SIZE);
+    // Load fonts into memory
+    font_small = TTF_OpenFont("../assets/fonts/consola.ttf", FONT_SIZE_SMALL);
 
-    if (font == NULL)
+    if (font_small == NULL)
     {
         SDL_Log("Could not load font: %s\n", SDL_GetError());
         TTF_Quit();
@@ -95,10 +96,17 @@ int init_sdl()
         return FALSE;
     }
 
-    // Text color for game console
-    text_color.r = 255;
-    text_color.g = 255;
-    text_color.b = 255;
+    font_large = TTF_OpenFont("../assets/fonts/consola.ttf", FONT_SIZE_LARGE);
+
+    if (font_large == NULL)
+    {
+        SDL_Log("Could not load font: %s\n", SDL_GetError());
+        TTF_Quit();
+        SDL_DestroyRenderer(renderer);
+        SDL_DestroyWindow(window);
+        SDL_Quit();
+        return FALSE;
+    }
 
     // Set blend mode
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
@@ -111,7 +119,8 @@ int init_sdl()
  */
 void close_sdl(void)
 {
-    TTF_CloseFont(font);
+    TTF_CloseFont(font_small);
+    TTF_CloseFont(font_large);
     TTF_Quit();
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);

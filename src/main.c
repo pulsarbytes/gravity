@@ -1,7 +1,7 @@
 /*
  * Gravity - An infinite procedural 2d universe that models gravity and orbital motion.
  *
- * v1.2.1
+ * v1.3.1
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 only,
@@ -36,8 +36,9 @@
 SDL_Window *window = NULL;
 SDL_DisplayMode display_mode;
 SDL_Renderer *renderer = NULL;
-TTF_Font *font = NULL;
-SDL_Color text_color;
+TTF_Font *font_small = NULL;
+TTF_Font *font_large = NULL;
+SDL_Color text_color = {255, 255, 255, 255};
 
 // Global variables
 const float g_launch = 0.7 * G_CONSTANT;
@@ -47,8 +48,7 @@ static int galaxies_start = ON;
 static int speed_limit = BASE_SPEED_LIMIT;
 static int landing_stage = STAGE_OFF;
 struct vector_t velocity;
-int state = NAVIGATE;
-int save_state;
+int state = MENU;
 long double game_scale = ZOOM_NAVIGATE;
 static float save_scale = OFF;
 
@@ -66,8 +66,10 @@ int zoom_out = OFF;
 int console = ON;
 int orbits_on = SHOW_ORBITS;
 int galaxy_region_size = GALAXY_REGION_SIZE;
+int selected_button = 0;
 
 // Keep track of events
+int game_started = OFF;
 int map_enter = OFF;
 int map_exit = OFF;
 int map_center = OFF;
@@ -86,6 +88,12 @@ struct point_t universe_cross_axis;
 // Array for game console entries
 struct game_console_entry game_console_entries[LOG_COUNT];
 
+// Array for menu button entries
+struct menu_button menu[MENU_BUTTON_COUNT];
+
+// Logo
+struct menu_button logo;
+
 // Hash table for stars
 struct star_entry *stars[MAX_STARS];
 
@@ -102,17 +110,17 @@ static struct point_t previous_ship_position = {.x = 0, .y = 0};
 uint64_t initseq;
 
 // Function prototypes
-void onMenu(struct bstar_t bstars[], struct camera_t *);
+void onMenu(struct bstar_t bstars[], struct gstar_t menustars[], struct camera_t *);
 void onNavigate(struct bstar_t bstars[], struct ship_t *, struct camera_t *, struct point_t *, struct point_state *);
 void onMap(struct bstar_t bstars[], struct ship_t *, struct camera_t *, struct point_t *, struct point_t *, struct point_state *);
 void onUniverse(struct ship_t *, struct camera_t *, struct point_t *, struct point_t *, struct point_state *);
 int init_sdl(void);
 void close_sdl(void);
-void poll_events(int *quit);
+void poll_events(struct menu_button menu[]);
 void log_game_console(struct game_console_entry entries[], int index, double value);
 void update_game_console(struct game_console_entry entries[]);
 void log_fps(unsigned int time_diff);
-void cleanup_resources(struct ship_t *, struct galaxy_t *, struct galaxy_t *, struct galaxy_t *);
+void cleanup_resources(struct menu_button menu[], struct ship_t *, struct galaxy_t *, struct galaxy_t *, struct galaxy_t *);
 void cleanup_stars(void);
 void calc_orbital_velocity(float height, float angle, float radius, float *vx, float *vy);
 void create_bstars(struct bstar_t bstars[], int max_bstars);
@@ -135,7 +143,7 @@ struct planet_t *get_star(struct point_t);
 int star_exists(struct point_t);
 void delete_star(struct point_t);
 void update_velocity(struct ship_t *);
-double nearest_star_distance(struct point_t, struct galaxy_t *, uint64_t initseq);
+double nearest_star_distance(struct point_t, struct galaxy_t *, uint64_t initseq, int galaxy_density);
 int get_star_class(float n);
 int get_planet_class(float n);
 void zoom_star(struct planet_t *);
@@ -164,6 +172,13 @@ void draw_speed_arc(struct ship_t *, const struct camera_t *);
 void delete_stars_outside_region(double bx, double by, int region_size);
 void generate_stars_preview(const struct camera_t *, struct point_t *, struct point_t *, int zoom_preview);
 int point_in_rect(struct point_t, struct point_t rect[]);
+void create_menu(void);
+void create_logo(void);
+void change_state(int new_state);
+void update_menu(void);
+void reset_vars(void);
+void create_menu_galaxy_cloud(struct galaxy_t *galaxy, struct gstar_t menustars[]);
+void draw_menu_galaxy_cloud(const struct camera_t *camera, struct gstar_t menustars[]);
 
 int main(int argc, char *argv[])
 {
@@ -173,14 +188,18 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    int quit = 0;
-
     // Initialize SDL
     if (!init_sdl())
     {
         fprintf(stderr, "Error: could not initialize SDL.\n");
         return 1;
     }
+
+    // Create menu
+    create_menu();
+
+    // Create logo
+    create_logo();
 
     // Galaxy coordinates
     // Retrieved from saved game or use default values if this is a new game
@@ -251,21 +270,11 @@ int main(int argc, char *argv[])
     // Generate stars
     generate_stars(bstars, &ship, &navigate_offset, &galaxy_offset, state);
 
-    // Put ship in orbit around a star
-    if (START_IN_ORBIT)
-    {
-        struct point_t start_position = {.x = GALAXY_START_X, .y = GALAXY_START_Y};
-
-        if (star_exists(start_position))
-        {
-            struct planet_t *star = get_star(start_position);
-
-            float d = 3 * (star->radius);
-            ship.position.x = start_position.x + d;
-            ship.position.y = start_position.y - d;
-            calc_orbital_velocity(sqrt(d * d + d * d), -45, star->radius, &ship.vx, &ship.vy);
-        }
-    }
+    // Create galaxy for menu
+    struct point_t menu_galaxy_position = {.x = -140000, .y = -70000};
+    struct galaxy_t *menu_galaxy = get_galaxy(menu_galaxy_position);
+    struct gstar_t menustars[MAX_GSTARS];
+    create_menu_galaxy_cloud(menu_galaxy, menustars);
 
     // Initialize universe sections crossings
     universe_cross_axis.x = galaxy_offset.current_x;
@@ -279,12 +288,12 @@ int main(int argc, char *argv[])
     unsigned int start_time;
 
     // Main loop
-    while (!quit)
+    while (state != QUIT)
     {
         start_time = SDL_GetTicks();
 
         // Process events
-        poll_events(&quit);
+        poll_events(menu);
 
         // Set background color
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
@@ -295,7 +304,7 @@ int main(int argc, char *argv[])
         switch (state)
         {
         case MENU:
-            onMenu(bstars, &camera);
+            onMenu(bstars, menustars, &camera);
             break;
         case NAVIGATE:
             onNavigate(bstars, &ship, &camera, &navigate_offset, &galaxy_offset);
@@ -307,7 +316,7 @@ int main(int argc, char *argv[])
             onUniverse(&ship, &camera, &map_offset, &universe_offset, &galaxy_offset);
             break;
         default:
-            onMenu(bstars, &camera);
+            onMenu(bstars, menustars, &camera);
             break;
         }
 
@@ -325,7 +334,7 @@ int main(int argc, char *argv[])
     }
 
     // Cleanup resources
-    cleanup_resources(&ship, current_galaxy, buffer_galaxy, previous_galaxy);
+    cleanup_resources(menu, &ship, current_galaxy, buffer_galaxy, previous_galaxy);
 
     // Close SDL
     close_sdl();
@@ -333,11 +342,262 @@ int main(int argc, char *argv[])
     return 0;
 }
 
-void onMenu(struct bstar_t bstars[], struct camera_t *camera)
+void change_state(int new_state)
 {
+    state = new_state;
+
+    if (state == NAVIGATE)
+        game_started = ON;
+
+    if (state == NEW)
+        reset_vars();
+
+    update_menu();
+}
+
+void reset_vars(void)
+{
+    stars_start = ON;
+    galaxies_start = ON;
+    landing_stage = STAGE_OFF;
+    velocity.magnitude = 0;
+    velocity.angle = 0;
+    state = NAVIGATE;
+    game_scale = ZOOM_NAVIGATE;
+    save_scale = OFF;
+    left = OFF;
+    right = OFF;
+    up = OFF;
+    down = OFF;
+    thrust = OFF;
+    reverse = OFF;
+    camera_on = CAMERA_ON;
+    stop = OFF;
+    zoom_in = OFF;
+    zoom_out = OFF;
+    console = ON;
+    orbits_on = SHOW_ORBITS;
+    galaxy_region_size = GALAXY_REGION_SIZE;
+    selected_button = 0;
+    game_started = ON;
+    map_enter = OFF;
+    map_exit = OFF;
+    map_center = OFF;
+    map_switch = OFF;
+    universe_enter = OFF;
+    universe_exit = OFF;
+    universe_center = OFF;
+    universe_switch = OFF;
+    exited_galaxy = OFF;
+    galaxy_found = OFF;
+    previous_ship_position.x = 0;
+    previous_ship_position.y = 0;
+
+    // galaxy_offset.current_x = UNIVERSE_START_X;
+    // galaxy_offset.current_y = UNIVERSE_START_Y;
+    // galaxy_offset.buffer_x = UNIVERSE_START_X;
+    // galaxy_offset.buffer_y = UNIVERSE_START_Y;
+    // navigate_offset.x = GALAXY_START_X;
+    // navigate_offset.y = GALAXY_START_Y;
+    // map_offset.x = GALAXY_START_X;
+    // map_offset.y = GALAXY_START_Y;
+    // universe_offset.x = galaxy_offset.current_x;
+    // universe_offset.y = galaxy_offset.current_y;
+
+    // ship.position.x = GALAXY_START_X;
+    // ship.position.y = GALAXY_START_Y;
+    // ship.angle = 0;
+
+    // // Get a copy of current galaxy from the hash table
+    // struct point_t galaxy_position = {
+    //     .x = galaxy_offset.current_x,
+    //     .y = galaxy_offset.current_y};
+    // struct galaxy_t *current_galaxy_copy = get_galaxy(galaxy_position);
+
+    // // Copy current_galaxy_copy to current_galaxy
+    // memcpy(current_galaxy, current_galaxy_copy, sizeof(struct galaxy_t));
+
+    // // Copy current_galaxy to buffer_galaxy
+    // memcpy(buffer_galaxy, current_galaxy, sizeof(struct galaxy_t));
+
+    // // Create background stars
+    // int max_bstars = (int)(display_mode.w * display_mode.h * BSTARS_PER_SQUARE / BSTARS_SQUARE);
+    // struct bstar_t bstars[max_bstars];
+
+    // for (int i = 0; i < max_bstars; i++)
+    // {
+    //     bstars[i].final_star = 0;
+    // }
+
+    // create_bstars(bstars, max_bstars);
+
+    // // Generate stars
+    // generate_stars(bstars, &ship, &navigate_offset, &galaxy_offset, state);
+
+    // // Initialize universe sections crossings
+    // universe_cross_axis.x = galaxy_offset.current_x;
+    // universe_cross_axis.y = galaxy_offset.current_x;
+
+    // // Initialize galaxy sections crossings
+    // cross_axis.x = ship.position.x;
+    // cross_axis.y = ship.position.y;
+}
+
+void update_menu(void)
+{
+    SDL_Color enabled_text_color = {255, 255, 255, 255};
+    SDL_Color disabled_text_color = {255, 255, 255, 100};
+
+    if (game_started)
+    {
+        // Update Start button
+        menu[MENU_BUTTON_START].disabled = TRUE;
+        SDL_Surface *start_surface = TTF_RenderText_Solid(font_small, menu[MENU_BUTTON_START].text, disabled_text_color);
+        SDL_DestroyTexture(menu[MENU_BUTTON_START].texture);
+        SDL_Texture *start_texture = SDL_CreateTextureFromSurface(renderer, start_surface);
+        menu[MENU_BUTTON_START].texture = start_texture;
+        SDL_FreeSurface(start_surface);
+
+        // Update Resume button
+        menu[MENU_BUTTON_RESUME].disabled = FALSE;
+        SDL_Surface *resume_surface = TTF_RenderText_Solid(font_small, menu[MENU_BUTTON_RESUME].text, enabled_text_color);
+        SDL_DestroyTexture(menu[MENU_BUTTON_RESUME].texture);
+        SDL_Texture *resume_texture = SDL_CreateTextureFromSurface(renderer, resume_surface);
+        menu[MENU_BUTTON_RESUME].texture = resume_texture;
+        SDL_FreeSurface(resume_surface);
+
+        // Update New button
+        menu[MENU_BUTTON_NEW].disabled = FALSE;
+        SDL_Surface *new_surface = TTF_RenderText_Solid(font_small, menu[MENU_BUTTON_NEW].text, enabled_text_color);
+        SDL_DestroyTexture(menu[MENU_BUTTON_NEW].texture);
+        SDL_Texture *new_texture = SDL_CreateTextureFromSurface(renderer, new_surface);
+        menu[MENU_BUTTON_NEW].texture = new_texture;
+        SDL_FreeSurface(new_surface);
+    }
+}
+
+void create_logo()
+{
+    strcpy(logo.text, "Gravity");
+
+    // Set the position of the logo
+    logo.rect.w = 300;
+    logo.rect.h = 200;
+    logo.rect.x = 50;
+    logo.rect.y = 0;
+
+    // Create a texture from the text
+    SDL_Surface *logo_surface = TTF_RenderText_Solid(font_large, logo.text, text_color);
+    SDL_Texture *logo_texture = SDL_CreateTextureFromSurface(renderer, logo_surface);
+    logo.texture = logo_texture;
+
+    // Set the position of the text within the button
+    logo.texture_rect.w = logo_surface->w;
+    logo.texture_rect.h = logo_surface->h;
+    logo.texture_rect.x = logo.rect.x + (logo.rect.w - logo.texture_rect.w) / 2;
+    logo.texture_rect.y = logo.rect.y + (logo.rect.h - logo.texture_rect.h) / 2;
+
+    SDL_FreeSurface(logo_surface);
+}
+
+void create_menu(void)
+{
+    // Start
+    strcpy(menu[MENU_BUTTON_START].text, "Start");
+    menu[MENU_BUTTON_START].state = NAVIGATE;
+    menu[MENU_BUTTON_START].disabled = FALSE;
+
+    // Resume
+    strcpy(menu[MENU_BUTTON_RESUME].text, "Resume");
+    menu[MENU_BUTTON_RESUME].state = RESUME;
+    menu[MENU_BUTTON_RESUME].disabled = TRUE;
+
+    // New
+    strcpy(menu[MENU_BUTTON_NEW].text, "New Game");
+    menu[MENU_BUTTON_NEW].state = NEW;
+    menu[MENU_BUTTON_NEW].disabled = TRUE;
+
+    // Exit
+    strcpy(menu[MENU_BUTTON_EXIT].text, "Exit");
+    menu[MENU_BUTTON_EXIT].state = QUIT;
+    menu[MENU_BUTTON_EXIT].disabled = FALSE;
+
+    for (int i = 0; i < MENU_BUTTON_COUNT; i++)
+    {
+        menu[i].rect.w = 300;
+        menu[i].rect.h = 50;
+
+        // Create a texture from the button text
+        SDL_Surface *text_surface = TTF_RenderText_Solid(font_small, menu[i].text, text_color);
+        SDL_Texture *text_texture = SDL_CreateTextureFromSurface(renderer, text_surface);
+        menu[i].texture = text_texture;
+        menu[i].texture_rect.w = text_surface->w;
+        menu[i].texture_rect.h = text_surface->h;
+
+        SDL_FreeSurface(text_surface);
+    }
+}
+
+void onMenu(struct bstar_t bstars[], struct gstar_t menustars[], struct camera_t *camera)
+{
+    int num_buttons = 0;
+
     // Draw background stars
-    struct speed_t speed = {.vx = 0, .vy = 0};
+    struct speed_t speed = {.vx = 1000, .vy = 0};
     update_bstars(bstars, camera, speed, 0);
+
+    // Draw logo
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
+    SDL_RenderFillRect(renderer, &logo.rect);
+    SDL_RenderCopy(renderer, logo.texture, NULL, &logo.texture_rect);
+
+    // Draw menu
+    for (int i = 0; i < MENU_BUTTON_COUNT; i++)
+    {
+        if (i == selected_button && menu[i].disabled)
+        {
+            do
+            {
+                selected_button = (selected_button + 1) % MENU_BUTTON_COUNT;
+            } while (menu[selected_button].disabled);
+        }
+
+        if (game_started && i == MENU_BUTTON_START)
+            continue;
+
+        if (!game_started && i == MENU_BUTTON_RESUME)
+            continue;
+
+        if (!game_started && i == MENU_BUTTON_NEW)
+            continue;
+
+        if (i == selected_button)
+        {
+            SDL_SetRenderDrawColor(renderer, 255, 255, 255, 40);
+        }
+        else
+        {
+            SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
+        }
+
+        // Set the position of the button
+        menu[i].rect.x = 50;
+        menu[i].rect.y = 200 + 50 * num_buttons;
+
+        SDL_RenderFillRect(renderer, &menu[i].rect);
+
+        // Set the position of the text within the button
+        menu[i].texture_rect.x = menu[i].rect.x + (menu[i].rect.w - menu[i].texture_rect.w) / 2;
+        menu[i].texture_rect.y = menu[i].rect.y + (menu[i].rect.h - menu[i].texture_rect.h) / 2;
+
+        // Render the text texture onto the button
+        SDL_RenderCopy(renderer, menu[i].texture, NULL, &menu[i].texture_rect);
+
+        num_buttons++;
+    }
+
+    // Draw galaxy
+    draw_menu_galaxy_cloud(camera, menustars);
 }
 
 void onNavigate(struct bstar_t bstars[], struct ship_t *ship, struct camera_t *camera, struct point_t *navigate_offset, struct point_state *galaxy_offset)
@@ -354,6 +614,9 @@ void onNavigate(struct bstar_t bstars[], struct ship_t *ship, struct camera_t *c
             galaxy_offset->current_x = galaxy_offset->buffer_x;
             galaxy_offset->current_y = galaxy_offset->buffer_y;
         }
+
+        // Generate new stars
+        stars_start = ON;
 
         // Reset ship position
         ship->position.x = previous_ship_position.x;
@@ -435,10 +698,12 @@ void onNavigate(struct bstar_t bstars[], struct ship_t *ship, struct camera_t *c
     if (camera_on)
         update_camera(camera, *navigate_offset, game_scale);
 
+    // Get distance from galaxy center
+    double distance_current = find_distance(ship->position.x, ship->position.y, 0, 0);
+
     if (BSTARS_ON || GSTARS_ON || SPEED_LINES_ON)
     {
         struct speed_t speed = {.vx = ship->vx, .vy = ship->vy};
-        double distance_current = find_distance(ship->position.x, ship->position.y, 0, 0);
 
         // Draw galaxy cloud
         if (GSTARS_ON)
@@ -510,7 +775,7 @@ void onNavigate(struct bstar_t bstars[], struct ship_t *ship, struct camera_t *c
     }
 
     // Enforce speed limits
-    if (!exited_galaxy)
+    if (distance_current < current_galaxy->radius * GALAXY_SCALE)
     {
         if (velocity.magnitude > GALAXY_SPEED_LIMIT)
         {
@@ -740,7 +1005,7 @@ void onMap(struct bstar_t bstars[], struct ship_t *ship, struct camera_t *camera
                 map_exit = ON;
                 map_switch = ON;
                 universe_enter = ON;
-                state = UNIVERSE;
+                change_state(UNIVERSE);
 
                 // Update universe_offset
                 universe_offset->x = current_galaxy->position.x + map_offset->x / GALAXY_SCALE;
@@ -857,12 +1122,12 @@ void onMap(struct bstar_t bstars[], struct ship_t *ship, struct camera_t *camera
     else
         SDL_RenderCopyEx(renderer, ship->projection->texture, &ship->projection->main_img_rect, &ship->projection->rect, ship->projection->angle, &ship->projection->rotation_pt, SDL_FLIP_NONE);
 
-    // Draw galaxy radius circle
-    int radius = current_galaxy->radius * GALAXY_SCALE * game_scale;
+    // Draw galaxy cutoff circle
+    int cutoff = current_galaxy->cutoff * GALAXY_SCALE * game_scale;
     int cx = -camera->x * game_scale;
     int cy = -camera->y * game_scale;
-    SDL_Color radius_color = {0, 255, 255, 70};
-    SDL_DrawCircleApprox(renderer, camera, cx, cy, radius, radius_color);
+    SDL_Color cutoff_color = {0, 255, 255, 70};
+    SDL_DrawCircleApprox(renderer, camera, cx, cy, cutoff, cutoff_color);
 
     // Draw cross at position
     SDL_SetRenderDrawColor(renderer, 255, 255, 255, 128);
@@ -1120,7 +1385,7 @@ void onUniverse(struct ship_t *ship, struct camera_t *camera, struct point_t *ma
             {
                 universe_switch = ON;
                 map_enter = ON;
-                state = MAP;
+                change_state(MAP);
 
                 cleanup_stars();
 
@@ -1434,21 +1699,8 @@ void generate_stars(struct bstar_t bstars[], struct ship_t *ship, struct point_t
             cross_axis.y = by;
     }
 
-    // Define a region of galaxy_region_size * galaxy_region_size
-    // bx,by are at the center of this area
-    double ix, iy;
-    double left_boundary = bx - ((galaxy_region_size / 2) * GALAXY_SECTION_SIZE);
-    double right_boundary = bx + ((galaxy_region_size / 2) * GALAXY_SECTION_SIZE);
-    double top_boundary = by - ((galaxy_region_size / 2) * GALAXY_SECTION_SIZE);
-    double bottom_boundary = by + ((galaxy_region_size / 2) * GALAXY_SECTION_SIZE);
-
-    // Add a buffer zone of <galaxy_region_size> sections beyond galaxy radius
-    int radius_plus_buffer = (current_galaxy->radius * GALAXY_SCALE) + galaxy_region_size * GALAXY_SECTION_SIZE;
-    int in_horizontal_bounds = left_boundary > -radius_plus_buffer && right_boundary < radius_plus_buffer;
-    int in_vertical_bounds = top_boundary > -radius_plus_buffer && bottom_boundary < radius_plus_buffer;
-
     // If exited galaxy, check for closest galaxy, including current galaxy
-    if (sqrt(offset->x * offset->x + offset->y * offset->y) > current_galaxy->radius * GALAXY_SCALE)
+    if (sqrt(offset->x * offset->x + offset->y * offset->y) > current_galaxy->cutoff * GALAXY_SCALE)
     {
         exited_galaxy = ON;
 
@@ -1542,6 +1794,19 @@ void generate_stars(struct bstar_t bstars[], struct ship_t *ship, struct point_t
     }
     else
         exited_galaxy = OFF;
+
+    // Define a region of galaxy_region_size * galaxy_region_size
+    // bx,by are at the center of this area
+    double ix, iy;
+    double left_boundary = bx - ((galaxy_region_size / 2) * GALAXY_SECTION_SIZE);
+    double right_boundary = bx + ((galaxy_region_size / 2) * GALAXY_SECTION_SIZE);
+    double top_boundary = by - ((galaxy_region_size / 2) * GALAXY_SECTION_SIZE);
+    double bottom_boundary = by + ((galaxy_region_size / 2) * GALAXY_SECTION_SIZE);
+
+    // Add a buffer zone of <galaxy_region_size> sections beyond galaxy radius
+    int radius_plus_buffer = (current_galaxy->radius * GALAXY_SCALE) + galaxy_region_size * GALAXY_SECTION_SIZE;
+    int in_horizontal_bounds = left_boundary > -radius_plus_buffer && right_boundary < radius_plus_buffer;
+    int in_vertical_bounds = top_boundary > -radius_plus_buffer && bottom_boundary < radius_plus_buffer;
 
     // Use a local rng
     pcg32_random_t rng;
@@ -1749,8 +2014,8 @@ void create_bstars(struct bstar_t bstars[], int max_bstars)
                     star.rect.h = 1;
                 }
 
-                // Get a color between 15 - 155
-                star.opacity = ((rand() % 156) + 15);
+                // Get a color between 15 - BSTARS_OPACITY
+                star.opacity = ((rand() % (BSTARS_OPACITY + 1 - 15)) + 15);
 
                 star.final_star = 1;
                 bstars[i++] = star;
@@ -1769,23 +2034,32 @@ void update_bstars(struct bstar_t bstars[], const struct camera_t *camera, struc
 {
     int i = 0;
     int max_bstars = (int)(display_mode.w * display_mode.h * BSTARS_PER_SQUARE / BSTARS_SQUARE);
+    float max_distance = 2 * current_galaxy->radius * GALAXY_SCALE;
 
     while (i < max_bstars && bstars[i].final_star == 1)
     {
-        if (camera_on && state != MENU)
+        if (camera_on || state == MENU)
         {
             float dx, dy;
 
-            // Don't move background stars faster than BSTARS_MAX_SPEED
-            if (velocity.magnitude > BSTARS_MAX_SPEED)
-            {
-                dx = BSTARS_SPEED_FACTOR * (BSTARS_MAX_SPEED * speed.vx / velocity.magnitude) / FPS;
-                dy = BSTARS_SPEED_FACTOR * (BSTARS_MAX_SPEED * speed.vy / velocity.magnitude) / FPS;
-            }
-            else
+            if (state == MENU)
             {
                 dx = BSTARS_SPEED_FACTOR * speed.vx / FPS;
                 dy = BSTARS_SPEED_FACTOR * speed.vy / FPS;
+            }
+            else
+            {
+                // Limit background stars speed
+                if (velocity.magnitude > GALAXY_SPEED_LIMIT)
+                {
+                    dx = BSTARS_SPEED_FACTOR * speed.vx / FPS;
+                    dy = BSTARS_SPEED_FACTOR * speed.vy / FPS;
+                }
+                else
+                {
+                    dx = BSTARS_SPEED_FACTOR * (velocity.magnitude / GALAXY_SPEED_LIMIT) * speed.vx / FPS;
+                    dy = BSTARS_SPEED_FACTOR * (velocity.magnitude / GALAXY_SPEED_LIMIT) * speed.vy / FPS;
+                }
             }
 
             bstars[i].position.x -= dx;
@@ -1813,14 +2087,18 @@ void update_bstars(struct bstar_t bstars[], const struct camera_t *camera, struc
             bstars[i].rect.y = (int)bstars[i].position.y;
         }
 
-        // Update opacity with game_scale and fade as we move away from galaxy center.
-        float max_distance = 1.5 * current_galaxy->radius;
         float opacity;
 
         if (state == MENU)
-            opacity = (double)bstars[i].opacity;
+            opacity = (double)(bstars[i].opacity * 2 / 3);
         else
-            opacity = (double)bstars[i].opacity * (1 - pow(1 - game_scale, 2)) * (1 - (distance / (max_distance * GALAXY_SCALE)));
+        {
+            // Fade out opacity as we move away from galaxy center
+            opacity = (double)bstars[i].opacity * (1 - (distance / max_distance));
+
+            // Opacity is 1/3 at center, 3/3 at max_distance
+            opacity = (double)(opacity * ((3 - (2 - 2 * (distance / max_distance))) / 3));
+        }
 
         if (opacity > 255)
             opacity = 255;
@@ -1841,7 +2119,7 @@ void update_gstars(struct galaxy_t *galaxy, struct point_t ship_position, const 
 {
     int i = 0;
     float min_opacity_factor = 0.35;
-    float max_opacity_factor = 0.5;
+    float max_opacity_factor = 0.45;
     float galaxy_radius = galaxy->radius * GALAXY_SCALE;
 
     // Calculate position in galaxy
@@ -2018,7 +2296,7 @@ struct galaxy_t *create_galaxy(struct point_t position)
 struct planet_t *create_star(struct point_t position, int preview)
 {
     // Find distance to nearest star
-    double distance = nearest_star_distance(position, current_galaxy, initseq);
+    double distance = nearest_star_distance(position, current_galaxy, initseq, GALAXY_DENSITY);
 
     // Get star class
     int class = get_star_class(distance);
@@ -2385,7 +2663,7 @@ void update_galaxy(struct galaxy_t *galaxy, const struct camera_t *camera, struc
     double delta_y = galaxy->position.y - position.y;
     double distance = sqrt(delta_x * delta_x + delta_y * delta_y);
 
-    // Draw radius circle
+    // Draw cutoff circle
     if (distance < galaxy->cutoff)
     {
         // Reset stars and update current_galaxy
@@ -2395,12 +2673,12 @@ void update_galaxy(struct galaxy_t *galaxy, const struct camera_t *camera, struc
             memcpy(current_galaxy, galaxy, sizeof(struct galaxy_t));
         }
 
-        int radius = galaxy->radius * game_scale * GALAXY_SCALE;
+        int cutoff = galaxy->cutoff * game_scale * GALAXY_SCALE;
         int rx = (galaxy->position.x - camera->x) * game_scale * GALAXY_SCALE;
         int ry = (galaxy->position.y - camera->y) * game_scale * GALAXY_SCALE;
 
-        SDL_Color radius_color = {0, 255, 255, 70};
-        SDL_DrawCircle(renderer, camera, rx, ry, radius, radius_color);
+        SDL_Color cutoff_color = {0, 255, 255, 70};
+        SDL_DrawCircle(renderer, camera, rx, ry, cutoff, cutoff_color);
 
         // Create gstars_hd
         if (!galaxy->initialized_hd)
@@ -2596,12 +2874,12 @@ void update_system(struct planet_t *planet, struct ship_t *ship, const struct ca
             // Draw cutoff area circle
             if (orbits_on && distance_star < 2 * planet->cutoff)
             {
-                int radius = planet->cutoff * game_scale;
+                int cutoff = planet->cutoff * game_scale;
                 int _x = (planet->position.x - camera->x) * game_scale;
                 int _y = (planet->position.y - camera->y) * game_scale;
                 SDL_Color cutoff_color = {255, 0, 255, 70};
 
-                SDL_DrawCircle(renderer, camera, _x, _y, radius, cutoff_color);
+                SDL_DrawCircle(renderer, camera, _x, _y, cutoff, cutoff_color);
             }
         }
     }

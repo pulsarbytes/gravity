@@ -5,9 +5,10 @@
 #include <SDL2/SDL.h>
 
 #include "../include/common.h"
+#include "../include/structs.h"
 
 extern int state;
-extern int save_state;
+extern int game_started;
 extern int left;
 extern int right;
 extern int up;
@@ -26,20 +27,29 @@ extern int map_center;
 extern int universe_enter;
 extern int universe_exit;
 extern int universe_center;
+extern int selected_button;
+
+void change_state(int new_state);
 
 /*
  * Poll SDL events.
  */
-void poll_events(int *quit)
+void poll_events(struct menu_button menu[])
 {
     SDL_Event event;
+    static int save_state;
 
     while (SDL_PollEvent(&event))
     {
         switch (event.type)
         {
         case SDL_QUIT:
-            *quit = 1;
+            change_state(QUIT);
+            break;
+        case SDL_MOUSEBUTTONDOWN:
+            int x, y;
+            SDL_GetMouseState(&x, &y);
+            printf("\nButton was clicked!");
             break;
         case SDL_KEYDOWN:
             switch (event.key.keysym.scancode)
@@ -58,7 +68,7 @@ void poll_events(int *quit)
                     universe_exit = ON;
                 if (state == NAVIGATE || state == UNIVERSE)
                 {
-                    state = MAP;
+                    change_state(MAP);
                     map_enter = ON;
                     camera_on = ON;
                 }
@@ -66,20 +76,17 @@ void poll_events(int *quit)
             case SDL_SCANCODE_N:
                 if (state == MAP)
                 {
-                    state = NAVIGATE;
+                    change_state(NAVIGATE);
                     map_exit = ON;
                 }
                 else if (state == UNIVERSE)
                 {
-                    state = NAVIGATE;
+                    change_state(NAVIGATE);
                     universe_exit = ON;
                 }
                 break;
             case SDL_SCANCODE_O:
                 orbits_on = !orbits_on;
-                break;
-            case SDL_SCANCODE_Q:
-                *quit = 1;
                 break;
             case SDL_SCANCODE_S:
                 if (state == NAVIGATE)
@@ -90,7 +97,7 @@ void poll_events(int *quit)
                     map_exit = ON;
                 if (state == NAVIGATE || state == MAP)
                 {
-                    state = UNIVERSE;
+                    change_state(UNIVERSE);
                     universe_enter = ON;
                     camera_on = ON;
                 }
@@ -104,16 +111,42 @@ void poll_events(int *quit)
                 right = ON;
                 break;
             case SDL_SCANCODE_UP:
-                reverse = OFF;
-                down = OFF;
-                thrust = ON;
-                up = ON;
+                if (state == MENU)
+                {
+                    do
+                    {
+                        selected_button = (selected_button + MENU_BUTTON_COUNT - 1) % MENU_BUTTON_COUNT;
+                    } while (menu[selected_button].disabled);
+                }
+                else
+                {
+                    reverse = OFF;
+                    down = OFF;
+                    thrust = ON;
+                    up = ON;
+                }
                 break;
             case SDL_SCANCODE_DOWN:
-                thrust = OFF;
-                up = OFF;
-                reverse = ON;
-                down = ON;
+                if (state == MENU)
+                {
+                    do
+                    {
+                        selected_button = (selected_button + 1) % MENU_BUTTON_COUNT;
+                    } while (menu[selected_button].disabled);
+                }
+                else
+                {
+                    thrust = OFF;
+                    up = OFF;
+                    reverse = ON;
+                    down = ON;
+                }
+                break;
+            case SDL_SCANCODE_RETURN:
+                if (menu[selected_button].state == RESUME)
+                    change_state(save_state);
+                else
+                    change_state(menu[selected_button].state);
                 break;
             case SDL_SCANCODE_SPACE:
                 if (state == MAP)
@@ -125,10 +158,10 @@ void poll_events(int *quit)
                 if (state != MENU)
                 {
                     save_state = state;
-                    state = MENU;
+                    change_state(MENU);
                 }
-                else if (state == MENU)
-                    state = save_state;
+                else if (state == MENU && game_started)
+                    change_state(save_state);
                 break;
             case SDL_SCANCODE_LEFTBRACKET:
                 zoom_in = OFF;

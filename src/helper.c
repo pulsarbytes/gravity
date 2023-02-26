@@ -94,7 +94,7 @@ void cleanup_stars(void)
 /*
  * Clean up resources.
  */
-void cleanup_resources(struct ship_t *ship, struct galaxy_t *current_galaxy, struct galaxy_t *buffer_galaxy, struct galaxy_t *previous_galaxy)
+void cleanup_resources(struct menu_button menu[], struct ship_t *ship, struct galaxy_t *current_galaxy, struct galaxy_t *buffer_galaxy, struct galaxy_t *previous_galaxy)
 {
     // Clean up galaxies
     cleanup_galaxies();
@@ -112,6 +112,12 @@ void cleanup_resources(struct ship_t *ship, struct galaxy_t *current_galaxy, str
     free(current_galaxy);
     free(buffer_galaxy);
     free(previous_galaxy);
+
+    // Clean up menu texttures
+    for (int i = 0; i < MENU_BUTTON_COUNT; i++)
+    {
+        SDL_DestroyTexture(menu[i].texture);
+    }
 }
 
 /*
@@ -813,7 +819,7 @@ struct galaxy_t *find_nearest_galaxy(struct point_t position, struct galaxy_t *g
 /*
  * Find distance to nearest star.
  */
-double nearest_star_distance(struct point_t position, struct galaxy_t *current_galaxy, uint64_t initseq)
+double nearest_star_distance(struct point_t position, struct galaxy_t *current_galaxy, uint64_t initseq, int galaxy_density)
 {
     // We use 6 * GALAXY_SECTION_SIZE as max, since a CLASS_6 star needs 6 + 1 empty sections
     // We search inner circumferences of points first and work towards outward circumferences
@@ -853,7 +859,7 @@ double nearest_star_distance(struct point_t position, struct galaxy_t *current_g
 
                 // Calculate density based on distance from center
                 double distance_from_center = sqrt((ix - position.x) * (ix - position.x) + (iy - position.y) * (iy - position.y));
-                double density = (GALAXY_DENSITY / pow((distance_from_center / a + 1), 6));
+                double density = (galaxy_density / pow((distance_from_center / a + 1), 6));
 
                 int has_star = abs(pcg32_random_r(&rng)) % 1000 < density;
 
@@ -1117,7 +1123,7 @@ void draw_section_lines(struct camera_t *camera, int section_size, SDL_Color col
     }
 }
 
-void create_galaxy_cloud(struct galaxy_t *galaxy, unsigned short high_definition)
+void create_menu_galaxy_cloud(struct galaxy_t *galaxy, struct gstar_t menustars[])
 {
     float radius = galaxy->radius;
     double full_size_radius = radius * GALAXY_SCALE;
@@ -1131,9 +1137,6 @@ void create_galaxy_cloud(struct galaxy_t *galaxy, unsigned short high_definition
 
     // Scale max array size by galaxy class
     int array_factor = 12;
-
-    if (!high_definition)
-        array_factor = galaxy->class;
 
     while (total_sections > MAX_GSTARS_ROW * array_factor) // Allow <array_factor> times more than array size as density is low
     {
@@ -1173,7 +1176,7 @@ void create_galaxy_cloud(struct galaxy_t *galaxy, unsigned short high_definition
             pcg32_srandom_r(&rng, seed, initseq);
 
             // Calculate density based on distance from center
-            double density = (GALAXY_DENSITY / pow((distance_from_center / a + 1), 6));
+            double density = (MENU_GALAXY_CLOUD_DENSITY / pow((distance_from_center / a + 1), 6));
 
             int has_star = abs(pcg32_random_r(&rng)) % 1000 < density;
 
@@ -1183,9 +1186,116 @@ void create_galaxy_cloud(struct galaxy_t *galaxy, unsigned short high_definition
                 star.position.x = ix;
                 star.position.y = iy;
 
-                double distance = nearest_star_distance(position, galaxy, initseq);
+                double distance = nearest_star_distance(position, galaxy, initseq, MENU_GALAXY_CLOUD_DENSITY);
                 int class = get_star_class(distance);
-                star.opacity = class * (255 / 6);
+                float class_opacity_max = class * (255 / 6) + 20; // There are only a few Class 6 galaxies, increase max value by 20
+                class_opacity_max = class_opacity_max > 255 ? 255 : class_opacity_max;
+                float class_opacity_min = class_opacity_max - (255 / 6);
+                int opacity = (abs(pcg32_random_r(&rng)) % (int)class_opacity_max + (int)class_opacity_min);
+                star.opacity = opacity * (1 - pow(distance_from_center / (galaxy->radius * GALAXY_SCALE), 3));
+                star.opacity = star.opacity < 0 ? 0 : star.opacity;
+
+                star.final_star = 1;
+                menustars[i++] = star;
+            }
+        }
+    }
+}
+
+void draw_menu_galaxy_cloud(const struct camera_t *camera, struct gstar_t menustars[])
+{
+    int i = 0;
+
+    while (i < MAX_GSTARS && menustars[i].final_star == 1)
+    {
+        int x, y;
+
+        SDL_SetRenderDrawColor(renderer, 255, 255, 255, menustars[i].opacity);
+
+        x = camera->w - camera->w / 4 + (menustars[i].position.x / GALAXY_SCALE) * 0.15;
+        y = camera->h / 3 + (menustars[i].position.y / GALAXY_SCALE) * 0.15;
+
+        SDL_RenderDrawPoint(renderer, x, y);
+
+        i++;
+    }
+}
+
+void create_galaxy_cloud(struct galaxy_t *galaxy, unsigned short high_definition)
+{
+    float radius = galaxy->radius;
+    double full_size_radius = radius * GALAXY_SCALE;
+    full_size_radius -= fmod(full_size_radius, GALAXY_SECTION_SIZE); // zero out any digits below 10,000
+    double full_size_diameter = full_size_radius * 2;
+
+    // Check whether MAX_GSTARS_ROW * GALAXY_SECTION_SIZE fit in full_size_diameter
+    // If they don't fit, we must group sections together
+    int grouped_sections = 1;
+    int total_sections = full_size_diameter / (grouped_sections * GALAXY_SECTION_SIZE);
+
+    // Scale max array size by galaxy class
+    int array_factor = 12; // 2 * galaxy->class;
+
+    while (total_sections > MAX_GSTARS_ROW * array_factor) // Allow <array_factor> times more than array size as density is low
+    {
+        grouped_sections++;
+        total_sections = full_size_diameter / (grouped_sections * GALAXY_SECTION_SIZE);
+    }
+
+    // Double the grouped_sections for low def
+    if (!high_definition)
+        grouped_sections *= 2;
+
+    int section_size = grouped_sections * GALAXY_SECTION_SIZE;
+    double ix, iy;
+    int i = 0;
+
+    // Use a local rng
+    pcg32_random_t rng;
+
+    // Set galaxy hash as initseq
+    uint64_t initseq = pair_hash_order_sensitive_2(galaxy->position);
+
+    // Density scaling parameter
+    double a = galaxy->radius * GALAXY_SCALE / 2.0f;
+
+    for (ix = -full_size_radius; ix <= full_size_radius; ix += section_size)
+    {
+        for (iy = -full_size_radius; iy <= full_size_radius; iy += section_size)
+        {
+            // Calculate the distance from the center of the galaxy
+            double distance_from_center = sqrt(ix * ix + iy * iy);
+
+            // Check that point is within galaxy radius
+            if (distance_from_center > full_size_radius)
+                continue;
+
+            // Create rng seed by combining x,y values
+            struct point_t position = {.x = ix, .y = iy};
+            uint64_t seed = pair_hash_order_sensitive(position);
+
+            // Seed with a fixed constant
+            pcg32_srandom_r(&rng, seed, initseq);
+
+            // Calculate density based on distance from center
+            double density = (GALAXY_CLOUD_DENSITY / pow((distance_from_center / a + 1), 6));
+
+            int has_star = abs(pcg32_random_r(&rng)) % 1000 < density;
+
+            if (has_star)
+            {
+                struct gstar_t star;
+                star.position.x = ix;
+                star.position.y = iy;
+
+                double distance = nearest_star_distance(position, galaxy, initseq, GALAXY_CLOUD_DENSITY);
+                int class = get_star_class(distance);
+                float class_opacity_max = class * (255 / 6);
+                class_opacity_max = class_opacity_max > 255 ? 255 : class_opacity_max;
+                float class_opacity_min = class_opacity_max - (255 / 6);
+                int opacity = (abs(pcg32_random_r(&rng)) % (int)class_opacity_max + (int)class_opacity_min);
+                star.opacity = opacity;
+                star.opacity = star.opacity < 0 ? 0 : star.opacity;
 
                 star.final_star = 1;
 

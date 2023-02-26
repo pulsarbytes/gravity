@@ -74,7 +74,6 @@ make
 |            | `Space` | Reset Universe      |
 |            | `N`     | Exit Universe mode  |
 | `K`        |         | Toggle console      |
-| `Q`        |         | Exit program        |
 | `Esc`      |         | Show menu / Pause   |
 
 ## Console contents

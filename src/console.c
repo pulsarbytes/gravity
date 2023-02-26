@@ -13,7 +13,7 @@
 
 extern struct game_console_entry game_console_entries[];
 extern SDL_Renderer *renderer;
-extern TTF_Font *font;
+extern TTF_Font *font_small;
 extern SDL_Color text_color;
 
 void log_game_console(struct game_console_entry entries[], int index, double value);
@@ -46,7 +46,7 @@ void log_game_console(struct game_console_entry entries[], int index, double val
     float rounded_value;
 
     if (index == SCALE_INDEX)
-        rounded_value = value; // value100 * roundf(value * 1000) / 1000;
+        rounded_value = value;
     else
         rounded_value = (int)value;
 
@@ -63,7 +63,7 @@ void update_game_console(struct game_console_entry entries[])
 
     for (i = 0; i < LOG_COUNT; i++)
     {
-        entries[i].surface = TTF_RenderText_Solid(font, entries[i].value, text_color);
+        entries[i].surface = TTF_RenderText_Solid(font_small, entries[i].value, text_color);
         entries[i].texture = SDL_CreateTextureFromSurface(renderer, entries[i].surface);
         SDL_FreeSurface(entries[i].surface);
         entries[i].rect.x = 120;
