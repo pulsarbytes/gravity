@@ -11,13 +11,10 @@
 #include "../include/common.h"
 #include "../include/structs.h"
 
-extern SDL_Window *window;
+// External variable definitions
+extern TTF_Font *fonts[];
 extern SDL_DisplayMode display_mode;
 extern SDL_Renderer *renderer;
-extern TTF_Font *font_small;
-extern TTF_Font *font_large;
-extern SDL_Color text_color;
-extern long double game_scale;
 
 int in_camera_relative(const struct camera_t *camera, int x, int y);
 bool line_intersects_viewport(const struct camera_t *camera, double x1, double y1, double x2, double y2);
@@ -25,7 +22,7 @@ bool line_intersects_viewport(const struct camera_t *camera, double x1, double y
 /*
  * Initialize SDL.
  */
-int init_sdl()
+int init_sdl(SDL_Window *window)
 {
     // Attempt to initialize SDL
     if (SDL_Init(SDL_INIT_EVERYTHING) != 0)
@@ -84,9 +81,9 @@ int init_sdl()
     }
 
     // Load fonts into memory
-    font_small = TTF_OpenFont("../assets/fonts/consola.ttf", FONT_SIZE_SMALL);
+    fonts[FONT_SIZE_14] = TTF_OpenFont("../assets/fonts/consola.ttf", 14);
 
-    if (font_small == NULL)
+    if (fonts[FONT_SIZE_14] == NULL)
     {
         SDL_Log("Could not load font: %s\n", SDL_GetError());
         TTF_Quit();
@@ -96,9 +93,9 @@ int init_sdl()
         return FALSE;
     }
 
-    font_large = TTF_OpenFont("../assets/fonts/consola.ttf", FONT_SIZE_LARGE);
+    fonts[FONT_SIZE_36] = TTF_OpenFont("../assets/fonts/consola.ttf", 36);
 
-    if (font_large == NULL)
+    if (fonts[FONT_SIZE_36] == NULL)
     {
         SDL_Log("Could not load font: %s\n", SDL_GetError());
         TTF_Quit();
@@ -117,10 +114,13 @@ int init_sdl()
 /*
  * Clean up SDL resources.
  */
-void close_sdl(void)
+void close_sdl(SDL_Window *window)
 {
-    TTF_CloseFont(font_small);
-    TTF_CloseFont(font_large);
+    for (int i = 0; i < FONT_COUNT; i++)
+    {
+        TTF_CloseFont(fonts[i]);
+    }
+
     TTF_Quit();
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);

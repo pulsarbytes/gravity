@@ -11,17 +11,17 @@
 #include "../include/common.h"
 #include "../include/structs.h"
 
-extern struct game_console_entry game_console_entries[];
+// External variable definitions
+extern TTF_Font *fonts[];
 extern SDL_Renderer *renderer;
-extern TTF_Font *font_small;
-extern SDL_Color text_color;
+extern SDL_Color colors[];
 
 void log_game_console(struct game_console_entry entries[], int index, double value);
 
 /*
  * Calculate and log FPS to game console.
  */
-void log_fps(unsigned int time_diff)
+void log_fps(struct game_console_entry entries[], unsigned int time_diff)
 {
     static unsigned total_time = 0, current_fps = 0;
 
@@ -30,7 +30,7 @@ void log_fps(unsigned int time_diff)
 
     if (total_time >= 1000)
     {
-        log_game_console(game_console_entries, FPS_INDEX, (float)current_fps);
+        log_game_console(entries, FPS_INDEX, (float)current_fps);
 
         total_time = 0;
         current_fps = 0;
@@ -57,21 +57,41 @@ void log_game_console(struct game_console_entry entries[], int index, double val
 /*
  * Update game console.
  */
-void update_game_console(struct game_console_entry entries[])
+void update_game_console(GameState *game_state, NavigationState nav_state)
 {
-    int i;
+    struct point_t position;
 
-    for (i = 0; i < LOG_COUNT; i++)
+    if (game_state->state == NAVIGATE)
     {
-        entries[i].surface = TTF_RenderText_Solid(font_small, entries[i].value, text_color);
-        entries[i].texture = SDL_CreateTextureFromSurface(renderer, entries[i].surface);
-        SDL_FreeSurface(entries[i].surface);
-        entries[i].rect.x = 120;
-        entries[i].rect.y = (i + 1) * 20;
-        entries[i].rect.w = 100;
-        entries[i].rect.h = 15;
-        SDL_RenderCopy(renderer, entries[i].texture, NULL, &entries[i].rect);
-        SDL_DestroyTexture(entries[i].texture);
-        entries[i].texture = NULL;
+        position.x = nav_state.navigate_offset.x;
+        position.y = nav_state.navigate_offset.y;
+    }
+    else if (game_state->state == MAP)
+    {
+        position.x = nav_state.map_offset.x;
+        position.y = nav_state.map_offset.y;
+    }
+    else if (game_state->state == UNIVERSE)
+    {
+        position.x = nav_state.universe_offset.x;
+        position.y = nav_state.universe_offset.y;
+    }
+
+    log_game_console(game_state->game_console_entries, X_INDEX, position.x);
+    log_game_console(game_state->game_console_entries, Y_INDEX, position.y);
+    log_game_console(game_state->game_console_entries, SCALE_INDEX, game_state->game_scale);
+
+    for (int i = 0; i < LOG_COUNT; i++)
+    {
+        game_state->game_console_entries[i].surface = TTF_RenderText_Solid(fonts[FONT_SIZE_14], game_state->game_console_entries[i].value, colors[COLOR_WHITE_255]);
+        game_state->game_console_entries[i].texture = SDL_CreateTextureFromSurface(renderer, game_state->game_console_entries[i].surface);
+        SDL_FreeSurface(game_state->game_console_entries[i].surface);
+        game_state->game_console_entries[i].rect.x = 120;
+        game_state->game_console_entries[i].rect.y = (i + 1) * 20;
+        game_state->game_console_entries[i].rect.w = 100;
+        game_state->game_console_entries[i].rect.h = 15;
+        SDL_RenderCopy(renderer, game_state->game_console_entries[i].texture, NULL, &game_state->game_console_entries[i].rect);
+        SDL_DestroyTexture(game_state->game_console_entries[i].texture);
+        game_state->game_console_entries[i].texture = NULL;
     }
 }

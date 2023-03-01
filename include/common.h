@@ -4,27 +4,27 @@
 // System settings
 #define FPS 60 // Default: 60
 #define FULLSCREEN 1
-#define FONT_SIZE_SMALL 14 // Default: 14
-#define FONT_SIZE_LARGE 36 // Default: 36
 #define MAX(x, y) ((x) > (y) ? (x) : (y))
 #define MAX_OBJECT_NAME 64 // Default: 64
-
-// Math/Physics
-#define COSMIC_CONSTANT 7.75 // Default: 7.75
-#define G_CONSTANT 5         // Default: 5
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
 #endif
 
+// Physics
+#define COSMIC_CONSTANT 7.75      // Default: 7.75
+#define G_CONSTANT 5              // Default: 5
+#define G_LAUNCH 0.7 * G_CONSTANT // Default: 0.7 * G_CONSTANT
+#define G_THRUST 1 * G_CONSTANT   // Default: 1 * G_CONSTANT
+
 // Background stars
-#define BSTARS_SPEED_FACTOR 0.012 // Default: 0.012
-#define BSTARS_OPACITY 185        // Default: 185
-#define BSTARS_SQUARE 10000       // Groups X pixels. Default: 10000
-#define BSTARS_PER_SQUARE 2       // X stars per square. Default: 1
-#define MAX_GSTARS_ROW 100        // Default: 100
-#define MAX_GSTARS MAX_GSTARS_ROW *MAX_GSTARS_ROW
-#define GSTARS_SCALE 10   // Designates gstars scaling compared to universe mode. Default: 10
-#define SPEED_LINES_NUM 8 // Number of rows and columns for the speeding lines array. Default: 8
+#define BSTARS_SPEED_FACTOR 0.012                 // Default: 0.012
+#define BSTARS_OPACITY 185                        // Default: 185
+#define BSTARS_SQUARE 10000                       // Groups X pixels. Default: 10000
+#define BSTARS_PER_SQUARE 2                       // X stars per square. Default: 1
+#define MAX_GSTARS_ROW 100                        // Default: 100
+#define MAX_GSTARS MAX_GSTARS_ROW *MAX_GSTARS_ROW // Default: MAX_GSTARS_ROW *MAX_GSTARS_ROW
+#define GSTARS_SCALE 10                           // Designates gstars scaling compared to universe mode. Default: 10
+#define SPEED_LINES_NUM 8                         // Number of rows and columns for the speeding lines array. Default: 8
 
 // Game settings
 #define BSTARS_ON 1      // Default: 1
@@ -38,7 +38,6 @@
 #define PROJECT_PLANETS_ON 1
 #define SOLAR_SYSTEMS_ON 1
 #define SHOW_ORBITS 1
-#define START_IN_ORBIT 1
 #define PROJECTION_RADIUS 5       // Default: 5
 #define SHIP_PROJECTION_RADIUS 12 // Default: 12
 #define SHIP_RADIUS 17            // Default: 17
@@ -64,7 +63,7 @@
 #define ZOOM_MAP 0.01                        // Default: 0.01
 #define ZOOM_MAP_REGION_SWITCH 0.01          // Default: 0.01
 #define ZOOM_MAP_SWITCH 0.005                // Default: 0.005
-#define ZOOM_MAP_MIN ZOOM_MAP_SWITCH - 0.001 // Default: 0.001
+#define ZOOM_MAP_MIN ZOOM_MAP_SWITCH - 0.001 // Default: ZOOM_MAP_SWITCH - 0.001
 
 #define ZOOM_UNIVERSE 0.01          // Universe scale. Default: 0.01
 #define ZOOM_UNIVERSE_MIN 0.01      // Universe scale. Default: 0.01
@@ -101,7 +100,7 @@
 #define GALAXY_START_Y -0        // Default: 0
 
 // Galaxies
-#define GALAXY_SCALE 10000              // We multiply by this factor to get values in galaxy scale. Default: 10000
+#define GALAXY_SCALE 10000              // We multiply by this factor to get values in galaxy scale. Default: 10000 (min 1000)
                                         // Use a smaller number to generate smaller galaxies
 #define GALAXY_CLASS_1_RADIUS_MIN 3000  // Default: 3000
 #define GALAXY_CLASS_1_RADIUS_MAX 1000  // Default: 1000 (+ 3000 = 4000) (max 5000)
@@ -156,8 +155,8 @@
 #define STAR_CLASS_6_PLANET_RADIUS_MAX 200 // Default: 200
 
 // Moons
-#define MAX_MOONS 5 // Default: 5
-#define MAX_PLANETS_MOONS MAX(MAX_PLANETS, MAX_MOONS)
+#define MAX_MOONS 5                                   // Default: 5
+#define MAX_PLANETS_MOONS MAX(MAX_PLANETS, MAX_MOONS) // Default: MAX(MAX_PLANETS, MAX_MOONS)
 
 /* Number of planet radiuses */
 #define PLANET_CLASS_1_ORBIT_MIN 6 // Default: 6
@@ -180,6 +179,29 @@
 #define PLANET_CLASS_4_MOON_RADIUS_MAX 48  // Default: 48
 #define PLANET_CLASS_5_MOON_RADIUS_MAX 72  // Default: 72
 #define PLANET_CLASS_6_MOON_RADIUS_MAX 100 // Default: 100
+
+// Fonts
+enum
+{
+    FONT_SIZE_14,
+    FONT_SIZE_36,
+    FONT_COUNT
+};
+
+// Colors
+enum
+{
+    COLOR_WHITE_255,
+    COLOR_WHITE_100,
+    COLOR_ORANGE_32,
+    COLOR_CYAN_70,
+    COLOR_MAGENTA_40,
+    COLOR_MAGENTA_70,
+    COLOR_YELLOW_255,
+    COLOR_SKY_BLUE_255,
+    COLOR_GAINSBORO_255,
+    COLOR_COUNT
+};
 
 // States
 enum

@@ -7,34 +7,12 @@
 #include "../include/common.h"
 #include "../include/structs.h"
 
-extern int state;
-extern int game_started;
-extern int left;
-extern int right;
-extern int up;
-extern int down;
-extern int thrust;
-extern int reverse;
-extern int camera_on;
-extern int stop;
-extern int zoom_in;
-extern int zoom_out;
-extern int console;
-extern int orbits_on;
-extern int map_enter;
-extern int map_exit;
-extern int map_center;
-extern int universe_enter;
-extern int universe_exit;
-extern int universe_center;
-extern int selected_button;
-
-void change_state(int new_state);
+void change_state(GameState *, GameEvents *, int new_state);
 
 /*
  * Poll SDL events.
  */
-void poll_events(struct menu_button menu[])
+void poll_events(GameState *game_state, InputState *input_state, GameEvents *game_events)
 {
     SDL_Event event;
     static int save_state;
@@ -44,7 +22,7 @@ void poll_events(struct menu_button menu[])
         switch (event.type)
         {
         case SDL_QUIT:
-            change_state(QUIT);
+            change_state(game_state, game_events, QUIT);
             break;
         case SDL_MOUSEBUTTONDOWN:
             int x, y;
@@ -55,121 +33,124 @@ void poll_events(struct menu_button menu[])
             switch (event.key.keysym.scancode)
             {
             case SDL_SCANCODE_C:
-                if (state == NAVIGATE)
-                    camera_on = !camera_on;
-                else if (state == MAP || state == UNIVERSE)
-                    camera_on = ON;
+                if (game_state->state == NAVIGATE)
+                    input_state->camera_on = !input_state->camera_on;
+                else if (game_state->state == MAP || game_state->state == UNIVERSE)
+                    input_state->camera_on = ON;
                 break;
             case SDL_SCANCODE_K:
-                console = !console;
+                input_state->console = !input_state->console;
                 break;
             case SDL_SCANCODE_M:
-                if (state == UNIVERSE)
-                    universe_exit = ON;
-                if (state == NAVIGATE || state == UNIVERSE)
+                if (game_state->state == UNIVERSE)
+                    game_events->universe_exit = ON;
+                if (game_state->state == NAVIGATE || game_state->state == UNIVERSE)
                 {
-                    change_state(MAP);
-                    map_enter = ON;
-                    camera_on = ON;
+                    change_state(game_state, game_events, MAP);
+                    game_events->map_enter = ON;
+                    input_state->camera_on = ON;
                 }
                 break;
             case SDL_SCANCODE_N:
-                if (state == MAP)
+                if (game_state->state == MAP)
                 {
-                    change_state(NAVIGATE);
-                    map_exit = ON;
+                    change_state(game_state, game_events, NAVIGATE);
+                    game_events->map_exit = ON;
                 }
-                else if (state == UNIVERSE)
+                else if (game_state->state == UNIVERSE)
                 {
-                    change_state(NAVIGATE);
-                    universe_exit = ON;
+                    change_state(game_state, game_events, NAVIGATE);
+                    game_events->universe_exit = ON;
                 }
                 break;
             case SDL_SCANCODE_O:
-                orbits_on = !orbits_on;
+                input_state->orbits_on = !input_state->orbits_on;
                 break;
             case SDL_SCANCODE_S:
-                if (state == NAVIGATE)
-                    stop = ON;
+                if (game_state->state == NAVIGATE)
+                    input_state->stop = ON;
                 break;
             case SDL_SCANCODE_U:
-                if (state == MAP)
-                    map_exit = ON;
-                if (state == NAVIGATE || state == MAP)
+                if (game_state->state == MAP)
+                    game_events->map_exit = ON;
+                if (game_state->state == NAVIGATE || game_state->state == MAP)
                 {
-                    change_state(UNIVERSE);
-                    universe_enter = ON;
-                    camera_on = ON;
+                    change_state(game_state, game_events, UNIVERSE);
+                    game_events->universe_enter = ON;
+                    input_state->camera_on = ON;
                 }
                 break;
             case SDL_SCANCODE_LEFT:
-                right = OFF;
-                left = ON;
+                input_state->right = OFF;
+                input_state->left = ON;
                 break;
             case SDL_SCANCODE_RIGHT:
-                left = OFF;
-                right = ON;
+                input_state->left = OFF;
+                input_state->right = ON;
                 break;
             case SDL_SCANCODE_UP:
-                if (state == MENU)
+                if (game_state->state == MENU)
                 {
                     do
                     {
-                        selected_button = (selected_button + MENU_BUTTON_COUNT - 1) % MENU_BUTTON_COUNT;
-                    } while (menu[selected_button].disabled);
+                        input_state->selected_button = (input_state->selected_button + MENU_BUTTON_COUNT - 1) % MENU_BUTTON_COUNT;
+                    } while (game_state->menu[input_state->selected_button].disabled);
                 }
                 else
                 {
-                    reverse = OFF;
-                    down = OFF;
-                    thrust = ON;
-                    up = ON;
+                    input_state->reverse = OFF;
+                    input_state->down = OFF;
+                    input_state->thrust = ON;
+                    input_state->up = ON;
                 }
                 break;
             case SDL_SCANCODE_DOWN:
-                if (state == MENU)
+                if (game_state->state == MENU)
                 {
                     do
                     {
-                        selected_button = (selected_button + 1) % MENU_BUTTON_COUNT;
-                    } while (menu[selected_button].disabled);
+                        input_state->selected_button = (input_state->selected_button + 1) % MENU_BUTTON_COUNT;
+                    } while (game_state->menu[input_state->selected_button].disabled);
                 }
                 else
                 {
-                    thrust = OFF;
-                    up = OFF;
-                    reverse = ON;
-                    down = ON;
+                    input_state->thrust = OFF;
+                    input_state->up = OFF;
+                    input_state->reverse = ON;
+                    input_state->down = ON;
                 }
                 break;
             case SDL_SCANCODE_RETURN:
-                if (menu[selected_button].state == RESUME)
-                    change_state(save_state);
-                else
-                    change_state(menu[selected_button].state);
+                if (game_state->state == MENU)
+                {
+                    if (game_state->menu[input_state->selected_button].state == RESUME)
+                        change_state(game_state, game_events, save_state);
+                    else
+                        change_state(game_state, game_events, game_state->menu[input_state->selected_button].state);
+                }
                 break;
             case SDL_SCANCODE_SPACE:
-                if (state == MAP)
-                    map_center = ON;
-                else if (state == UNIVERSE)
-                    universe_center = ON;
+                if (game_state->state == MAP)
+                    game_events->map_center = ON;
+                else if (game_state->state == UNIVERSE)
+                    game_events->universe_center = ON;
                 break;
             case SDL_SCANCODE_ESCAPE:
-                if (state != MENU)
+                if (game_state->state != MENU)
                 {
-                    save_state = state;
-                    change_state(MENU);
+                    save_state = game_state->state;
+                    change_state(game_state, game_events, MENU);
                 }
-                else if (state == MENU && game_started)
-                    change_state(save_state);
+                else if (game_state->state == MENU && game_events->game_started)
+                    change_state(game_state, game_events, save_state);
                 break;
             case SDL_SCANCODE_LEFTBRACKET:
-                zoom_in = OFF;
-                zoom_out = ON;
+                input_state->zoom_in = OFF;
+                input_state->zoom_out = ON;
                 break;
             case SDL_SCANCODE_RIGHTBRACKET:
-                zoom_in = ON;
-                zoom_out = OFF;
+                input_state->zoom_in = ON;
+                input_state->zoom_out = OFF;
                 break;
             default:
                 break;
@@ -179,27 +160,27 @@ void poll_events(struct menu_button menu[])
             switch (event.key.keysym.scancode)
             {
             case SDL_SCANCODE_S:
-                stop = OFF;
+                input_state->stop = OFF;
                 break;
             case SDL_SCANCODE_LEFT:
-                left = OFF;
+                input_state->left = OFF;
                 break;
             case SDL_SCANCODE_RIGHT:
-                right = OFF;
+                input_state->right = OFF;
                 break;
             case SDL_SCANCODE_UP:
-                thrust = OFF;
-                up = OFF;
+                input_state->thrust = OFF;
+                input_state->up = OFF;
                 break;
             case SDL_SCANCODE_DOWN:
-                reverse = OFF;
-                down = OFF;
+                input_state->reverse = OFF;
+                input_state->down = OFF;
                 break;
             case SDL_SCANCODE_LEFTBRACKET:
-                zoom_out = OFF;
+                input_state->zoom_out = OFF;
                 break;
             case SDL_SCANCODE_RIGHTBRACKET:
-                zoom_in = OFF;
+                input_state->zoom_in = OFF;
                 break;
             default:
                 break;

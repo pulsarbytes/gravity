@@ -124,6 +124,7 @@ struct ship_t
     char *image;
     int radius;
     struct point_t position;
+    struct point_t previous_position;
     float angle;
     float vx;
     float vy;
@@ -153,5 +154,72 @@ struct camera_t
     int w;
     int h;
 };
+
+// Struct for input state
+typedef struct
+{
+    int left;
+    int right;
+    int up;
+    int down;
+    int thrust;
+    int reverse;
+    int camera_on;
+    int stop;
+    int zoom_in;
+    int zoom_out;
+    int console;
+    int orbits_on;
+    int selected_button;
+} InputState;
+
+// Struct for game events
+typedef struct
+{
+    int stars_start;
+    int galaxies_start;
+    int game_started;
+    int map_enter;
+    int map_exit;
+    int map_center;
+    int map_switch;
+    int universe_enter;
+    int universe_exit;
+    int universe_center;
+    int universe_switch;
+    int exited_galaxy;
+    int galaxy_found;
+} GameEvents;
+
+// Struct for navigation state
+typedef struct
+{
+    struct star_entry *stars[MAX_STARS];         // Hash table for stars
+    struct galaxy_entry *galaxies[MAX_GALAXIES]; // Hash table for galaxies
+    struct galaxy_t *current_galaxy;
+    struct galaxy_t *buffer_galaxy; // Stores galaxy of current ship position
+    struct galaxy_t *previous_galaxy;
+    struct point_state galaxy_offset;
+    struct point_t universe_cross_axis; // Keep track of nearest axis coordinates
+    struct point_t navigate_offset;
+    struct point_t map_offset;
+    struct point_t universe_offset;
+    struct point_t cross_axis; // Keep track of nearest axis coordinates
+    struct vector_t velocity;
+    uint64_t initseq; // Output sequence for the RNG of stars; Changes for every new current_galaxy
+} NavigationState;
+
+typedef struct
+{
+    int state;
+    int speed_limit;
+    int landing_stage;
+    long double game_scale;
+    float save_scale;
+    int galaxy_region_size;
+    struct menu_button menu[MENU_BUTTON_COUNT];
+    struct menu_button logo;
+    struct game_console_entry game_console_entries[LOG_COUNT];
+} GameState;
 
 #endif /* STRUCTS_H */

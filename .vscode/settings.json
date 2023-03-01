@@ -4,6 +4,8 @@
         "structs.h": "c",
         "type_traits": "c",
         "cmath": "c",
-        "limits": "c"
+        "limits": "c",
+        "pcg_basic.h": "c",
+        "sdl_timer.h": "c"
     }
 }
