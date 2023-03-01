@@ -8,6 +8,9 @@
         "pcg_basic.h": "c",
         "sdl_timer.h": "c",
         "constants.h": "c",
-        "sdl2_gfxprimitives.h": "c"
+        "sdl2_gfxprimitives.h": "c",
+        "sdl_image.h": "c",
+        "enums.h": "c",
+        "stdbool.h": "c"
     }
 }

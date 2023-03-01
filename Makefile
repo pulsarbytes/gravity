@@ -4,14 +4,20 @@ CC=/usr/bin/gcc
 COMPILER_FLAGS=-Wall -g
 LINKER_FLAGS=`sdl2-config --libs --cflags` -lSDL2_gfx -lSDL2_image -lSDL2_ttf -lm
 
-bin/gravity: build/main.o build/sdl.o build/physics.o build/math.o build/graphics.o build/events.o build/utilities.o build/console.o build/stars.o build/galaxies.o build/pcg.o
-	$(CC) $(COMPILER_FLAGS) build/main.o build/sdl.o build/physics.o build/math.o build/graphics.o build/events.o build/utilities.o build/console.o build/stars.o build/galaxies.o build/pcg.o $(LINKER_FLAGS) -o bin/gravity
+bin/gravity: build/main.o build/sdl.o build/game.o build/menu.o build/physics.o build/math.o build/graphics.o build/events.o build/utilities.o build/console.o build/stars.o build/galaxies.o build/pcg.o
+	$(CC) $(COMPILER_FLAGS) build/main.o build/sdl.o build/game.o build/menu.o build/physics.o build/math.o build/graphics.o build/events.o build/utilities.o build/console.o build/stars.o build/galaxies.o build/pcg.o $(LINKER_FLAGS) -o bin/gravity
 
 build/main.o: src/main.c include/constants.h include/enums.h include/structs.h lib/pcg-c-basic-0.9/pcg_basic.h
 	$(CC) -c $(COMPILER_FLAGS) src/main.c $(LINKER_FLAGS) -o build/main.o
 
 build/sdl.o: src/sdl.c include/constants.h include/enums.h
 	$(CC) -c $(COMPILER_FLAGS) src/sdl.c $(LINKER_FLAGS) -o build/sdl.o
+
+build/game.o: src/game.c include/constants.h include/enums.h include/structs.h
+	$(CC) -c $(COMPILER_FLAGS) src/game.c $(LINKER_FLAGS) -o build/game.o
+
+build/menu.o: src/menu.c include/constants.h include/enums.h include/structs.h
+	$(CC) -c $(COMPILER_FLAGS) src/menu.c $(LINKER_FLAGS) -o build/menu.o
 
 build/physics.o: src/physics.c include/constants.h include/enums.h include/structs.h
 	$(CC) -c $(COMPILER_FLAGS) src/physics.c $(LINKER_FLAGS) -o build/physics.o

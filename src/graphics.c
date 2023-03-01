@@ -2,22 +2,22 @@
  * graphics.c - Definitions for graphics functions.
  */
 
-#include <stdlib.h>
 #include <math.h>
 #include <stdbool.h>
 
 #include <SDL2/SDL.h>
+#include "../lib/pcg-c-basic-0.9/pcg_basic.h"
 
 #include "../include/constants.h"
 #include "../include/enums.h"
 #include "../include/structs.h"
-#include "../lib/pcg-c-basic-0.9/pcg_basic.h"
 
 // External variable definitions
 extern SDL_Renderer *renderer;
 extern SDL_Color colors[];
 
 // Function prototypes
+void update_camera(struct camera_t *camera, struct point_t position, long double scale);
 void update_projection_coordinates(NavigationState nav_state, void *ptr, int entity_type, const struct camera_t *camera, int state, long double scale);
 void project_ship(int state, InputState input_state, NavigationState nav_state, struct ship_t *ship, const struct camera_t *camera, long double scale);
 void project_planet(GameState game_state, NavigationState nav_state, struct planet_t *planet, const struct camera_t *camera);
@@ -35,6 +35,10 @@ void draw_galaxy_cloud(struct galaxy_t *galaxy, const struct camera_t *camera, i
 void draw_speed_arc(struct ship_t *ship, const struct camera_t *camera, long double scale);
 void draw_speed_lines(float velocity, const struct camera_t *camera, struct speed_t speed);
 void create_colors(void);
+void SDL_DrawCircle(SDL_Renderer *renderer, const struct camera_t *camera, int xc, int yc, int radius, SDL_Color color);
+void SDL_DrawCircleApprox(SDL_Renderer *renderer, const struct camera_t *camera, int x, int y, int r, SDL_Color color);
+void update_gstars(struct galaxy_t *galaxy, struct point_t ship_position, const struct camera_t *camera, double distance, double limit);
+void update_bstars(int state, int camera_on, NavigationState nav_state, struct bstar_t bstars[], const struct camera_t *camera, struct speed_t speed, double distance);
 
 // External function prototypes
 uint64_t pair_hash_order_sensitive(struct point_t);
@@ -42,6 +46,16 @@ uint64_t pair_hash_order_sensitive_2(struct point_t);
 double find_nearest_section_axis(double offset, int size);
 double nearest_star_distance(struct point_t position, struct galaxy_t *current_galaxy, uint64_t initseq, int galaxy_density);
 int get_star_class(float distance);
+bool line_intersects_viewport(const struct camera_t *camera, double x1, double y1, double x2, double y2);
+
+/*
+ * Update camera position.
+ */
+void update_camera(struct camera_t *camera, struct point_t position, long double scale)
+{
+    camera->x = position.x - (camera->w / 2) / scale;
+    camera->y = position.y - (camera->h / 2) / scale;
+}
 
 /*
  * Update projection position.
@@ -1073,4 +1087,312 @@ void create_colors(void)
     colors[COLOR_GAINSBORO_255].g = 220;
     colors[COLOR_GAINSBORO_255].b = 220;
     colors[COLOR_GAINSBORO_255].a = 255;
+}
+
+/*
+ * Midpoint Circle Algorithm for drawing a circle in SDL.
+ * xc, xy, radius are in game_scale.
+ * This function is efficient only for small circles.
+ */
+void SDL_DrawCircle(SDL_Renderer *renderer, const struct camera_t *camera, int xc, int yc, int radius, SDL_Color color)
+{
+    int x = 0;
+    int y = radius;
+    int d = 3 - 2 * radius;
+
+    SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a);
+
+    // Draw the circle
+    while (y >= x)
+    {
+        // Draw the 8 points symmetrically
+        if (in_camera_relative(camera, xc + x, yc + y))
+        {
+            SDL_RenderDrawPoint(renderer, xc + x, yc + y);
+        }
+        if (in_camera_relative(camera, xc + x, yc - y))
+        {
+            SDL_RenderDrawPoint(renderer, xc + x, yc - y);
+        }
+        if (in_camera_relative(camera, xc - x, yc + y))
+        {
+            SDL_RenderDrawPoint(renderer, xc - x, yc + y);
+        }
+        if (in_camera_relative(camera, xc - x, yc - y))
+        {
+            SDL_RenderDrawPoint(renderer, xc - x, yc - y);
+        }
+        if (in_camera_relative(camera, xc + y, yc + x))
+        {
+            SDL_RenderDrawPoint(renderer, xc + y, yc + x);
+        }
+        if (in_camera_relative(camera, xc + y, yc - x))
+        {
+            SDL_RenderDrawPoint(renderer, xc + y, yc - x);
+        }
+        if (in_camera_relative(camera, xc - y, yc + x))
+        {
+            SDL_RenderDrawPoint(renderer, xc - y, yc + x);
+        }
+        if (in_camera_relative(camera, xc - y, yc - x))
+        {
+            SDL_RenderDrawPoint(renderer, xc - y, yc - x);
+        }
+
+        if (d < 0)
+            d = d + 4 * x + 6;
+        else
+        {
+            d = d + 4 * (x - y) + 10;
+            y--;
+        }
+
+        x++;
+    }
+}
+
+/**
+ * Draws a circle approximation using a series of bezier curves.
+ * This function will only draw segments of the circle that intersect with the viewport defined by `camera`.
+ * This function is efficient for very large circles.
+ *
+ * @param renderer The renderer to use to draw the circle
+ * @param camera The camera used to view the scene
+ * @param x The x coordinate of the center of the circle
+ * @param y The y coordinate of the center of the circle
+ * @param r The radius of the circle
+ * @param color The color to use when drawing the circle
+ */
+void SDL_DrawCircleApprox(SDL_Renderer *renderer, const struct camera_t *camera, int x, int y, int r, SDL_Color color)
+{
+    const int CIRCLE_APPROXIMATION = 500;
+    int i;
+    double angle;
+    double x1, y1, x2, y2, x3, y3, x4, y4;
+
+    SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a);
+
+    for (i = 0; i < CIRCLE_APPROXIMATION; i++)
+    {
+        angle = 2 * M_PI * i / CIRCLE_APPROXIMATION;
+        x1 = x + r * cos(angle);
+        y1 = y + r * sin(angle);
+        angle = 2 * M_PI * (i + 1) / CIRCLE_APPROXIMATION;
+        x2 = x + r * cos(angle);
+        y2 = y + r * sin(angle);
+
+        x3 = (2 * x1 + x2) / 3;
+        y3 = (2 * y1 + y2) / 3;
+        x4 = (x1 + 2 * x2) / 3;
+        y4 = (y1 + 2 * y2) / 3;
+
+        if (line_intersects_viewport(camera, x1, y1, x3, y3) ||
+            line_intersects_viewport(camera, x3, y3, x4, y4) ||
+            line_intersects_viewport(camera, x4, y4, x2, y2))
+        {
+
+            SDL_RenderDrawLine(renderer, x1, y1, x3, y3);
+            SDL_RenderDrawLine(renderer, x3, y3, x4, y4);
+            SDL_RenderDrawLine(renderer, x4, y4, x2, y2);
+        }
+    }
+}
+
+/*
+ * Move and draw galaxy cloud.
+ */
+void update_gstars(struct galaxy_t *galaxy, struct point_t ship_position, const struct camera_t *camera, double distance, double limit)
+{
+    int i = 0;
+    float min_opacity_factor = 0.35;
+    float max_opacity_factor = 0.45;
+    float galaxy_radius = galaxy->radius * GALAXY_SCALE;
+
+    // Calculate position in galaxy
+    double delta_x = ship_position.x / (galaxy->cutoff * GALAXY_SCALE);
+    double delta_y = ship_position.y / (galaxy->cutoff * GALAXY_SCALE);
+
+    // Galaxy has double size when we are at center
+    float scaling_factor = (float)galaxy->class / (2 + 2 * (1 - distance / galaxy_radius));
+
+    while (i < MAX_GSTARS && galaxy->gstars_hd[i].final_star == 1)
+    {
+        int x = (galaxy->gstars_hd[i].position.x / (GALAXY_SCALE * GSTARS_SCALE)) / scaling_factor + camera->w / 2 - delta_x * (camera->w / 2);
+        int y = (galaxy->gstars_hd[i].position.y / (GALAXY_SCALE * GSTARS_SCALE)) / scaling_factor + camera->h / 2 - delta_y * (camera->h / 2);
+
+        float opacity;
+
+        if (distance > limit)
+        {
+            opacity = 0;
+        }
+        else if (distance <= limit && distance > galaxy_radius)
+        {
+            // Fade in opacity as we move in towards galaxy radius
+            opacity = (float)galaxy->gstars_hd[i].opacity * max_opacity_factor * (limit - distance) / (limit - galaxy_radius);
+            opacity = opacity < 0 ? 0 : opacity;
+        }
+        else if (distance <= galaxy_radius)
+        {
+            // Fade out opacity as we move towards galaxy center
+            float factor = 1.0 - distance / galaxy_radius;
+            factor = factor < 0 ? 0 : factor;
+            opacity = galaxy->gstars_hd[i].opacity * (max_opacity_factor - (max_opacity_factor - min_opacity_factor) * factor);
+        }
+
+        if (opacity > 255)
+            opacity = 255;
+        else if (opacity < 0)
+            opacity = 0;
+
+        SDL_SetRenderDrawColor(renderer, 255, 255, 255, (unsigned short)opacity);
+        SDL_RenderDrawPoint(renderer, x, y);
+
+        i++;
+    }
+}
+
+void create_bstars(NavigationState *nav_state, struct bstar_t bstars[], const struct camera_t *camera)
+{
+    int i = 0, row, column, is_star;
+    int end = false;
+    int max_bstars = (int)(camera->w * camera->h * BSTARS_PER_SQUARE / BSTARS_SQUARE);
+
+    // Use a local rng
+    pcg32_random_t rng;
+
+    // Seed with a fixed constant
+    srand(1200);
+
+    for (row = 0; row < camera->h && !end; row++)
+    {
+        for (column = 0; column < camera->w && !end; column++)
+        {
+            // Create rng seed by combining x,y values
+            struct point_t position = {.x = row, .y = column};
+            uint64_t seed = pair_hash_order_sensitive(position);
+
+            // Set galaxy hash as initseq
+            nav_state->initseq = pair_hash_order_sensitive_2(nav_state->current_galaxy->position);
+
+            // Seed with a fixed constant
+            pcg32_srandom_r(&rng, seed, nav_state->initseq);
+
+            is_star = abs(pcg32_random_r(&rng)) % BSTARS_SQUARE < BSTARS_PER_SQUARE;
+
+            if (is_star)
+            {
+                struct bstar_t star;
+                star.position.x = column;
+                star.position.y = row;
+                star.rect.x = star.position.x;
+                star.rect.y = star.position.y;
+
+                if (rand() % 12 < 1)
+                {
+                    star.rect.w = 2;
+                    star.rect.h = 2;
+                }
+                else
+                {
+                    star.rect.w = 1;
+                    star.rect.h = 1;
+                }
+
+                // Get a color between BSTARS_MIN_OPACITY - BSTARS_MAX_OPACITY
+                star.opacity = ((rand() % (BSTARS_MAX_OPACITY + 1 - BSTARS_MIN_OPACITY)) + BSTARS_MIN_OPACITY);
+
+                star.final_star = 1;
+                bstars[i++] = star;
+            }
+
+            if (i >= max_bstars)
+                end = true;
+        }
+    }
+}
+
+/*
+ * Move and draw background stars.
+ */
+void update_bstars(int state, int camera_on, NavigationState nav_state, struct bstar_t bstars[], const struct camera_t *camera, struct speed_t speed, double distance)
+{
+    int i = 0;
+    int max_bstars = (int)(camera->w * camera->h * BSTARS_PER_SQUARE / BSTARS_SQUARE);
+    float max_distance = 2 * nav_state.current_galaxy->radius * GALAXY_SCALE;
+
+    while (i < max_bstars && bstars[i].final_star == 1)
+    {
+        if (camera_on || state == MENU)
+        {
+            float dx, dy;
+
+            if (state == MENU)
+            {
+                dx = MENU_BSTARS_SPEED_FACTOR * speed.vx / FPS;
+                dy = MENU_BSTARS_SPEED_FACTOR * speed.vy / FPS;
+            }
+            else
+            {
+                // Limit background stars speed
+                if (nav_state.velocity.magnitude > GALAXY_SPEED_LIMIT)
+                {
+                    dx = BSTARS_SPEED_FACTOR * speed.vx / FPS;
+                    dy = BSTARS_SPEED_FACTOR * speed.vy / FPS;
+                }
+                else
+                {
+                    dx = BSTARS_SPEED_FACTOR * (nav_state.velocity.magnitude / GALAXY_SPEED_LIMIT) * speed.vx / FPS;
+                    dy = BSTARS_SPEED_FACTOR * (nav_state.velocity.magnitude / GALAXY_SPEED_LIMIT) * speed.vy / FPS;
+                }
+            }
+
+            bstars[i].position.x -= dx;
+            bstars[i].position.y -= dy;
+
+            // Normalize within camera boundaries
+            if (bstars[i].position.x > camera->w)
+            {
+                bstars[i].position.x = fmod(bstars[i].position.x, camera->w);
+            }
+            if (bstars[i].position.x < 0)
+            {
+                bstars[i].position.x += camera->w;
+            }
+            if (bstars[i].position.y > camera->h)
+            {
+                bstars[i].position.y = fmod(bstars[i].position.y, camera->h);
+            }
+            if (bstars[i].position.y < 0)
+            {
+                bstars[i].position.y += camera->h;
+            }
+
+            bstars[i].rect.x = (int)bstars[i].position.x;
+            bstars[i].rect.y = (int)bstars[i].position.y;
+        }
+
+        float opacity;
+
+        if (state == MENU)
+            opacity = (double)(bstars[i].opacity * 1 / 2);
+        else
+        {
+            // Fade out opacity as we move away from galaxy center
+            opacity = (double)bstars[i].opacity * (1 - (distance / max_distance));
+
+            // Opacity is 1/3 at center, 3/3 at max_distance
+            opacity = (double)(opacity * ((3 - (2 - 2 * (distance / max_distance))) / 3));
+        }
+
+        if (opacity > 255)
+            opacity = 255;
+        else if (opacity < 0)
+            opacity = 0;
+
+        SDL_SetRenderDrawColor(renderer, 255, 255, 255, (unsigned short)opacity);
+        SDL_RenderFillRect(renderer, &bstars[i].rect);
+
+        i++;
+    }
 }
