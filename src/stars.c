@@ -19,68 +19,68 @@ extern SDL_Renderer *renderer;
 extern SDL_Color colors[];
 
 // Function prototypes
-static void cleanup_planets(struct planet_t *planet);
-void cleanup_stars(struct star_entry *stars[]);
-void put_star(struct star_entry *stars[], struct point_t position, struct planet_t *star);
-int star_exists(struct star_entry *stars[], struct point_t position);
-void delete_star(struct star_entry *stars[], struct point_t position);
-double nearest_star_distance(struct point_t position, struct galaxy_t *current_galaxy, uint64_t initseq, int galaxy_density);
+static void cleanup_planets(CelestialBody *);
+void cleanup_stars(StarEntry *stars[]);
+void put_star(StarEntry *stars[], Point, Star *);
+int star_exists(StarEntry *stars[], Point);
+void delete_star(StarEntry *stars[], Point);
+double nearest_star_distance(Point, Galaxy *, uint64_t initseq, int galaxy_density);
 int get_star_class(float distance);
 int get_planet_class(float width);
-void delete_stars_outside_region(struct star_entry *stars[], double bx, double by, int region_size);
-struct planet_t *create_star(NavigationState nav_state, struct point_t position, int preview, long double scale);
-void generate_stars(GameState *game_state, GameEvents *game_events, NavigationState *nav_state, struct bstar_t bstars[], struct ship_t *ship, const struct camera_t *camera);
-void generate_stars_preview(NavigationState *nav_state, const struct camera_t *camera, struct point_t *cross_point, int zoom_preview, long double scale);
-void populate_star_system(struct planet_t *planet, struct point_t position, pcg32_random_t rng, long double scale);
-void update_star_system(GameState *game_state, InputState input_state, NavigationState *nav_state, struct planet_t *planet, struct ship_t *ship, const struct camera_t *camera);
+void delete_stars_outside_region(StarEntry *stars[], double bx, double by, int region_size);
+Star *create_star(const NavigationState *, Point, int preview, long double scale);
+void generate_stars(GameState *, GameEvents *, NavigationState *, Bstar bstars[], Ship *ship, const Camera *);
+void generate_stars_preview(NavigationState *, const Camera *, Point *, int zoom_preview, long double scale);
+void populate_star_system(CelestialBody *, Point, pcg32_random_t rng, long double scale);
+void update_star_system(GameState *, const InputState *, NavigationState *, CelestialBody *, Ship *ship, const Camera *);
 
 // External function prototypes
-uint64_t pair_hash_order_sensitive(struct point_t);
-uint64_t pair_hash_order_sensitive_2(struct point_t position);
-uint64_t unique_index(struct point_t, int modulo, int entity_type);
-bool point_in_array(struct point_t p, struct point_t arr[], int len);
+uint64_t pair_hash_order_sensitive(Point);
+uint64_t pair_hash_order_sensitive_2(Point);
+uint64_t unique_index(Point, int modulo, int entity_type);
+bool point_in_array(Point, Point arr[], int len);
 double find_nearest_section_axis(double offset, int size);
-void generate_galaxies(GameEvents *game_events, NavigationState *nav_state, struct point_t offset);
-struct galaxy_t *find_nearest_galaxy(NavigationState nav_state, struct point_t position, int exclude);
+void generate_galaxies(GameEvents *, NavigationState *, Point);
+Galaxy *find_nearest_galaxy(const NavigationState *, Point, int exclude);
 double find_distance(double x1, double y1, double x2, double y2);
-void create_bstars(NavigationState *nav_state, struct bstar_t bstars[], const struct camera_t *camera);
-int point_in_rect(struct point_t p, struct point_t rect[]);
+void create_bstars(NavigationState *, Bstar bstars[], const Camera *);
+int point_in_rect(Point, Point rect[]);
 void calc_orbital_velocity(float distance, float angle, float radius, float *vx, float *vy);
-void SDL_DrawCircle(SDL_Renderer *renderer, const struct camera_t *camera, int xc, int yc, int radius, SDL_Color color);
-void project_planet(GameState game_state, NavigationState nav_state, struct planet_t *planet, const struct camera_t *camera);
-void apply_gravity_to_ship(GameState *game_state, int thrust, NavigationState *nav_state, struct planet_t *planet, struct ship_t *ship, const struct camera_t *camera);
-int in_camera(const struct camera_t *camera, double x, double y, float radius, long double scale);
+void SDL_DrawCircle(SDL_Renderer *renderer, const Camera *, int xc, int yc, int radius, SDL_Color color);
+void project_body(const GameState *, const NavigationState *, CelestialBody *, const Camera *);
+void apply_gravity_to_ship(GameState *, int thrust, NavigationState *, CelestialBody *, Ship *ship, const Camera *);
+int in_camera(const Camera *, double x, double y, float radius, long double scale);
 
 /*
  * Clean up planets (recursive).
  */
-static void cleanup_planets(struct planet_t *planet)
+static void cleanup_planets(CelestialBody *body)
 {
-    int planets_size = sizeof(planet->planets) / sizeof(planet->planets[0]);
+    int planets_size = sizeof(body->planets) / sizeof(body->planets[0]);
     int i;
 
-    for (i = 0; i < planets_size && planet->planets[i] != NULL; i++)
+    for (i = 0; i < planets_size && body->planets[i] != NULL; i++)
     {
-        cleanup_planets(planet->planets[i]);
+        cleanup_planets(body->planets[i]);
     }
 
-    SDL_DestroyTexture(planet->texture);
-    planet->texture = NULL;
+    SDL_DestroyTexture(body->texture);
+    body->texture = NULL;
 }
 
 /*
  * Delete all stars from hash table.
  */
-void cleanup_stars(struct star_entry *stars[])
+void cleanup_stars(StarEntry *stars[])
 {
     // Loop through hash table
     for (int s = 0; s < MAX_STARS; s++)
     {
-        struct star_entry *entry = stars[s];
+        StarEntry *entry = stars[s];
 
         while (entry != NULL)
         {
-            struct point_t position = {.x = entry->x, .y = entry->y};
+            Point position = {.x = entry->x, .y = entry->y};
             delete_star(stars, position);
             entry = entry->next;
         }
@@ -90,12 +90,12 @@ void cleanup_stars(struct star_entry *stars[])
 /*
  * Insert a new star entry in stars hash table.
  */
-void put_star(struct star_entry *stars[], struct point_t position, struct planet_t *star)
+void put_star(StarEntry *stars[], Point position, Star *star)
 {
     // Generate unique index for hash table
     uint64_t index = unique_index(position, MAX_STARS, ENTITY_STAR);
 
-    struct star_entry *entry = (struct star_entry *)malloc(sizeof(struct star_entry));
+    StarEntry *entry = (StarEntry *)malloc(sizeof(StarEntry));
     entry->x = position.x;
     entry->y = position.y;
     entry->star = star;
@@ -106,12 +106,12 @@ void put_star(struct star_entry *stars[], struct point_t position, struct planet
 /*
  * Check whether a star entry exists in the stars hash table.
  */
-int star_exists(struct star_entry *stars[], struct point_t position)
+int star_exists(StarEntry *stars[], Point position)
 {
     // Generate unique index for hash table
     uint64_t index = unique_index(position, MAX_STARS, ENTITY_STAR);
 
-    struct star_entry *entry = stars[index];
+    StarEntry *entry = stars[index];
 
     while (entry != NULL)
     {
@@ -130,13 +130,13 @@ int star_exists(struct star_entry *stars[], struct point_t position)
 /*
  * Delete a star entry from the stars hash table.
  */
-void delete_star(struct star_entry *stars[], struct point_t position)
+void delete_star(StarEntry *stars[], Point position)
 {
     // Generate unique index for hash table
     uint64_t index = unique_index(position, MAX_STARS, ENTITY_STAR);
 
-    struct star_entry *previous = NULL;
-    struct star_entry *entry = stars[index];
+    StarEntry *previous = NULL;
+    StarEntry *entry = stars[index];
 
     while (entry != NULL)
     {
@@ -172,14 +172,14 @@ void delete_star(struct star_entry *stars[], struct point_t position)
 /*
  * Find distance to nearest star.
  */
-double nearest_star_distance(struct point_t position, struct galaxy_t *current_galaxy, uint64_t initseq, int galaxy_density)
+double nearest_star_distance(Point position, Galaxy *current_galaxy, uint64_t initseq, int galaxy_density)
 {
     // We use 6 * GALAXY_SECTION_SIZE as max, since a CLASS_6 star needs 6 + 1 empty sections
     // We search inner circumferences of points first and work towards outward circumferences
     // If we find a star, the function returns.
 
     // Keep track of checked points
-    struct point_t checked_points[196];
+    Point checked_points[196];
     int num_checked_points = 0;
 
     // Use a local rng
@@ -197,7 +197,7 @@ double nearest_star_distance(struct point_t position, struct galaxy_t *current_g
                 if (ix == position.x && iy == position.y)
                     continue;
 
-                struct point_t p = {ix, iy};
+                Point p = {ix, iy};
 
                 if (point_in_array(p, checked_points, num_checked_points))
                     continue;
@@ -276,15 +276,15 @@ int get_planet_class(float width)
 /*
  * Delete stars outside region.
  */
-void delete_stars_outside_region(struct star_entry *stars[], double bx, double by, int region_size)
+void delete_stars_outside_region(StarEntry *stars[], double bx, double by, int region_size)
 {
     for (int s = 0; s < MAX_STARS; s++)
     {
-        struct star_entry *entry = stars[s];
+        StarEntry *entry = stars[s];
 
         while (entry != NULL)
         {
-            struct point_t position = {.x = entry->x, .y = entry->y};
+            Point position = {.x = entry->x, .y = entry->y};
 
             // Get distance from center of region
             double dx = position.x - bx;
@@ -304,10 +304,10 @@ void delete_stars_outside_region(struct star_entry *stars[], double bx, double b
 /*
  * Create a star.
  */
-struct planet_t *create_star(NavigationState nav_state, struct point_t position, int preview, long double scale)
+Star *create_star(const NavigationState *nav_state, Point position, int preview, long double scale)
 {
     // Find distance to nearest star
-    double distance = nearest_star_distance(position, nav_state.current_galaxy, nav_state.initseq, GALAXY_DENSITY);
+    double distance = nearest_star_distance(position, nav_state->current_galaxy, nav_state->initseq, GALAXY_DENSITY);
 
     // Get star class
     int class = get_star_class(distance);
@@ -319,7 +319,7 @@ struct planet_t *create_star(NavigationState nav_state, struct point_t position,
     uint64_t seed = pair_hash_order_sensitive(position);
 
     // Seed with a fixed constant
-    pcg32_srandom_r(&rng, seed, nav_state.initseq);
+    pcg32_srandom_r(&rng, seed, nav_state->initseq);
 
     float radius;
 
@@ -349,7 +349,7 @@ struct planet_t *create_star(NavigationState nav_state, struct point_t position,
     }
 
     // Create star
-    struct planet_t *star = (struct planet_t *)malloc(sizeof(struct planet_t));
+    Star *star = (Star *)malloc(sizeof(Star));
 
     // Get unique star index
     uint64_t index = pair_hash_order_sensitive(position);
@@ -397,9 +397,9 @@ struct planet_t *create_star(NavigationState nav_state, struct point_t position,
  * The region has intervals of size GALAXY_SECTION_SIZE.
  * The function checks for galaxy boundaries and switches to a new galaxy if close enough.
  */
-void generate_stars(GameState *game_state, GameEvents *game_events, NavigationState *nav_state, struct bstar_t bstars[], struct ship_t *ship, const struct camera_t *camera)
+void generate_stars(GameState *game_state, GameEvents *game_events, NavigationState *nav_state, Bstar bstars[], Ship *ship, const Camera *camera)
 {
-    struct point_t offset;
+    Point offset;
 
     if (game_state->state == NAVIGATE)
     {
@@ -437,18 +437,18 @@ void generate_stars(GameState *game_state, GameEvents *game_events, NavigationSt
         game_events->exited_galaxy = ON;
 
         // Convert offset to universe coordinates
-        struct point_t universe_position;
+        Point universe_position;
         universe_position.x = nav_state->current_galaxy->position.x + offset.x / GALAXY_SCALE;
         universe_position.y = nav_state->current_galaxy->position.y + offset.y / GALAXY_SCALE;
 
         // Convert to cross section offset to query for new galaxies
-        struct point_t cross_section_offset;
+        Point cross_section_offset;
         cross_section_offset.x = find_nearest_section_axis(universe_position.x, UNIVERSE_SECTION_SIZE);
         cross_section_offset.y = find_nearest_section_axis(universe_position.y, UNIVERSE_SECTION_SIZE);
         generate_galaxies(game_events, nav_state, cross_section_offset);
 
         // Search for nearest galaxy to universe_position, including current galaxy
-        struct galaxy_t *next_galaxy = find_nearest_galaxy(*nav_state, universe_position, false);
+        Galaxy *next_galaxy = find_nearest_galaxy(nav_state, universe_position, false);
 
         // Found a new galaxy
         if (next_galaxy != NULL &&
@@ -458,10 +458,10 @@ void generate_stars(GameState *game_state, GameEvents *game_events, NavigationSt
             game_events->galaxy_found = ON;
 
             // Update previous_galaxy
-            memcpy(nav_state->previous_galaxy, nav_state->current_galaxy, sizeof(struct galaxy_t));
+            memcpy(nav_state->previous_galaxy, nav_state->current_galaxy, sizeof(Galaxy));
 
             // Update current_galaxy
-            memcpy(nav_state->current_galaxy, next_galaxy, sizeof(struct galaxy_t));
+            memcpy(nav_state->current_galaxy, next_galaxy, sizeof(Galaxy));
 
             // Get coordinates of current position relative to new galaxy
             double angle = atan2(universe_position.y - next_galaxy->position.y, universe_position.x - next_galaxy->position.x);
@@ -488,7 +488,7 @@ void generate_stars(GameState *game_state, GameEvents *game_events, NavigationSt
                 nav_state->galaxy_offset.buffer_y = nav_state->galaxy_offset.current_y;
 
                 // Update buffer_galaxy
-                memcpy(nav_state->buffer_galaxy, nav_state->current_galaxy, sizeof(struct galaxy_t));
+                memcpy(nav_state->buffer_galaxy, nav_state->current_galaxy, sizeof(Galaxy));
 
                 // Create new background stars
                 int max_bstars = (int)(camera->w * camera->h * BSTARS_PER_SQUARE / BSTARS_SQUARE);
@@ -562,7 +562,7 @@ void generate_stars(GameState *game_state, GameEvents *game_events, NavigationSt
                 continue;
 
             // Create rng seed by combining x,y values
-            struct point_t position = {.x = ix, .y = iy};
+            Point position = {.x = ix, .y = iy};
             uint64_t seed = pair_hash_order_sensitive(position);
 
             // Seed with a fixed constant
@@ -581,7 +581,7 @@ void generate_stars(GameState *game_state, GameEvents *game_events, NavigationSt
                 else
                 {
                     // Create star
-                    struct planet_t *star = create_star(*nav_state, position, false, game_state->game_scale);
+                    Star *star = create_star(nav_state, position, false, game_state->game_scale);
 
                     // Add star to hash table
                     put_star(nav_state->stars, position, star);
@@ -601,7 +601,7 @@ void generate_stars(GameState *game_state, GameEvents *game_events, NavigationSt
  * Probe region for stars and create them procedurally.
  * The region has intervals of size GALAXY_SECTION_SIZE.
  */
-void generate_stars_preview(NavigationState *nav_state, const struct camera_t *camera, struct point_t *cross_point, int zoom_preview, long double scale)
+void generate_stars_preview(NavigationState *nav_state, const Camera *camera, Point *cross_point, int zoom_preview, long double scale)
 {
     // Check how many sections fit in camera
     double section_size_scaled = GALAXY_SECTION_SIZE * scale;
@@ -704,12 +704,12 @@ void generate_stars_preview(NavigationState *nav_state, const struct camera_t *c
     double bottom_boundary = by + (half_sections_y * GALAXY_SECTION_SIZE);
 
     // Store previous boundaries
-    static struct point_t boundaries_minus;
-    static struct point_t boundaries_plus;
+    static Point boundaries_minus;
+    static Point boundaries_plus;
     static int initialized = OFF;
 
     // Define rect of previous boundaries
-    struct point_t rect[4];
+    Point rect[4];
 
     if (initialized)
     {
@@ -739,7 +739,7 @@ void generate_stars_preview(NavigationState *nav_state, const struct camera_t *c
     {
         for (iy = top_boundary; iy < bottom_boundary; iy += section_size)
         {
-            struct point_t position = {.x = ix, .y = iy};
+            Point position = {.x = ix, .y = iy};
 
             // If this point has been checked in previous function call,
             // check that point is not within previous boundaries
@@ -774,7 +774,7 @@ void generate_stars_preview(NavigationState *nav_state, const struct camera_t *c
                 else
                 {
                     // Create star
-                    struct planet_t *star = create_star(*nav_state, position, true, scale);
+                    Star *star = create_star(nav_state, position, true, scale);
 
                     // Add star to hash table
                     put_star(nav_state->stars, position, star);
@@ -796,29 +796,29 @@ void generate_stars_preview(NavigationState *nav_state, const struct camera_t *c
 }
 
 /*
- * Create a system (recursive). Takes a pointer to a star or planet
+ * Create a system (recursive). Takes a pointer to a celestial body
  * and populates it with children planets.
  */
-void populate_star_system(struct planet_t *planet, struct point_t position, pcg32_random_t rng, long double scale)
+void populate_star_system(CelestialBody *body, Point position, pcg32_random_t rng, long double scale)
 {
-    if (planet->level == LEVEL_STAR && planet->initialized == 1)
+    if (body->level == LEVEL_STAR && body->initialized == 1)
         return;
 
-    if (planet->level >= LEVEL_MOON)
+    if (body->level >= LEVEL_MOON)
         return;
 
-    int max_planets = (planet->level == LEVEL_STAR) ? MAX_PLANETS : MAX_MOONS;
+    int max_planets = (body->level == LEVEL_STAR) ? MAX_PLANETS : MAX_MOONS;
 
     if (max_planets == 0)
         return;
 
-    if (planet->level == LEVEL_STAR)
+    if (body->level == LEVEL_STAR)
     {
         int orbit_range_min = STAR_CLASS_1_ORBIT_MIN;
         int orbit_range_max = STAR_CLASS_1_ORBIT_MAX;
         float radius_max = STAR_CLASS_1_PLANET_RADIUS_MAX;
 
-        switch (planet->class)
+        switch (body->class)
         {
         case STAR_CLASS_1:
             orbit_range_min = STAR_CLASS_1_ORBIT_MIN;
@@ -863,11 +863,11 @@ void populate_star_system(struct planet_t *planet, struct point_t position, pcg3
         // Keep track of previous orbit so that we increment orbits
         float previous_orbit = 0;
 
-        while (i < max_planets && width < planet->cutoff - 2 * planet->radius)
+        while (i < max_planets && width < body->cutoff - 2 * body->radius)
         {
             // Orbit is calculated between surfaces, not centers
             // Round some values to get rid of floating-point inaccuracies
-            float _orbit_width = fmod(abs(pcg32_random_r(&rng)), orbit_range_max * planet->radius) + orbit_range_min * planet->radius;
+            float _orbit_width = fmod(abs(pcg32_random_r(&rng)), orbit_range_max * body->radius) + orbit_range_min * body->radius;
             float orbit_width = 0;
 
             // Increment next orbit
@@ -883,127 +883,127 @@ void populate_star_system(struct planet_t *planet, struct point_t position, pcg3
             float radius = fmod(orbit_width, radius_max) + PLANET_RADIUS_MIN;
 
             // Add planet
-            if (width + orbit_width + 2 * radius < planet->cutoff - 2 * planet->radius)
+            if (width + orbit_width + 2 * radius < body->cutoff - 2 * body->radius)
             {
                 width += orbit_width + 2 * radius;
 
-                struct planet_t *_planet = (struct planet_t *)malloc(sizeof(struct planet_t));
+                Planet *planet = (Planet *)malloc(sizeof(Planet));
 
-                strcpy(_planet->name, planet->name);                              // Copy star name to planet name
-                sprintf(_planet->name + strlen(_planet->name), "-%s-%d", "P", i); // Append to planet name
-                _planet->image = "../assets/images/earth.png";
-                _planet->class = get_planet_class(orbit_width);
-                _planet->color.r = colors[COLOR_SKY_BLUE_255].r;
-                _planet->color.g = colors[COLOR_SKY_BLUE_255].g;
-                _planet->color.b = colors[COLOR_SKY_BLUE_255].b;
-                _planet->level = LEVEL_PLANET;
-                _planet->radius = radius;
-                _planet->cutoff = orbit_width / 2;
+                strcpy(planet->name, body->name);                               // Copy star name to planet name
+                sprintf(planet->name + strlen(planet->name), "-%s-%d", "P", i); // Append to planet name
+                planet->image = "../assets/images/earth.png";
+                planet->class = get_planet_class(orbit_width);
+                planet->color.r = colors[COLOR_SKY_BLUE_255].r;
+                planet->color.g = colors[COLOR_SKY_BLUE_255].g;
+                planet->color.b = colors[COLOR_SKY_BLUE_255].b;
+                planet->level = LEVEL_PLANET;
+                planet->radius = radius;
+                planet->cutoff = orbit_width / 2;
 
                 // Calculate orbital velocity
                 float angle = fmod(abs(pcg32_random_r(&rng)), 360);
                 float vx, vy;
-                float total_width = width + planet->radius - _planet->radius; // center to center
-                calc_orbital_velocity(total_width, angle, planet->radius, &vx, &vy);
+                float total_width = width + body->radius - planet->radius; // center to center
+                calc_orbital_velocity(total_width, angle, body->radius, &vx, &vy);
 
-                _planet->position.x = planet->position.x + total_width * cos(angle * M_PI / 180);
-                _planet->position.y = planet->position.y + total_width * sin(angle * M_PI / 180);
-                _planet->vx = vx;
-                _planet->vy = vy;
-                _planet->dx = 0.0;
-                _planet->dy = 0.0;
-                SDL_Surface *surface = IMG_Load(_planet->image);
-                _planet->texture = SDL_CreateTextureFromSurface(renderer, surface);
+                planet->position.x = body->position.x + total_width * cos(angle * M_PI / 180);
+                planet->position.y = body->position.y + total_width * sin(angle * M_PI / 180);
+                planet->vx = vx;
+                planet->vy = vy;
+                planet->dx = 0.0;
+                planet->dy = 0.0;
+                SDL_Surface *surface = IMG_Load(planet->image);
+                planet->texture = SDL_CreateTextureFromSurface(renderer, surface);
                 SDL_FreeSurface(surface);
-                _planet->rect.x = (_planet->position.x - _planet->radius) * scale;
-                _planet->rect.y = (_planet->position.y - _planet->radius) * scale;
-                _planet->rect.w = 2 * _planet->radius * scale;
-                _planet->rect.h = 2 * _planet->radius * scale;
-                _planet->planets[0] = NULL;
-                _planet->parent = planet;
+                planet->rect.x = (planet->position.x - planet->radius) * scale;
+                planet->rect.y = (planet->position.y - planet->radius) * scale;
+                planet->rect.w = 2 * planet->radius * scale;
+                planet->rect.h = 2 * planet->radius * scale;
+                planet->planets[0] = NULL;
+                planet->parent = body;
 
-                planet->planets[i] = _planet;
-                planet->planets[i + 1] = NULL;
+                body->planets[i] = planet;
+                body->planets[i + 1] = NULL;
                 i++;
 
-                populate_star_system(_planet, position, rng, scale);
+                populate_star_system(planet, position, rng, scale);
             }
             else
                 break;
         }
 
         // Set star as initialized
-        planet->initialized = 1;
+        body->initialized = 1;
     }
 
     // Moons
-    else if (planet->level == LEVEL_PLANET)
+    else if (body->level == LEVEL_PLANET)
     {
         int orbit_range_min = PLANET_CLASS_1_ORBIT_MIN;
         int orbit_range_max = PLANET_CLASS_1_ORBIT_MAX;
         float radius_max = PLANET_CLASS_1_MOON_RADIUS_MAX;
         float planet_cutoff_limit;
 
-        switch (planet->class)
+        switch (body->class)
         {
         case PLANET_CLASS_1:
             orbit_range_min = PLANET_CLASS_1_ORBIT_MIN;
             orbit_range_max = PLANET_CLASS_1_ORBIT_MAX;
             radius_max = PLANET_CLASS_1_MOON_RADIUS_MAX;
-            planet_cutoff_limit = planet->cutoff / 2;
-            max_planets = (int)planet->cutoff % (max_planets - 4); // 0 - <max - 4>
+            planet_cutoff_limit = body->cutoff / 2;
+            max_planets = (int)body->cutoff % (max_planets - 4); // 0 - <max - 4>
             break;
         case PLANET_CLASS_2:
             orbit_range_min = PLANET_CLASS_2_ORBIT_MIN;
             orbit_range_max = PLANET_CLASS_2_ORBIT_MAX;
             radius_max = PLANET_CLASS_2_MOON_RADIUS_MAX;
-            planet_cutoff_limit = planet->cutoff / 2;
-            max_planets = (int)planet->cutoff % (max_planets - 3); // 0 - <max - 3>
+            planet_cutoff_limit = body->cutoff / 2;
+            max_planets = (int)body->cutoff % (max_planets - 3); // 0 - <max - 3>
             break;
         case PLANET_CLASS_3:
             orbit_range_min = PLANET_CLASS_3_ORBIT_MIN;
             orbit_range_max = PLANET_CLASS_3_ORBIT_MAX;
             radius_max = PLANET_CLASS_3_MOON_RADIUS_MAX;
-            planet_cutoff_limit = planet->cutoff / 2;
-            max_planets = (int)planet->cutoff % (max_planets - 2); // 0 - <max - 2>
+            planet_cutoff_limit = body->cutoff / 2;
+            max_planets = (int)body->cutoff % (max_planets - 2); // 0 - <max - 2>
             break;
         case PLANET_CLASS_4:
             orbit_range_min = PLANET_CLASS_4_ORBIT_MIN;
             orbit_range_max = PLANET_CLASS_4_ORBIT_MAX;
             radius_max = PLANET_CLASS_4_MOON_RADIUS_MAX;
-            planet_cutoff_limit = planet->cutoff / 2;
-            max_planets = (int)planet->cutoff % (max_planets - 2); // 0 - <max - 2>
+            planet_cutoff_limit = body->cutoff / 2;
+            max_planets = (int)body->cutoff % (max_planets - 2); // 0 - <max - 2>
             break;
         case PLANET_CLASS_5:
             orbit_range_min = PLANET_CLASS_5_ORBIT_MIN;
             orbit_range_max = PLANET_CLASS_5_ORBIT_MAX;
             radius_max = PLANET_CLASS_5_MOON_RADIUS_MAX;
-            planet_cutoff_limit = planet->cutoff / 3;
-            max_planets = (int)planet->cutoff % (max_planets - 1); // 0 - <max - 1>
+            planet_cutoff_limit = body->cutoff / 3;
+            max_planets = (int)body->cutoff % (max_planets - 1); // 0 - <max - 1>
             break;
         case PLANET_CLASS_6:
             orbit_range_min = PLANET_CLASS_6_ORBIT_MIN;
             orbit_range_max = PLANET_CLASS_6_ORBIT_MAX;
             radius_max = PLANET_CLASS_6_MOON_RADIUS_MAX;
-            planet_cutoff_limit = planet->cutoff / 3;
-            max_planets = (int)planet->cutoff % max_planets; // 0 - <max>
+            planet_cutoff_limit = body->cutoff / 3;
+            max_planets = (int)body->cutoff % max_planets; // 0 - <max>
             break;
         default:
             orbit_range_min = PLANET_CLASS_1_ORBIT_MIN;
             orbit_range_max = PLANET_CLASS_1_ORBIT_MAX;
             radius_max = PLANET_CLASS_1_MOON_RADIUS_MAX;
-            planet_cutoff_limit = planet->cutoff / 2;
-            max_planets = (int)planet->cutoff % (max_planets - 4); // 0 - <max - 4>
+            planet_cutoff_limit = body->cutoff / 2;
+            max_planets = (int)body->cutoff % (max_planets - 4); // 0 - <max - 4>
             break;
         }
 
         float width = 0;
         int i = 0;
 
-        while (i < max_planets && width < planet->cutoff - 2 * planet->radius)
+        while (i < max_planets && width < body->cutoff - 2 * body->radius)
         {
             // Orbit is calculated between surfaces, not centers
-            float _orbit_width = fmod(abs(pcg32_random_r(&rng)), orbit_range_max * planet->radius) + orbit_range_min * planet->radius;
+            float _orbit_width = fmod(abs(pcg32_random_r(&rng)), orbit_range_max * body->radius) + orbit_range_min * body->radius;
             float orbit_width = 0;
 
             // The first orbit should not be closer than <planet_cutoff_limit>
@@ -1016,49 +1016,49 @@ void populate_star_system(struct planet_t *planet, struct point_t position, pcg3
             }
 
             // A moon can not be larger than class radius_max or 1 / 3 of planet radius
-            float radius = fmod(orbit_width, fmin(radius_max, planet->radius / 3)) + MOON_RADIUS_MIN;
+            float radius = fmod(orbit_width, fmin(radius_max, body->radius / 3)) + MOON_RADIUS_MIN;
 
             // Add moon
-            if (width + orbit_width + 2 * radius < planet->cutoff - 2 * planet->radius)
+            if (width + orbit_width + 2 * radius < body->cutoff - 2 * body->radius)
             {
                 width += orbit_width + 2 * radius;
 
-                struct planet_t *_planet = (struct planet_t *)malloc(sizeof(struct planet_t));
+                Planet *moon = (Planet *)malloc(sizeof(Planet));
 
-                strcpy(_planet->name, planet->name);                              // Copy planet name to moon name
-                sprintf(_planet->name + strlen(_planet->name), "-%s-%d", "M", i); // Append to moon name
-                _planet->image = "../assets/images/moon.png";
-                _planet->class = 0;
-                _planet->color.r = colors[COLOR_GAINSBORO_255].r;
-                _planet->color.g = colors[COLOR_GAINSBORO_255].g;
-                _planet->color.b = colors[COLOR_GAINSBORO_255].b;
-                _planet->level = LEVEL_MOON;
-                _planet->radius = radius;
+                strcpy(moon->name, body->name);                             // Copy planet name to moon name
+                sprintf(moon->name + strlen(moon->name), "-%s-%d", "M", i); // Append to moon name
+                moon->image = "../assets/images/moon.png";
+                moon->class = 0;
+                moon->color.r = colors[COLOR_GAINSBORO_255].r;
+                moon->color.g = colors[COLOR_GAINSBORO_255].g;
+                moon->color.b = colors[COLOR_GAINSBORO_255].b;
+                moon->level = LEVEL_MOON;
+                moon->radius = radius;
 
                 // Calculate orbital velocity
                 float angle = fmod(abs(pcg32_random_r(&rng)), 360);
                 float vx, vy;
-                float total_width = width + planet->radius - _planet->radius;
-                calc_orbital_velocity(total_width, angle, planet->radius, &vx, &vy);
+                float total_width = width + body->radius - moon->radius;
+                calc_orbital_velocity(total_width, angle, body->radius, &vx, &vy);
 
-                _planet->position.x = planet->position.x + total_width * cos(angle * M_PI / 180);
-                _planet->position.y = planet->position.y + total_width * sin(angle * M_PI / 180);
-                _planet->vx = vx;
-                _planet->vy = vy;
-                _planet->dx = 0.0;
-                _planet->dy = 0.0;
-                SDL_Surface *surface = IMG_Load(_planet->image);
-                _planet->texture = SDL_CreateTextureFromSurface(renderer, surface);
+                moon->position.x = body->position.x + total_width * cos(angle * M_PI / 180);
+                moon->position.y = body->position.y + total_width * sin(angle * M_PI / 180);
+                moon->vx = vx;
+                moon->vy = vy;
+                moon->dx = 0.0;
+                moon->dy = 0.0;
+                SDL_Surface *surface = IMG_Load(moon->image);
+                moon->texture = SDL_CreateTextureFromSurface(renderer, surface);
                 SDL_FreeSurface(surface);
-                _planet->rect.x = (_planet->position.x - _planet->radius) * scale;
-                _planet->rect.y = (_planet->position.y - _planet->radius) * scale;
-                _planet->rect.w = 2 * _planet->radius * scale;
-                _planet->rect.h = 2 * _planet->radius * scale;
-                _planet->planets[0] = NULL;
-                _planet->parent = planet;
+                moon->rect.x = (moon->position.x - moon->radius) * scale;
+                moon->rect.y = (moon->position.y - moon->radius) * scale;
+                moon->rect.w = 2 * moon->radius * scale;
+                moon->rect.h = 2 * moon->radius * scale;
+                moon->planets[0] = NULL;
+                moon->parent = body;
 
-                planet->planets[i] = _planet;
-                planet->planets[i + 1] = NULL;
+                body->planets[i] = moon;
+                body->planets[i + 1] = NULL;
                 i++;
             }
             else
@@ -1070,9 +1070,9 @@ void populate_star_system(struct planet_t *planet, struct point_t position, pcg3
 /*
  * Create, update, draw star system and apply gravity to planets and ship (recursive).
  */
-void update_star_system(GameState *game_state, InputState input_state, NavigationState *nav_state, struct planet_t *planet, struct ship_t *ship, const struct camera_t *camera)
+void update_star_system(GameState *game_state, const InputState *input_state, NavigationState *nav_state, CelestialBody *body, Ship *ship, const Camera *camera)
 {
-    struct point_t position;
+    Point position;
 
     if (game_state->state == NAVIGATE)
     {
@@ -1086,55 +1086,55 @@ void update_star_system(GameState *game_state, InputState input_state, Navigatio
     }
 
     // Update planets & moons
-    if (planet->level != LEVEL_STAR)
+    if (body->level != LEVEL_STAR)
     {
         double distance;
         float orbit_opacity;
 
         if (game_state->state == NAVIGATE)
         {
-            // Update planet position
-            planet->position.x += planet->parent->dx;
-            planet->position.y += planet->parent->dy;
+            // Update body position
+            body->position.x += body->parent->dx;
+            body->position.y += body->parent->dy;
 
             // Find distance from parent
-            double delta_x = planet->parent->position.x - planet->position.x;
-            double delta_y = planet->parent->position.y - planet->position.y;
+            double delta_x = body->parent->position.x - body->position.x;
+            double delta_y = body->parent->position.y - body->position.y;
             distance = sqrt(delta_x * delta_x + delta_y * delta_y);
 
             // Determine speed and position shift
-            if (distance > (planet->parent->radius + planet->radius))
+            if (distance > (body->parent->radius + body->radius))
             {
-                float g_planet = G_CONSTANT * planet->parent->radius * planet->parent->radius / (distance * distance);
+                float g_body = G_CONSTANT * body->parent->radius * body->parent->radius / (distance * distance);
 
-                planet->vx += g_planet * delta_x / distance;
-                planet->vy += g_planet * delta_y / distance;
-                planet->dx = planet->vx / FPS;
-                planet->dy = planet->vy / FPS;
+                body->vx += g_body * delta_x / distance;
+                body->vy += g_body * delta_y / distance;
+                body->dx = body->vx / FPS;
+                body->dy = body->vy / FPS;
             }
 
-            // Update planet position
-            planet->position.x += planet->vx / FPS;
-            planet->position.y += planet->vy / FPS;
+            // Update body position
+            body->position.x += body->vx / FPS;
+            body->position.y += body->vy / FPS;
 
             orbit_opacity = 45;
         }
         else if (game_state->state == MAP)
         {
             // Find distance from parent
-            double delta_x = planet->parent->position.x - planet->position.x;
-            double delta_y = planet->parent->position.y - planet->position.y;
+            double delta_x = body->parent->position.x - body->position.x;
+            double delta_y = body->parent->position.y - body->position.y;
             distance = sqrt(delta_x * delta_x + delta_y * delta_y);
 
             orbit_opacity = 32;
         }
 
         // Draw orbit
-        if (input_state.orbits_on)
+        if (input_state->orbits_on)
         {
             int radius = distance * game_state->game_scale;
-            int _x = (planet->parent->position.x - camera->x) * game_state->game_scale;
-            int _y = (planet->parent->position.y - camera->y) * game_state->game_scale;
+            int _x = (body->parent->position.x - camera->x) * game_state->game_scale;
+            int _y = (body->parent->position.y - camera->y) * game_state->game_scale;
             SDL_Color orbit_color = {
                 colors[COLOR_WHITE_255].r,
                 colors[COLOR_WHITE_255].g,
@@ -1147,26 +1147,26 @@ void update_star_system(GameState *game_state, InputState input_state, Navigatio
         // Update moons
         int max_planets = MAX_MOONS;
 
-        for (int i = 0; i < max_planets && planet->planets[i] != NULL; i++)
+        for (int i = 0; i < max_planets && body->planets[i] != NULL; i++)
         {
-            update_star_system(game_state, input_state, nav_state, planet->planets[i], ship, camera);
+            update_star_system(game_state, input_state, nav_state, body->planets[i], ship, camera);
         }
     }
-    else if (planet->level == LEVEL_STAR)
+    else if (body->level == LEVEL_STAR)
     {
         // Get star distance from position
-        double delta_x_star = planet->position.x - position.x;
-        double delta_y_star = planet->position.y - position.y;
+        double delta_x_star = body->position.x - position.x;
+        double delta_y_star = body->position.y - position.y;
         double distance_star = sqrt(delta_x_star * delta_x_star + delta_y_star * delta_y_star);
 
         if (game_state->state == MAP)
         {
-            if (distance_star < planet->cutoff && SOLAR_SYSTEMS_ON)
+            if (distance_star < body->cutoff && SOLAR_SYSTEMS_ON)
             {
                 // Create system
-                if (!planet->initialized && SOLAR_SYSTEMS_ON)
+                if (!body->initialized && SOLAR_SYSTEMS_ON)
                 {
-                    struct point_t star_position = {.x = planet->position.x, .y = planet->position.y};
+                    Point star_position = {.x = body->position.x, .y = body->position.y};
 
                     // Use a local rng
                     pcg32_random_t rng;
@@ -1177,24 +1177,24 @@ void update_star_system(GameState *game_state, InputState input_state, Navigatio
                     // Seed with a fixed constant
                     pcg32_srandom_r(&rng, seed, nav_state->initseq);
 
-                    populate_star_system(planet, star_position, rng, game_state->game_scale);
+                    populate_star_system(body, star_position, rng, game_state->game_scale);
                 }
 
                 // Update planets
                 int max_planets = MAX_PLANETS;
 
-                for (int i = 0; i < max_planets && planet->planets[i] != NULL; i++)
+                for (int i = 0; i < max_planets && body->planets[i] != NULL; i++)
                 {
-                    update_star_system(game_state, input_state, nav_state, planet->planets[i], ship, camera);
+                    update_star_system(game_state, input_state, nav_state, body->planets[i], ship, camera);
                 }
 
-                if (input_state.orbits_on)
+                if (input_state->orbits_on)
                 {
                     // Draw cutoff area circles
-                    int _r = planet->class * GALAXY_SECTION_SIZE / 2;
+                    int _r = body->class * GALAXY_SECTION_SIZE / 2;
                     int radius = _r * game_state->game_scale;
-                    int _x = (planet->position.x - camera->x) * game_state->game_scale;
-                    int _y = (planet->position.y - camera->y) * game_state->game_scale;
+                    int _x = (body->position.x - camera->x) * game_state->game_scale;
+                    int _y = (body->position.y - camera->y) * game_state->game_scale;
 
                     SDL_DrawCircle(renderer, camera, _x, _y, radius - 1, colors[COLOR_MAGENTA_40]);
                     SDL_DrawCircle(renderer, camera, _x, _y, radius - 2, colors[COLOR_MAGENTA_40]);
@@ -1204,12 +1204,12 @@ void update_star_system(GameState *game_state, InputState input_state, Navigatio
         }
         else if (game_state->state == NAVIGATE)
         {
-            if (distance_star < planet->cutoff && SOLAR_SYSTEMS_ON)
+            if (distance_star < body->cutoff && SOLAR_SYSTEMS_ON)
             {
                 // Create system
-                if (!planet->initialized)
+                if (!body->initialized)
                 {
-                    struct point_t star_position = {.x = planet->position.x, .y = planet->position.y};
+                    Point star_position = {.x = body->position.x, .y = body->position.y};
 
                     // Use a local rng
                     pcg32_random_t rng;
@@ -1220,55 +1220,55 @@ void update_star_system(GameState *game_state, InputState input_state, Navigatio
                     // Seed with a fixed constant
                     pcg32_srandom_r(&rng, seed, nav_state->initseq);
 
-                    populate_star_system(planet, star_position, rng, game_state->game_scale);
+                    populate_star_system(body, star_position, rng, game_state->game_scale);
                 }
 
                 // Update planets
                 int max_planets = MAX_PLANETS;
 
-                for (int i = 0; i < max_planets && planet->planets[i] != NULL; i++)
+                for (int i = 0; i < max_planets && body->planets[i] != NULL; i++)
                 {
-                    update_star_system(game_state, input_state, nav_state, planet->planets[i], ship, camera);
+                    update_star_system(game_state, input_state, nav_state, body->planets[i], ship, camera);
                 }
             }
 
             // Draw cutoff area circle
-            if (input_state.orbits_on && distance_star < 2 * planet->cutoff)
+            if (input_state->orbits_on && distance_star < 2 * body->cutoff)
             {
-                int cutoff = planet->cutoff * game_state->game_scale;
-                int _x = (planet->position.x - camera->x) * game_state->game_scale;
-                int _y = (planet->position.y - camera->y) * game_state->game_scale;
+                int cutoff = body->cutoff * game_state->game_scale;
+                int _x = (body->position.x - camera->x) * game_state->game_scale;
+                int _y = (body->position.y - camera->y) * game_state->game_scale;
 
                 SDL_DrawCircle(renderer, camera, _x, _y, cutoff, colors[COLOR_MAGENTA_70]);
             }
         }
     }
 
-    // Draw planet
-    if (in_camera(camera, planet->position.x, planet->position.y, planet->radius, game_state->game_scale))
+    // Draw body
+    if (in_camera(camera, body->position.x, body->position.y, body->radius, game_state->game_scale))
     {
-        planet->rect.x = (int)(planet->position.x - planet->radius - camera->x) * game_state->game_scale;
-        planet->rect.y = (int)(planet->position.y - planet->radius - camera->y) * game_state->game_scale;
+        body->rect.x = (int)(body->position.x - body->radius - camera->x) * game_state->game_scale;
+        body->rect.y = (int)(body->position.y - body->radius - camera->y) * game_state->game_scale;
 
-        SDL_RenderCopy(renderer, planet->texture, NULL, &planet->rect);
+        SDL_RenderCopy(renderer, body->texture, NULL, &body->rect);
     }
-    // Draw planet projection
-    else if (PROJECT_PLANETS_ON)
+    // Draw body projection
+    else if (PROJECT_BODIES_ON)
     {
-        if (planet->level == LEVEL_MOON)
+        if (body->level == LEVEL_MOON)
         {
-            double delta_x = planet->parent->position.x - position.x;
-            double delta_y = planet->parent->position.y - position.y;
+            double delta_x = body->parent->position.x - position.x;
+            double delta_y = body->parent->position.y - position.y;
             double distance = sqrt(delta_x * delta_x + delta_y * delta_y);
 
-            if (distance < 2 * planet->parent->cutoff)
-                project_planet(*game_state, *nav_state, planet, camera);
+            if (distance < 2 * body->parent->cutoff)
+                project_body(game_state, nav_state, body, camera);
         }
         else
-            project_planet(*game_state, *nav_state, planet, camera);
+            project_body(game_state, nav_state, body, camera);
     }
 
     // Update ship speed due to gravity
     if (game_state->state == NAVIGATE && SHIP_GRAVITY_ON)
-        apply_gravity_to_ship(game_state, input_state.thrust, nav_state, planet, ship, camera);
+        apply_gravity_to_ship(game_state, input_state->thrust, nav_state, body, ship, camera);
 }

@@ -18,45 +18,45 @@ extern SDL_Renderer *renderer;
 extern SDL_Color colors[];
 
 // Function prototypes
-void cleanup_galaxies(struct galaxy_entry *galaxies[]);
-void put_galaxy(struct galaxy_entry *galaxies[], struct point_t position, struct galaxy_t *galaxy);
-int galaxy_exists(struct galaxy_entry *galaxies[], struct point_t position);
-struct galaxy_t *get_galaxy(struct galaxy_entry *galaxies[], struct point_t position);
-void delete_galaxy(struct galaxy_entry *galaxies[], struct point_t position);
-double nearest_galaxy_center_distance(struct point_t position);
-struct galaxy_t *find_nearest_galaxy(NavigationState nav_state, struct point_t position, int exclude);
+void cleanup_galaxies(GalaxyEntry *galaxies[]);
+void put_galaxy(GalaxyEntry *galaxies[], Point, Galaxy *);
+int galaxy_exists(GalaxyEntry *galaxies[], Point);
+Galaxy *get_galaxy(GalaxyEntry *galaxies[], Point);
+void delete_galaxy(GalaxyEntry *galaxies[], Point);
+double nearest_galaxy_center_distance(Point);
+Galaxy *find_nearest_galaxy(const NavigationState *, Point, int exclude);
 int get_galaxy_class(float distance);
-struct galaxy_t *create_galaxy(struct point_t position);
-void update_galaxy(NavigationState *nav_state, struct galaxy_t *galaxy, const struct camera_t *camera, int state, long double scale);
-void generate_galaxies(GameEvents *game_events, NavigationState *nav_state, struct point_t offset);
+Galaxy *create_galaxy(Point);
+void update_galaxy(NavigationState *, Galaxy *, const Camera *, int state, long double scale);
+void generate_galaxies(GameEvents *, NavigationState *, Point);
 
 // External function prototypes
-uint64_t pair_hash_order_sensitive(struct point_t);
-uint64_t pair_hash_order_sensitive_2(struct point_t);
-uint64_t unique_index(struct point_t, int modulo, int entity_type);
+uint64_t pair_hash_order_sensitive(Point);
+uint64_t pair_hash_order_sensitive_2(Point);
+uint64_t unique_index(Point, int modulo, int entity_type);
 double find_distance(double x1, double y1, double x2, double y2);
-bool point_in_array(struct point_t p, struct point_t arr[], int len);
-void create_galaxy_cloud(struct galaxy_t *galaxy, unsigned short high_definition);
-void draw_galaxy_cloud(struct galaxy_t *galaxy, const struct camera_t *camera, int gstars_count, unsigned short high_definition, long double scale);
-void cleanup_stars(struct star_entry *stars[]);
-void project_galaxy(int state, NavigationState nav_state, struct galaxy_t *galaxy, const struct camera_t *camera, long double scale);
-void SDL_DrawCircle(SDL_Renderer *renderer, const struct camera_t *camera, int xc, int yc, int radius, SDL_Color color);
-int in_camera(const struct camera_t *camera, double x, double y, float radius, long double scale);
+bool point_in_array(Point, Point arr[], int len);
+void create_galaxy_cloud(Galaxy *, unsigned short high_definition);
+void draw_galaxy_cloud(Galaxy *, const Camera *, int gstars_count, unsigned short high_definition, long double scale);
+void cleanup_stars(StarEntry *stars[]);
+void project_galaxy(int state, const NavigationState *, Galaxy *, const Camera *, long double scale);
+void SDL_DrawCircle(SDL_Renderer *renderer, const Camera *, int xc, int yc, int radius, SDL_Color color);
+int in_camera(const Camera *, double x, double y, float radius, long double scale);
 double find_nearest_section_axis(double offset, int size);
 
 /*
  * Clean up galaxies.
  */
-void cleanup_galaxies(struct galaxy_entry *galaxies[])
+void cleanup_galaxies(GalaxyEntry *galaxies[])
 {
     // Loop through hash table
     for (int s = 0; s < MAX_GALAXIES; s++)
     {
-        struct galaxy_entry *entry = galaxies[s];
+        GalaxyEntry *entry = galaxies[s];
 
         while (entry != NULL)
         {
-            struct point_t position = {.x = entry->x, .y = entry->y};
+            Point position = {.x = entry->x, .y = entry->y};
             delete_galaxy(galaxies, position);
             entry = entry->next;
         }
@@ -66,12 +66,12 @@ void cleanup_galaxies(struct galaxy_entry *galaxies[])
 /*
  * Insert a new galaxy entry in galaxies hash table.
  */
-void put_galaxy(struct galaxy_entry *galaxies[], struct point_t position, struct galaxy_t *galaxy)
+void put_galaxy(GalaxyEntry *galaxies[], Point position, Galaxy *galaxy)
 {
     // Generate unique index for hash table
     uint64_t index = unique_index(position, MAX_GALAXIES, ENTITY_GALAXY);
 
-    struct galaxy_entry *entry = (struct galaxy_entry *)malloc(sizeof(struct galaxy_entry));
+    GalaxyEntry *entry = (GalaxyEntry *)malloc(sizeof(GalaxyEntry));
     entry->x = position.x;
     entry->y = position.y;
     entry->galaxy = galaxy;
@@ -82,12 +82,12 @@ void put_galaxy(struct galaxy_entry *galaxies[], struct point_t position, struct
 /*
  * Check whether a galaxy entry exists in the galaxies hash table.
  */
-int galaxy_exists(struct galaxy_entry *galaxies[], struct point_t position)
+int galaxy_exists(GalaxyEntry *galaxies[], Point position)
 {
     // Generate unique index for hash table
     uint64_t index = unique_index(position, MAX_GALAXIES, ENTITY_GALAXY);
 
-    struct galaxy_entry *entry = galaxies[index];
+    GalaxyEntry *entry = galaxies[index];
 
     while (entry != NULL)
     {
@@ -106,12 +106,12 @@ int galaxy_exists(struct galaxy_entry *galaxies[], struct point_t position)
 /*
  * Get a galaxy entry from the galaxies hash table.
  */
-struct galaxy_t *get_galaxy(struct galaxy_entry *galaxies[], struct point_t position)
+Galaxy *get_galaxy(GalaxyEntry *galaxies[], Point position)
 {
     // Generate unique index for hash table
     uint64_t index = unique_index(position, MAX_GALAXIES, ENTITY_GALAXY);
 
-    struct galaxy_entry *entry = galaxies[index];
+    GalaxyEntry *entry = galaxies[index];
 
     while (entry != NULL)
     {
@@ -127,13 +127,13 @@ struct galaxy_t *get_galaxy(struct galaxy_entry *galaxies[], struct point_t posi
 /*
  * Delete a galaxy entry from the galaxies hash table.
  */
-void delete_galaxy(struct galaxy_entry *galaxies[], struct point_t position)
+void delete_galaxy(GalaxyEntry *galaxies[], Point position)
 {
     // Generate unique index for hash table
     uint64_t index = unique_index(position, MAX_GALAXIES, ENTITY_GALAXY);
 
-    struct galaxy_entry *previous = NULL;
-    struct galaxy_entry *entry = galaxies[index];
+    GalaxyEntry *previous = NULL;
+    GalaxyEntry *entry = galaxies[index];
 
     while (entry != NULL)
     {
@@ -161,14 +161,14 @@ void delete_galaxy(struct galaxy_entry *galaxies[], struct point_t position)
 /*
  * Find distance to nearest galaxy.
  */
-double nearest_galaxy_center_distance(struct point_t position)
+double nearest_galaxy_center_distance(Point position)
 {
     // We use 6 * UNIVERSE_SECTION_SIZE as max, since a CLASS_6 galaxy needs 6 + 1 empty sections
     // We search inner circumferences of points first and work towards outward circumferences
     // If we find a galaxy, the function returns.
 
     // Keep track of checked points
-    struct point_t checked_points[196];
+    Point checked_points[196];
     int num_checked_points = 0;
 
     // Use a local rng
@@ -183,7 +183,7 @@ double nearest_galaxy_center_distance(struct point_t position)
                 if (ix == position.x && iy == position.y)
                     continue;
 
-                struct point_t p = {ix, iy};
+                Point p = {ix, iy};
 
                 if (point_in_array(p, checked_points, num_checked_points))
                     continue;
@@ -216,23 +216,23 @@ double nearest_galaxy_center_distance(struct point_t position)
  * The funtion finds the galaxy in the galaxies hash table
  * whose circumference is closest to the position.
  */
-struct galaxy_t *find_nearest_galaxy(NavigationState nav_state, struct point_t position, int exclude)
+Galaxy *find_nearest_galaxy(const NavigationState *nav_state, Point position, int exclude)
 {
-    struct galaxy_t *closest = NULL;
+    Galaxy *closest = NULL;
     double closest_distance = INFINITY;
     int sections = 10;
 
     for (int i = 0; i < MAX_GALAXIES; i++)
     {
-        struct galaxy_entry *entry = nav_state.galaxies[i];
+        GalaxyEntry *entry = nav_state->galaxies[i];
 
         while (entry != NULL)
         {
             // Exlude current galaxy
             if (exclude)
             {
-                if (entry->galaxy->position.x == nav_state.current_galaxy->position.x &&
-                    entry->galaxy->position.y == nav_state.current_galaxy->position.y)
+                if (entry->galaxy->position.x == nav_state->current_galaxy->position.x &&
+                    entry->galaxy->position.y == nav_state->current_galaxy->position.y)
                 {
                     entry = entry->next;
                     continue;
@@ -290,7 +290,7 @@ int get_galaxy_class(float distance)
 /*
  * Create a galaxy.
  */
-struct galaxy_t *create_galaxy(struct point_t position)
+Galaxy *create_galaxy(Point position)
 {
     // Find distance to nearest galaxy
     double distance = nearest_galaxy_center_distance(position);
@@ -335,7 +335,7 @@ struct galaxy_t *create_galaxy(struct point_t position)
     }
 
     // Create galaxy
-    struct galaxy_t *galaxy = (struct galaxy_t *)malloc(sizeof(struct galaxy_t));
+    Galaxy *galaxy = (Galaxy *)malloc(sizeof(Galaxy));
 
     // Get unique galaxy index
     uint64_t index = pair_hash_order_sensitive_2(position);
@@ -364,7 +364,7 @@ struct galaxy_t *create_galaxy(struct point_t position)
 /*
  * Update and draw galaxy.
  */
-void update_galaxy(NavigationState *nav_state, struct galaxy_t *galaxy, const struct camera_t *camera, int state, long double scale)
+void update_galaxy(NavigationState *nav_state, Galaxy *galaxy, const Camera *camera, int state, long double scale)
 {
     // Get galaxy distance from position
     double delta_x = galaxy->position.x - nav_state->universe_offset.x;
@@ -378,7 +378,7 @@ void update_galaxy(NavigationState *nav_state, struct galaxy_t *galaxy, const st
         if (strcmp(nav_state->current_galaxy->name, galaxy->name) != 0)
         {
             cleanup_stars(nav_state->stars);
-            memcpy(nav_state->current_galaxy, galaxy, sizeof(struct galaxy_t));
+            memcpy(nav_state->current_galaxy, galaxy, sizeof(Galaxy));
         }
 
         int cutoff = galaxy->cutoff * scale * GALAXY_SCALE;
@@ -424,7 +424,7 @@ void update_galaxy(NavigationState *nav_state, struct galaxy_t *galaxy, const st
         {
             // Show projections only if game scale < 50 * ZOOM_UNIVERSE_MIN
             if (scale / (ZOOM_UNIVERSE_MIN / GALAXY_SCALE) < 50)
-                project_galaxy(state, *nav_state, galaxy, camera, scale * GALAXY_SCALE);
+                project_galaxy(state, nav_state, galaxy, camera, scale * GALAXY_SCALE);
         }
     }
 }
@@ -433,7 +433,7 @@ void update_galaxy(NavigationState *nav_state, struct galaxy_t *galaxy, const st
  * Probe region for galaxies and create them procedurally.
  * The region has intervals of size UNIVERSE_SECTION_SIZE.
  */
-void generate_galaxies(GameEvents *game_events, NavigationState *nav_state, struct point_t offset)
+void generate_galaxies(GameEvents *game_events, NavigationState *nav_state, Point offset)
 {
     // Keep track of current nearest section axis coordinates
     double bx = find_nearest_section_axis(offset.x, UNIVERSE_SECTION_SIZE);
@@ -479,7 +479,7 @@ void generate_galaxies(GameEvents *game_events, NavigationState *nav_state, stru
                 continue;
 
             // Create rng seed by combining x,y values
-            struct point_t position = {.x = ix, .y = iy};
+            Point position = {.x = ix, .y = iy};
             uint64_t seed = pair_hash_order_sensitive_2(position);
 
             // Seed with a fixed constant
@@ -495,7 +495,7 @@ void generate_galaxies(GameEvents *game_events, NavigationState *nav_state, stru
                 else
                 {
                     // Create galaxy
-                    struct galaxy_t *galaxy = create_galaxy(position);
+                    Galaxy *galaxy = create_galaxy(position);
 
                     // Add galaxy to hash table
                     put_galaxy(nav_state->galaxies, position, galaxy);
@@ -509,7 +509,7 @@ void generate_galaxies(GameEvents *game_events, NavigationState *nav_state, stru
     {
         if (nav_state->galaxies[s] != NULL)
         {
-            struct point_t position = {.x = nav_state->galaxies[s]->x, .y = nav_state->galaxies[s]->y};
+            Point position = {.x = nav_state->galaxies[s]->x, .y = nav_state->galaxies[s]->y};
 
             // Skip current galaxy, otherwise we lose track of where we are
             if (!game_events->galaxies_start)

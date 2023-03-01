@@ -17,43 +17,42 @@ extern SDL_Renderer *renderer;
 extern SDL_Color colors[];
 
 // Function prototypes
-void change_state(GameState *game_state, GameEvents *game_events, int new_state);
-void reset_game(GameState *game_state, InputState *input_state, GameEvents *game_events, NavigationState *nav_state, struct ship_t *ship);
-void onNavigate(GameState *game_state, InputState *input_state, GameEvents *game_events, NavigationState *nav_state, struct bstar_t bstars[], struct ship_t *ship, struct camera_t *camera);
-void onMap(GameState *game_state, InputState *input_state, GameEvents *game_events, NavigationState *nav_state, struct bstar_t bstars[], struct ship_t *ship, struct camera_t *camera);
-void onUniverse(GameState *game_state, InputState *input_state, GameEvents *game_events, NavigationState *nav_state, struct ship_t *ship, struct camera_t *camera);
-struct ship_t create_ship(int radius, struct point_t position, long double scale);
-void update_ship(GameState *game_state, InputState input_state, NavigationState nav_state, struct ship_t *ship, const struct camera_t *camera);
+void change_state(GameState *, GameEvents *, int new_state);
+void reset_game(GameState *, InputState *, GameEvents *, NavigationState *, Ship *);
+void onNavigate(GameState *, InputState *, GameEvents *, NavigationState *, Bstar bstars[], Ship *, Camera *);
+void onMap(GameState *, InputState *, GameEvents *, NavigationState *, Bstar bstars[], Ship *, Camera *);
+void onUniverse(GameState *, InputState *, GameEvents *, NavigationState *, Ship *, Camera *);
+Ship create_ship(int radius, Point, long double scale);
+void update_ship(GameState *, const InputState *, const NavigationState *, Ship *, const Camera *);
 
 // External function prototypes
-void update_menu(GameState *game_state, int game_started);
-void cleanup_stars(struct star_entry *stars[]);
-void cleanup_galaxies(struct galaxy_entry *galaxies[]);
-void generate_galaxies(GameEvents *game_events, NavigationState *nav_state, struct point_t offset);
-struct galaxy_t *get_galaxy(struct galaxy_entry *galaxies[], struct point_t position);
+void update_menu(GameState *, int game_started);
+void cleanup_stars(StarEntry *stars[]);
+void cleanup_galaxies(GalaxyEntry *galaxies[]);
+void generate_galaxies(GameEvents *, NavigationState *, Point);
+Galaxy *get_galaxy(GalaxyEntry *galaxies[], Point);
 double find_nearest_section_axis(double offset, int size);
-void delete_stars_outside_region(struct star_entry *stars[], double bx, double by, int region_size);
-void update_camera(struct camera_t *camera, struct point_t position, long double scale);
-void zoom_star(struct planet_t *planet, long double scale);
-void generate_stars(GameState *game_state, GameEvents *game_events, NavigationState *nav_state, struct bstar_t bstars[], struct ship_t *ship, const struct camera_t *camera);
+void delete_stars_outside_region(StarEntry *stars[], double bx, double by, int region_size);
+void update_camera(Camera *, Point, long double scale);
+void zoom_star(CelestialBody *, long double scale);
+void generate_stars(GameState *, GameEvents *, NavigationState *, Bstar bstars[], Ship *, const Camera *);
 double find_distance(double x1, double y1, double x2, double y2);
-void update_gstars(struct galaxy_t *galaxy, struct point_t ship_position, const struct camera_t *camera, double distance, double limit);
-void update_bstars(int state, int camera_on, NavigationState nav_state, struct bstar_t bstars[], const struct camera_t *camera, struct speed_t speed, double distance);
-void draw_speed_lines(float velocity, const struct camera_t *camera, struct speed_t speed);
-void draw_speed_arc(struct ship_t *ship, const struct camera_t *camera, long double scale);
-void update_star_system(GameState *game_state, InputState input_state, NavigationState *nav_state, struct planet_t *planet, struct ship_t *ship, const struct camera_t *camera);
-void update_velocity(struct vector_t *velocity, struct ship_t *ship);
-void update_ship(GameState *game_state, InputState input_state, NavigationState nav_state, struct ship_t *ship, const struct camera_t *camera);
-struct galaxy_t *find_nearest_galaxy(NavigationState nav_state, struct point_t position, int exclude);
-void project_galaxy(int state, NavigationState nav_state, struct galaxy_t *galaxy, const struct camera_t *camera, long double scale);
-void create_galaxy_cloud(struct galaxy_t *galaxy, unsigned short high_definition);
-void draw_screen_frame(struct camera_t *camera);
-void draw_section_lines(struct camera_t *camera, int section_size, SDL_Color color, long double scale);
-void project_ship(int state, InputState input_state, NavigationState nav_state, struct ship_t *ship, const struct camera_t *camera, long double scale);
-void SDL_DrawCircleApprox(SDL_Renderer *renderer, const struct camera_t *camera, int x, int y, int r, SDL_Color color);
-void generate_stars_preview(NavigationState *nav_state, const struct camera_t *camera, struct point_t *cross_point, int zoom_preview, long double scale);
-void update_galaxy(NavigationState *nav_state, struct galaxy_t *galaxy, const struct camera_t *camera, int state, long double scale);
-int in_camera(const struct camera_t *camera, double x, double y, float radius, long double scale);
+void update_gstars(Galaxy *, Point, const Camera *, double distance, double limit);
+void update_bstars(int state, int camera_on, const NavigationState *, Bstar bstars[], const Camera *, Speed speed, double distance);
+void draw_speed_lines(float velocity, const Camera *, Speed);
+void draw_speed_arc(const Ship *, const Camera *, long double scale);
+void update_star_system(GameState *, const InputState *, NavigationState *, CelestialBody *, Ship *, const Camera *);
+void update_velocity(Vector *velocity, const Ship *);
+Galaxy *find_nearest_galaxy(const NavigationState *, Point, int exclude);
+void project_galaxy(int state, const NavigationState *, Galaxy *, const Camera *, long double scale);
+void create_galaxy_cloud(Galaxy *, unsigned short high_definition);
+void draw_screen_frame(Camera *);
+void draw_section_lines(Camera *, int section_size, SDL_Color color, long double scale);
+void project_ship(int state, const InputState *, const NavigationState *, Ship *, const Camera *, long double scale);
+void SDL_DrawCircleApprox(SDL_Renderer *renderer, const Camera *, int x, int y, int r, SDL_Color color);
+void generate_stars_preview(NavigationState *, const Camera *, Point *, int zoom_preview, long double scale);
+void update_galaxy(NavigationState *, Galaxy *, const Camera *, int state, long double scale);
+int in_camera(const Camera *, double x, double y, float radius, long double scale);
 
 void change_state(GameState *game_state, GameEvents *game_events, int new_state)
 {
@@ -65,7 +64,7 @@ void change_state(GameState *game_state, GameEvents *game_events, int new_state)
     update_menu(game_state, game_events->game_started);
 }
 
-void reset_game(GameState *game_state, InputState *input_state, GameEvents *game_events, NavigationState *nav_state, struct ship_t *ship)
+void reset_game(GameState *game_state, InputState *input_state, GameEvents *game_events, NavigationState *nav_state, Ship *ship)
 {
     // Game state
     game_state->landing_stage = STAGE_OFF;
@@ -147,27 +146,27 @@ void reset_game(GameState *game_state, InputState *input_state, GameEvents *game
     }
 
     // Generate galaxies
-    struct point_t initial_position = {
+    Point initial_position = {
         .x = nav_state->galaxy_offset.current_x,
         .y = nav_state->galaxy_offset.current_y};
     generate_galaxies(game_events, nav_state, initial_position);
 
     // Get a copy of current galaxy from the hash table
-    struct point_t galaxy_position = {
+    Point galaxy_position = {
         .x = nav_state->galaxy_offset.current_x,
         .y = nav_state->galaxy_offset.current_y};
-    struct galaxy_t *current_galaxy_copy = get_galaxy(nav_state->galaxies, galaxy_position);
+    Galaxy *current_galaxy_copy = get_galaxy(nav_state->galaxies, galaxy_position);
 
     // Copy current_galaxy_copy to current_galaxy
-    memcpy(nav_state->current_galaxy, current_galaxy_copy, sizeof(struct galaxy_t));
+    memcpy(nav_state->current_galaxy, current_galaxy_copy, sizeof(Galaxy));
 
     // Copy current_galaxy to buffer_galaxy
-    memcpy(nav_state->buffer_galaxy, nav_state->current_galaxy, sizeof(struct galaxy_t));
+    memcpy(nav_state->buffer_galaxy, nav_state->current_galaxy, sizeof(Galaxy));
 
     game_state->state = NAVIGATE;
 }
 
-void onNavigate(GameState *game_state, InputState *input_state, GameEvents *game_events, NavigationState *nav_state, struct bstar_t bstars[], struct ship_t *ship, struct camera_t *camera)
+void onNavigate(GameState *game_state, InputState *input_state, GameEvents *game_events, NavigationState *nav_state, Bstar bstars[], Ship *ship, Camera *camera)
 {
     if (game_events->map_exit || game_events->universe_exit)
     {
@@ -176,7 +175,7 @@ void onNavigate(GameState *game_state, InputState *input_state, GameEvents *game
             nav_state->current_galaxy->position.y != nav_state->buffer_galaxy->position.y)
         {
             cleanup_stars(nav_state->stars);
-            memcpy(nav_state->current_galaxy, nav_state->buffer_galaxy, sizeof(struct galaxy_t));
+            memcpy(nav_state->current_galaxy, nav_state->buffer_galaxy, sizeof(Galaxy));
 
             // Reset galaxy_offset
             nav_state->galaxy_offset.current_x = nav_state->galaxy_offset.buffer_x;
@@ -271,12 +270,12 @@ void onNavigate(GameState *game_state, InputState *input_state, GameEvents *game
 
     if (BSTARS_ON || GSTARS_ON || SPEED_LINES_ON)
     {
-        struct speed_t speed = {.vx = ship->vx, .vy = ship->vy};
+        Speed speed = {.vx = ship->vx, .vy = ship->vy};
 
         // Draw galaxy cloud
         if (GSTARS_ON)
         {
-            struct point_t ship_position_current = {.x = ship->position.x, .y = ship->position.y};
+            Point ship_position_current = {.x = ship->position.x, .y = ship->position.y};
             static double limit_current;
 
             if (limit_current == 0.0)
@@ -293,12 +292,12 @@ void onNavigate(GameState *game_state, InputState *input_state, GameEvents *game
             if (game_events->exited_galaxy && nav_state->previous_galaxy != NULL && nav_state->previous_galaxy->initialized_hd)
             {
                 // Convert ship position to universe coordinates
-                struct point_t universe_position;
+                Point universe_position;
                 universe_position.x = nav_state->current_galaxy->position.x + ship->position.x / GALAXY_SCALE;
                 universe_position.y = nav_state->current_galaxy->position.y + ship->position.y / GALAXY_SCALE;
 
                 // Convert universe coordinates to ship position relative to previous galaxy
-                struct point_t ship_position_previous = {
+                Point ship_position_previous = {
                     .x = (universe_position.x - nav_state->previous_galaxy->position.x) * GALAXY_SCALE,
                     .y = (universe_position.y - nav_state->previous_galaxy->position.y) * GALAXY_SCALE};
 
@@ -312,7 +311,7 @@ void onNavigate(GameState *game_state, InputState *input_state, GameEvents *game
 
         // Draw background stars
         if (BSTARS_ON)
-            update_bstars(game_state->state, input_state->camera_on, *nav_state, bstars, camera, speed, distance_current);
+            update_bstars(game_state->state, input_state->camera_on, nav_state, bstars, camera, speed, distance_current);
 
         // Draw speed lines
         if (SPEED_LINES_ON && input_state->camera_on)
@@ -331,11 +330,11 @@ void onNavigate(GameState *game_state, InputState *input_state, GameEvents *game
             if (nav_state->stars[i] != NULL)
             {
                 // Each index can have many entries, loop through all of them
-                struct star_entry *entry = nav_state->stars[i];
+                StarEntry *entry = nav_state->stars[i];
 
                 while (entry != NULL)
                 {
-                    update_star_system(game_state, *input_state, nav_state, entry->star, ship, camera);
+                    update_star_system(game_state, input_state, nav_state, entry->star, ship, camera);
                     entry = entry->next;
                 }
             }
@@ -364,7 +363,7 @@ void onNavigate(GameState *game_state, InputState *input_state, GameEvents *game
     update_velocity(&nav_state->velocity, ship);
 
     // Update ship
-    update_ship(game_state, *input_state, *nav_state, ship, camera);
+    update_ship(game_state, input_state, nav_state, ship, camera);
 
     // Update coordinates
     nav_state->navigate_offset.x = ship->position.x;
@@ -374,29 +373,29 @@ void onNavigate(GameState *game_state, InputState *input_state, GameEvents *game
     if (game_events->exited_galaxy && PROJECTIONS_ON)
     {
         // Convert offset to universe coordinates
-        struct point_t universe_position;
+        Point universe_position;
         universe_position.x = nav_state->current_galaxy->position.x + ship->position.x / GALAXY_SCALE;
         universe_position.y = nav_state->current_galaxy->position.y + ship->position.y / GALAXY_SCALE;
 
         // Calculate camera position in universe scale
-        struct camera_t universe_camera = {
+        Camera universe_camera = {
             .x = nav_state->current_galaxy->position.x * GALAXY_SCALE + camera->x,
             .y = nav_state->current_galaxy->position.y * GALAXY_SCALE + camera->y,
             .w = camera->w,
             .h = camera->h};
 
-        struct galaxy_t *nearest_galaxy = find_nearest_galaxy(*nav_state, universe_position, true);
+        Galaxy *nearest_galaxy = find_nearest_galaxy(nav_state, universe_position, true);
 
         if (nearest_galaxy != NULL &&
             (nearest_galaxy->position.x != nav_state->current_galaxy->position.x ||
              nearest_galaxy->position.y != nav_state->current_galaxy->position.y))
         {
             // Project nearest galaxy
-            project_galaxy(MAP, *nav_state, nearest_galaxy, &universe_camera, game_state->game_scale);
+            project_galaxy(MAP, nav_state, nearest_galaxy, &universe_camera, game_state->game_scale);
         }
 
         // Project current galaxy
-        project_galaxy(MAP, *nav_state, nav_state->current_galaxy, &universe_camera, game_state->game_scale);
+        project_galaxy(MAP, nav_state, nav_state->current_galaxy, &universe_camera, game_state->game_scale);
     }
 
     // Create galaxy cloud
@@ -413,7 +412,7 @@ void onNavigate(GameState *game_state, InputState *input_state, GameEvents *game
         game_events->universe_exit = OFF;
 }
 
-void onMap(GameState *game_state, InputState *input_state, GameEvents *game_events, NavigationState *nav_state, struct bstar_t bstars[], struct ship_t *ship, struct camera_t *camera)
+void onMap(GameState *game_state, InputState *input_state, GameEvents *game_events, NavigationState *nav_state, Bstar bstars[], Ship *ship, Camera *camera)
 {
     // Add small tolerance to account for floating-point precision errors
     const double epsilon = ZOOM_EPSILON;
@@ -472,7 +471,7 @@ void onMap(GameState *game_state, InputState *input_state, GameEvents *game_even
             nav_state->current_galaxy->position.y != nav_state->buffer_galaxy->position.y)
         {
             cleanup_stars(nav_state->stars);
-            memcpy(nav_state->current_galaxy, nav_state->buffer_galaxy, sizeof(struct galaxy_t));
+            memcpy(nav_state->current_galaxy, nav_state->buffer_galaxy, sizeof(Galaxy));
 
             // Reset galaxy_offset
             nav_state->galaxy_offset.current_x = nav_state->galaxy_offset.buffer_x;
@@ -598,29 +597,29 @@ void onMap(GameState *game_state, InputState *input_state, GameEvents *game_even
     if (game_events->exited_galaxy && PROJECTIONS_ON)
     {
         // Convert offset to universe coordinates
-        struct point_t universe_position;
+        Point universe_position;
         universe_position.x = nav_state->current_galaxy->position.x + nav_state->map_offset.x / GALAXY_SCALE;
         universe_position.y = nav_state->current_galaxy->position.y + nav_state->map_offset.y / GALAXY_SCALE;
 
         // Calculate camera position in universe scale
-        struct camera_t universe_camera = {
+        Camera universe_camera = {
             .x = nav_state->current_galaxy->position.x * GALAXY_SCALE + camera->x,
             .y = nav_state->current_galaxy->position.y * GALAXY_SCALE + camera->y,
             .w = camera->w,
             .h = camera->h};
 
-        struct galaxy_t *nearest_galaxy = find_nearest_galaxy(*nav_state, universe_position, true);
+        Galaxy *nearest_galaxy = find_nearest_galaxy(nav_state, universe_position, true);
 
         if (nearest_galaxy != NULL &&
             (nearest_galaxy->position.x != nav_state->current_galaxy->position.x ||
              nearest_galaxy->position.y != nav_state->current_galaxy->position.y))
         {
             // Project nearest galaxy
-            project_galaxy(MAP, *nav_state, nearest_galaxy, &universe_camera, game_state->game_scale);
+            project_galaxy(MAP, nav_state, nearest_galaxy, &universe_camera, game_state->game_scale);
         }
 
         // Project current galaxy
-        project_galaxy(MAP, *nav_state, nav_state->current_galaxy, &universe_camera, game_state->game_scale);
+        project_galaxy(MAP, nav_state, nav_state->current_galaxy, &universe_camera, game_state->game_scale);
     }
 
     // Create galaxy cloud
@@ -652,11 +651,11 @@ void onMap(GameState *game_state, InputState *input_state, GameEvents *game_even
             if (nav_state->stars[i] != NULL)
             {
                 // Each index can have many entries, loop through all of them
-                struct star_entry *entry = nav_state->stars[i];
+                StarEntry *entry = nav_state->stars[i];
 
                 while (entry != NULL)
                 {
-                    update_star_system(game_state, *input_state, nav_state, entry->star, ship, camera);
+                    update_star_system(game_state, input_state, nav_state, entry->star, ship, camera);
                     entry = entry->next;
                 }
             }
@@ -673,7 +672,7 @@ void onMap(GameState *game_state, InputState *input_state, GameEvents *game_even
                                      ship->projection->rect.y + ship->projection->radius < 0 ||
                                      ship->projection->rect.y + ship->projection->radius > camera->h))
     {
-        project_ship(game_state->state, *input_state, *nav_state, ship, camera, game_state->game_scale);
+        project_ship(game_state->state, input_state, nav_state, ship, camera, game_state->game_scale);
     }
     else
         SDL_RenderCopyEx(renderer, ship->projection->texture, &ship->projection->main_img_rect, &ship->projection->rect, ship->projection->angle, &ship->projection->rotation_pt, SDL_FLIP_NONE);
@@ -699,11 +698,11 @@ void onMap(GameState *game_state, InputState *input_state, GameEvents *game_even
         game_events->map_enter = OFF;
 }
 
-void onUniverse(GameState *game_state, InputState *input_state, GameEvents *game_events, NavigationState *nav_state, struct ship_t *ship, struct camera_t *camera)
+void onUniverse(GameState *game_state, InputState *input_state, GameEvents *game_events, NavigationState *nav_state, Ship *ship, Camera *camera)
 {
     static int stars_preview_start = ON;
     static int zoom_preview = OFF;
-    static struct point_t cross_point = {0.0, 0.0};
+    static Point cross_point = {0.0, 0.0};
 
     if (game_events->map_exit)
     {
@@ -745,7 +744,7 @@ void onUniverse(GameState *game_state, InputState *input_state, GameEvents *game
             cross_point.y = find_nearest_section_axis(nav_state->map_offset.y + GALAXY_SECTION_SIZE, GALAXY_SECTION_SIZE);
 
         // Generate galaxies
-        struct point_t offset = {.x = nav_state->galaxy_offset.current_x, .y = nav_state->galaxy_offset.current_y};
+        Point offset = {.x = nav_state->galaxy_offset.current_x, .y = nav_state->galaxy_offset.current_y};
         generate_galaxies(game_events, nav_state, offset);
 
         if (game_events->universe_enter && !game_state->save_scale)
@@ -834,7 +833,7 @@ void onUniverse(GameState *game_state, InputState *input_state, GameEvents *game
             if (nav_state->stars[i] != NULL)
             {
                 // Each index can have many entries, loop through all of them
-                struct star_entry *entry = nav_state->stars[i];
+                StarEntry *entry = nav_state->stars[i];
 
                 while (entry != NULL)
                 {
@@ -858,7 +857,7 @@ void onUniverse(GameState *game_state, InputState *input_state, GameEvents *game
             if (nav_state->galaxies[i] != NULL)
             {
                 // Each index can have many entries, loop through all of them
-                struct galaxy_entry *entry = nav_state->galaxies[i];
+                GalaxyEntry *entry = nav_state->galaxies[i];
 
                 while (entry != NULL)
                 {
@@ -981,7 +980,7 @@ void onUniverse(GameState *game_state, InputState *input_state, GameEvents *game
                                           ship->projection->rect.y + ship->projection->radius < 0 ||
                                           ship->projection->rect.y + ship->projection->radius > camera->h))
     {
-        project_ship(game_state->state, *input_state, *nav_state, ship, camera, game_state->game_scale);
+        project_ship(game_state->state, input_state, nav_state, ship, camera, game_state->game_scale);
     }
     else
         SDL_RenderCopyEx(renderer, ship->projection->texture, &ship->projection->main_img_rect, &ship->projection->rect, ship->projection->angle, &ship->projection->rotation_pt, SDL_FLIP_NONE);
@@ -1007,9 +1006,9 @@ void onUniverse(GameState *game_state, InputState *input_state, GameEvents *game
 /*
  * Create a ship.
  */
-struct ship_t create_ship(int radius, struct point_t position, long double scale)
+Ship create_ship(int radius, Point position, long double scale)
 {
-    struct ship_t ship;
+    Ship ship;
 
     ship.image = "../assets/sprites/ship.png";
     ship.radius = radius;
@@ -1050,22 +1049,22 @@ struct ship_t create_ship(int radius, struct point_t position, long double scale
 /*
  * Update ship position, listen for key controls and draw ship.
  */
-void update_ship(GameState *game_state, InputState input_state, NavigationState nav_state, struct ship_t *ship, const struct camera_t *camera)
+void update_ship(GameState *game_state, const InputState *input_state, const NavigationState *nav_state, Ship *ship, const Camera *camera)
 {
     float radians;
 
     // Update ship angle
-    if (input_state.right && !input_state.left && game_state->landing_stage == STAGE_OFF)
+    if (input_state->right && !input_state->left && game_state->landing_stage == STAGE_OFF)
         ship->angle += 3;
 
-    if (input_state.left && !input_state.right && game_state->landing_stage == STAGE_OFF)
+    if (input_state->left && !input_state->right && game_state->landing_stage == STAGE_OFF)
         ship->angle -= 3;
 
     if (ship->angle > 360)
         ship->angle -= 360;
 
     // Apply thrust
-    if (input_state.thrust)
+    if (input_state->thrust)
     {
         game_state->landing_stage = STAGE_OFF;
         radians = ship->angle * M_PI / 180;
@@ -1075,7 +1074,7 @@ void update_ship(GameState *game_state, InputState input_state, NavigationState 
     }
 
     // Apply reverse
-    if (input_state.reverse)
+    if (input_state->reverse)
     {
         radians = ship->angle * M_PI / 180;
 
@@ -1084,7 +1083,7 @@ void update_ship(GameState *game_state, InputState input_state, NavigationState 
     }
 
     // Stop ship
-    if (input_state.stop)
+    if (input_state->stop)
     {
         ship->vx = 0;
         ship->vy = 0;
@@ -1094,7 +1093,7 @@ void update_ship(GameState *game_state, InputState input_state, NavigationState 
     ship->position.x += (float)ship->vx / FPS;
     ship->position.y += (float)ship->vy / FPS;
 
-    if (input_state.camera_on)
+    if (input_state->camera_on)
     {
         // Static rect position at center of screen fixes flickering caused by float-to-int inaccuracies
         ship->rect.x = (camera->w / 2) - ship->radius;
@@ -1117,10 +1116,10 @@ void update_ship(GameState *game_state, InputState input_state, NavigationState 
         project_ship(NAVIGATE, input_state, nav_state, ship, camera, game_state->game_scale);
 
     // Draw ship thrust
-    if (input_state.thrust)
+    if (input_state->thrust)
         SDL_RenderCopyEx(renderer, ship->texture, &ship->thrust_img_rect, &ship->rect, ship->angle, &ship->rotation_pt, SDL_FLIP_NONE);
 
     // Draw reverse thrust
-    if (input_state.reverse)
+    if (input_state->reverse)
         SDL_RenderCopyEx(renderer, ship->texture, &ship->reverse_img_rect, &ship->rect, ship->angle, &ship->rotation_pt, SDL_FLIP_NONE);
 }

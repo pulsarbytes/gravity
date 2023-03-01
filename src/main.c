@@ -39,24 +39,24 @@ SDL_Color colors[COLOR_COUNT];
 // External function prototypes
 int init_sdl(SDL_Window *);
 void create_colors(void);
-void create_menu(struct menu_button menu[]);
-void create_logo(struct menu_button *logo);
-struct ship_t create_ship(int radius, struct point_t position, long double scale);
-void generate_galaxies(GameEvents *game_events, NavigationState *nav_state, struct point_t offset);
-struct galaxy_t *get_galaxy(struct galaxy_entry *galaxies[], struct point_t);
-void create_bstars(NavigationState *nav_state, struct bstar_t bstars[], const struct camera_t *camera);
-void generate_stars(GameState *game_state, GameEvents *game_events, NavigationState *nav_state, struct bstar_t bstars[], struct ship_t *ship, const struct camera_t *camera);
-void create_menu_galaxy_cloud(struct galaxy_t *, struct gstar_t menustars[]);
+void create_menu(MenuButton menu[]);
+void create_logo(MenuButton *logo);
+Ship create_ship(int radius, Point, long double scale);
+void generate_galaxies(GameEvents *, NavigationState *, Point);
+Galaxy *get_galaxy(GalaxyEntry *galaxies[], Point);
+void create_bstars(NavigationState *, Bstar bstars[], const Camera *);
+void generate_stars(GameState *, GameEvents *, NavigationState *, Bstar bstars[], Ship *, const Camera *);
+void create_menu_galaxy_cloud(Galaxy *, Gstar menustars[]);
 void poll_events(GameState *, InputState *, GameEvents *);
-void onMenu(GameState *game_state, InputState *input_state, int game_started, NavigationState nav_state, struct bstar_t bstars[], struct gstar_t menustars[], struct camera_t *camera);
-void onNavigate(GameState *game_state, InputState *input_state, GameEvents *game_events, NavigationState *nav_state, struct bstar_t bstars[], struct ship_t *ship, struct camera_t *camera);
-void log_game_console(struct game_console_entry entries[], int index, double value);
-void onMap(GameState *game_state, InputState *input_state, GameEvents *game_events, NavigationState *nav_state, struct bstar_t bstars[], struct ship_t *ship, struct camera_t *camera);
-void onUniverse(GameState *game_state, InputState *input_state, GameEvents *game_events, NavigationState *nav_state, struct ship_t *ship, struct camera_t *camera);
-void reset_game(GameState *game_state, InputState *input_state, GameEvents *game_events, NavigationState *nav_state, struct ship_t *ship);
-void update_game_console(GameState *, NavigationState);
-void log_fps(struct game_console_entry entries[], unsigned int time_diff);
-void cleanup_resources(GameState *, NavigationState *, struct ship_t *);
+void onMenu(GameState *, InputState *, int game_started, const NavigationState *, Bstar bstars[], Gstar menustars[], Camera *);
+void onNavigate(GameState *, InputState *, GameEvents *, NavigationState *, Bstar bstars[], Ship *, Camera *);
+void log_game_console(ConsoleEntry entries[], int index, double value);
+void onMap(GameState *, InputState *, GameEvents *, NavigationState *, Bstar bstars[], Ship *, Camera *);
+void onUniverse(GameState *, InputState *, GameEvents *, NavigationState *, Ship *, Camera *);
+void reset_game(GameState *, InputState *, GameEvents *, NavigationState *, Ship *);
+void update_game_console(GameState *, const NavigationState *);
+void log_fps(ConsoleEntry entries[], unsigned int time_diff);
+void cleanup_resources(GameState *, NavigationState *, Ship *);
 void close_sdl(SDL_Window *);
 
 int main(int argc, char *argv[])
@@ -143,9 +143,9 @@ int main(int argc, char *argv[])
     }
 
     // Allocate memory for galaxies
-    nav_state.current_galaxy = (struct galaxy_t *)malloc(sizeof(struct galaxy_t));
-    nav_state.buffer_galaxy = (struct galaxy_t *)malloc(sizeof(struct galaxy_t));
-    nav_state.previous_galaxy = (struct galaxy_t *)malloc(sizeof(struct galaxy_t));
+    nav_state.current_galaxy = (Galaxy *)malloc(sizeof(Galaxy));
+    nav_state.buffer_galaxy = (Galaxy *)malloc(sizeof(Galaxy));
+    nav_state.previous_galaxy = (Galaxy *)malloc(sizeof(Galaxy));
 
     // Galaxy coordinates
     // Retrieved from saved game or use default values if this is a new game
@@ -171,9 +171,9 @@ int main(int argc, char *argv[])
     nav_state.universe_offset.y = nav_state.galaxy_offset.current_y;
 
     // Create ship and ship projection
-    struct ship_t ship = create_ship(SHIP_RADIUS, nav_state.navigate_offset, game_state.game_scale);
-    struct point_t zero_position = {.x = 0, .y = 0};
-    struct ship_t ship_projection = create_ship(SHIP_PROJECTION_RADIUS, zero_position, game_state.game_scale);
+    Ship ship = create_ship(SHIP_RADIUS, nav_state.navigate_offset, game_state.game_scale);
+    Point zero_position = {.x = 0, .y = 0};
+    Ship ship_projection = create_ship(SHIP_PROJECTION_RADIUS, zero_position, game_state.game_scale);
     ship.projection = &ship_projection;
 
     // Initialize galaxy sections crossings
@@ -181,25 +181,25 @@ int main(int argc, char *argv[])
     nav_state.cross_axis.y = ship.position.y;
 
     // Generate galaxies
-    struct point_t initial_position = {
+    Point initial_position = {
         .x = nav_state.galaxy_offset.current_x,
         .y = nav_state.galaxy_offset.current_y};
     generate_galaxies(&game_events, &nav_state, initial_position);
 
     // Get a copy of current galaxy from the hash table
-    struct point_t galaxy_position = {
+    Point galaxy_position = {
         .x = nav_state.galaxy_offset.current_x,
         .y = nav_state.galaxy_offset.current_y};
-    struct galaxy_t *current_galaxy_copy = get_galaxy(nav_state.galaxies, galaxy_position);
+    Galaxy *current_galaxy_copy = get_galaxy(nav_state.galaxies, galaxy_position);
 
     // Copy current_galaxy_copy to current_galaxy
-    memcpy(nav_state.current_galaxy, current_galaxy_copy, sizeof(struct galaxy_t));
+    memcpy(nav_state.current_galaxy, current_galaxy_copy, sizeof(Galaxy));
 
     // Copy current_galaxy to buffer_galaxy
-    memcpy(nav_state.buffer_galaxy, nav_state.current_galaxy, sizeof(struct galaxy_t));
+    memcpy(nav_state.buffer_galaxy, nav_state.current_galaxy, sizeof(Galaxy));
 
     // Create camera, sync initial position with ship
-    struct camera_t camera = {
+    Camera camera = {
         .x = ship.position.x - (display_mode.w / 2),
         .y = ship.position.y - (display_mode.h / 2),
         .w = display_mode.w,
@@ -207,7 +207,7 @@ int main(int argc, char *argv[])
 
     // Create background stars
     int max_bstars = (int)(camera.w * camera.h * BSTARS_PER_SQUARE / BSTARS_SQUARE);
-    struct bstar_t bstars[max_bstars];
+    Bstar bstars[max_bstars];
 
     for (int i = 0; i < max_bstars; i++)
     {
@@ -220,9 +220,9 @@ int main(int argc, char *argv[])
     generate_stars(&game_state, &game_events, &nav_state, bstars, &ship, &camera);
 
     // Create galaxy for menu
-    struct point_t menu_galaxy_position = {.x = -140000, .y = -70000};
-    struct galaxy_t *menu_galaxy = get_galaxy(nav_state.galaxies, menu_galaxy_position);
-    struct gstar_t menustars[MAX_GSTARS];
+    Point menu_galaxy_position = {.x = -140000, .y = -70000};
+    Galaxy *menu_galaxy = get_galaxy(nav_state.galaxies, menu_galaxy_position);
+    Gstar menustars[MAX_GSTARS];
     create_menu_galaxy_cloud(menu_galaxy, menustars);
 
     // Set time keeping variables
@@ -245,7 +245,7 @@ int main(int argc, char *argv[])
         switch (game_state.state)
         {
         case MENU:
-            onMenu(&game_state, &input_state, game_events.game_started, nav_state, bstars, menustars, &camera);
+            onMenu(&game_state, &input_state, game_events.game_started, &nav_state, bstars, menustars, &camera);
             break;
         case NAVIGATE:
             onNavigate(&game_state, &input_state, &game_events, &nav_state, bstars, &ship, &camera);
@@ -269,14 +269,14 @@ int main(int argc, char *argv[])
             create_bstars(&nav_state, bstars, &camera);
             break;
         default:
-            onMenu(&game_state, &input_state, game_events.game_started, nav_state, bstars, menustars, &camera);
+            onMenu(&game_state, &input_state, game_events.game_started, &nav_state, bstars, menustars, &camera);
             break;
         }
 
         // Update game console
         if (input_state.console && CONSOLE_ON && (game_state.state == NAVIGATE || game_state.state == MAP || game_state.state == UNIVERSE))
         {
-            update_game_console(&game_state, nav_state);
+            update_game_console(&game_state, &nav_state);
         }
 
         // Switch buffers, display back buffer

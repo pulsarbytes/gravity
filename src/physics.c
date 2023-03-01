@@ -11,14 +11,14 @@
 #include "../include/structs.h"
 
 // Function prototypes
-void update_velocity(struct vector_t *velocity, struct ship_t *ship);
+void update_velocity(Vector *velocity, const Ship *);
 void calc_orbital_velocity(float distance, float angle, float radius, float *vx, float *vy);
-void apply_gravity_to_ship(GameState *game_state, int thrust, NavigationState *nav_state, struct planet_t *planet, struct ship_t *ship, const struct camera_t *camera);
+void apply_gravity_to_ship(GameState *, int thrust, NavigationState *, CelestialBody *, Ship *, const Camera *);
 
 /*
  * Update velocity vector.
  */
-void update_velocity(struct vector_t *velocity, struct ship_t *ship)
+void update_velocity(Vector *velocity, const Ship *ship)
 {
     velocity->x = ship->position.x;
     velocity->y = ship->position.y;
@@ -49,22 +49,22 @@ void calc_orbital_velocity(float distance, float angle, float radius, float *vx,
 }
 
 /*
- * Apply planet gravity to ship.
+ * Apply body gravity to ship.
  */
-void apply_gravity_to_ship(GameState *game_state, int thrust, NavigationState *nav_state, struct planet_t *planet, struct ship_t *ship, const struct camera_t *camera)
+void apply_gravity_to_ship(GameState *game_state, int thrust, NavigationState *nav_state, CelestialBody *body, Ship *ship, const Camera *camera)
 {
-    double delta_x = planet->position.x - ship->position.x;
-    double delta_y = planet->position.y - ship->position.y;
+    double delta_x = body->position.x - ship->position.x;
+    double delta_y = body->position.y - ship->position.y;
     double distance = sqrt(delta_x * delta_x + delta_y * delta_y);
-    float g_planet = 0;
-    int is_star = planet->level == LEVEL_STAR;
-    int collision_point = planet->radius;
+    float g_body = 0;
+    int is_star = body->level == LEVEL_STAR;
+    int collision_point = body->radius;
 
-    // Detect planet collision
+    // Detect body collision
     if (COLLISIONS_ON && distance <= collision_point + ship->radius)
     {
-        game_state->landing_stage = STAGE_0; // This changes on next iteration (next planet). To-do: Must also link it to specific planet.
-        g_planet = 0;
+        game_state->landing_stage = STAGE_0; // This changes on next iteration (next body). To-do: Must also link it to specific body.
+        g_body = 0;
 
         if (is_star)
         {
@@ -73,67 +73,67 @@ void apply_gravity_to_ship(GameState *game_state, int thrust, NavigationState *n
         }
         else
         {
-            ship->vx = planet->vx;
-            ship->vy = planet->vy;
-            ship->vx += planet->parent->vx;
-            ship->vy += planet->parent->vy;
+            ship->vx = body->vx;
+            ship->vy = body->vy;
+            ship->vx += body->parent->vx;
+            ship->vy += body->parent->vy;
         }
 
         // Find landing angle
-        if (ship->position.y == planet->position.y)
+        if (ship->position.y == body->position.y)
         {
-            if (ship->position.x > planet->position.x)
+            if (ship->position.x > body->position.x)
             {
                 ship->angle = 90;
-                ship->position.x = planet->position.x + collision_point + ship->radius; // Fix ship position on collision surface
+                ship->position.x = body->position.x + collision_point + ship->radius; // Fix ship position on collision surface
             }
             else
             {
                 ship->angle = 270;
-                ship->position.x = planet->position.x - collision_point - ship->radius; // Fix ship position on collision surface
+                ship->position.x = body->position.x - collision_point - ship->radius; // Fix ship position on collision surface
             }
         }
-        else if (ship->position.x == planet->position.x)
+        else if (ship->position.x == body->position.x)
         {
-            if (ship->position.y > planet->position.y)
+            if (ship->position.y > body->position.y)
             {
                 ship->angle = 180;
-                ship->position.y = planet->position.y + collision_point + ship->radius; // Fix ship position on collision surface
+                ship->position.y = body->position.y + collision_point + ship->radius; // Fix ship position on collision surface
             }
             else
             {
                 ship->angle = 0;
-                ship->position.y = planet->position.y - collision_point - ship->radius; // Fix ship position on collision surface
+                ship->position.y = body->position.y - collision_point - ship->radius; // Fix ship position on collision surface
             }
         }
         else
         {
             // 2nd quadrant
-            if (ship->position.y > planet->position.y && ship->position.x > planet->position.x)
+            if (ship->position.y > body->position.y && ship->position.x > body->position.x)
             {
-                ship->angle = (asin(abs((int)(planet->position.x - ship->position.x)) / distance) * 180 / M_PI);
+                ship->angle = (asin(abs((int)(body->position.x - ship->position.x)) / distance) * 180 / M_PI);
                 ship->angle = 180 - ship->angle;
             }
             // 3rd quadrant
-            else if (ship->position.y > planet->position.y && ship->position.x < planet->position.x)
+            else if (ship->position.y > body->position.y && ship->position.x < body->position.x)
             {
-                ship->angle = (asin(abs((int)(planet->position.x - ship->position.x)) / distance) * 180 / M_PI);
+                ship->angle = (asin(abs((int)(body->position.x - ship->position.x)) / distance) * 180 / M_PI);
                 ship->angle = 180 + ship->angle;
             }
             // 4th quadrant
-            else if (ship->position.y < planet->position.y && ship->position.x < planet->position.x)
+            else if (ship->position.y < body->position.y && ship->position.x < body->position.x)
             {
-                ship->angle = (asin(abs((int)(planet->position.x - ship->position.x)) / distance) * 180 / M_PI);
+                ship->angle = (asin(abs((int)(body->position.x - ship->position.x)) / distance) * 180 / M_PI);
                 ship->angle = 360 - ship->angle;
             }
             // 1st quadrant
             else
             {
-                ship->angle = asin(abs((int)(planet->position.x - ship->position.x)) / distance) * 180 / M_PI;
+                ship->angle = asin(abs((int)(body->position.x - ship->position.x)) / distance) * 180 / M_PI;
             }
 
-            ship->position.x = ((ship->position.x - planet->position.x) * (collision_point + ship->radius) / distance) + planet->position.x; // Fix ship position on collision surface
-            ship->position.y = ((ship->position.y - planet->position.y) * (collision_point + ship->radius) / distance) + planet->position.y; // Fix ship position on collision surface
+            ship->position.x = ((ship->position.x - body->position.x) * (collision_point + ship->radius) / distance) + body->position.x; // Fix ship position on collision surface
+            ship->position.y = ((ship->position.y - body->position.y) * (collision_point + ship->radius) / distance) + body->position.y; // Fix ship position on collision surface
         }
 
         // Apply thrust
@@ -144,22 +144,22 @@ void apply_gravity_to_ship(GameState *game_state, int thrust, NavigationState *n
         }
     }
     // Ship inside cutoff
-    else if (distance < planet->cutoff)
+    else if (distance < body->cutoff)
     {
         game_state->landing_stage = STAGE_OFF;
-        g_planet = G_CONSTANT * planet->radius * planet->radius / (distance * distance);
+        g_body = G_CONSTANT * body->radius * body->radius / (distance * distance);
 
-        ship->vx += g_planet * delta_x / distance;
-        ship->vy += g_planet * delta_y / distance;
+        ship->vx += g_body * delta_x / distance;
+        ship->vy += g_body * delta_y / distance;
     }
 
     // Update velocity
     update_velocity(&nav_state->velocity, ship);
 
     // Enforce speed limit if within star cutoff
-    if (is_star && distance < planet->cutoff)
+    if (is_star && distance < body->cutoff)
     {
-        game_state->speed_limit = BASE_SPEED_LIMIT * planet->class;
+        game_state->speed_limit = BASE_SPEED_LIMIT * body->class;
 
         if (nav_state->velocity.magnitude > game_state->speed_limit)
         {

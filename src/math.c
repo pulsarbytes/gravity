@@ -13,18 +13,18 @@
 
 // Function prototypes
 uint64_t double_hash(double x);
-uint64_t pair_hash_order_sensitive(struct point_t position);
-uint64_t pair_hash_order_sensitive_2(struct point_t position);
-uint64_t unique_index(struct point_t position, int modulo, int entity_type);
-int point_in_rect(struct point_t p, struct point_t rect[]);
+uint64_t pair_hash_order_sensitive(Point);
+uint64_t pair_hash_order_sensitive_2(Point);
+uint64_t unique_index(Point, int modulo, int entity_type);
+int point_in_rect(Point, Point rect[]);
 double find_nearest_section_axis(double offset, int size);
 double find_distance(double x1, double y1, double x2, double y2);
-bool points_equal(struct point_t a, struct point_t b);
-bool line_intersects_viewport(const struct camera_t *camera, double x1, double y1, double x2, double y2);
-bool point_in_array(struct point_t p, struct point_t arr[], int len);
+bool points_equal(Point, Point);
+bool line_intersects_viewport(const Camera *, double x1, double y1, double x2, double y2);
+bool point_in_array(Point, Point arr[], int len);
 
 // External function prototypes
-int in_camera_relative(const struct camera_t *camera, int x, int y);
+int in_camera_relative(const Camera *, int x, int y);
 
 /**
  * Generates a hash value for a given double number `x`.
@@ -48,7 +48,7 @@ uint64_t double_hash(double x)
 /*
  * Hash function that maps two double numbers to a unique 64-bit integer.
  */
-uint64_t pair_hash_order_sensitive(struct point_t position)
+uint64_t pair_hash_order_sensitive(Point position)
 {
     uint64_t x_hash = double_hash(position.x);
     uint64_t y_hash = double_hash(position.y);
@@ -60,7 +60,7 @@ uint64_t pair_hash_order_sensitive(struct point_t position)
 /*
  * Hash function that maps two double numbers to a unique 64-bit integer.
  */
-uint64_t pair_hash_order_sensitive_2(struct point_t position)
+uint64_t pair_hash_order_sensitive_2(Point position)
 {
     uint64_t x_hash = double_hash(position.x);
     uint64_t y_hash = double_hash(position.y);
@@ -73,7 +73,7 @@ uint64_t pair_hash_order_sensitive_2(struct point_t position)
  * Hash function that maps a unique 64-bit integer to an int between 0 and modulo.
  * This int will be used as index in hash table.
  */
-uint64_t unique_index(struct point_t position, int modulo, int entity_type)
+uint64_t unique_index(Point position, int modulo, int entity_type)
 {
     uint64_t index;
 
@@ -88,7 +88,7 @@ uint64_t unique_index(struct point_t position, int modulo, int entity_type)
 /*
  * Check whether point p is in rectangular rect.
  */
-int point_in_rect(struct point_t p, struct point_t rect[])
+int point_in_rect(Point p, Point rect[])
 {
     int i, j;
     int sign = 0;
@@ -136,7 +136,7 @@ double find_distance(double x1, double y1, double x2, double y2)
 /*
  * Compares two points.
  */
-bool points_equal(struct point_t a, struct point_t b)
+bool points_equal(Point a, Point b)
 {
     return a.x == b.x && a.y == b.y;
 }
@@ -152,7 +152,7 @@ bool points_equal(struct point_t a, struct point_t b)
  *
  * @return: Returns true if the line segment intersects with the viewport, and false otherwise
  */
-bool line_intersects_viewport(const struct camera_t *camera, double x1, double y1, double x2, double y2)
+bool line_intersects_viewport(const Camera *camera, double x1, double y1, double x2, double y2)
 {
     double left = 0;
     double right = camera->w;
@@ -209,11 +209,11 @@ bool line_intersects_viewport(const struct camera_t *camera, double x1, double y
 /*
  * Checks whether a point exists in an array.
  */
-bool point_in_array(struct point_t p, struct point_t arr[], int len)
+bool point_in_array(Point point, Point arr[], int len)
 {
     for (int i = 0; i < len; ++i)
     {
-        if (points_equal(p, arr[i]))
+        if (points_equal(point, arr[i]))
             return true;
     }
 

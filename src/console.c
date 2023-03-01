@@ -18,14 +18,14 @@ extern SDL_Renderer *renderer;
 extern SDL_Color colors[];
 
 // Function prototypes
-void log_game_console(struct game_console_entry entries[], int index, double value);
-void log_fps(struct game_console_entry entries[], unsigned int time_diff);
-void update_game_console(GameState *game_state, NavigationState nav_state);
+void log_game_console(ConsoleEntry entries[], int index, double value);
+void log_fps(ConsoleEntry entries[], unsigned int time_diff);
+void update_game_console(GameState *, const NavigationState *);
 
 /*
  * Save data to game_console_entries array.
  */
-void log_game_console(struct game_console_entry entries[], int index, double value)
+void log_game_console(ConsoleEntry entries[], int index, double value)
 {
     char text[16];
     float rounded_value;
@@ -42,7 +42,7 @@ void log_game_console(struct game_console_entry entries[], int index, double val
 /*
  * Calculate and log FPS to game console.
  */
-void log_fps(struct game_console_entry entries[], unsigned int time_diff)
+void log_fps(ConsoleEntry entries[], unsigned int time_diff)
 {
     static unsigned total_time = 0, current_fps = 0;
 
@@ -61,24 +61,24 @@ void log_fps(struct game_console_entry entries[], unsigned int time_diff)
 /*
  * Update game console.
  */
-void update_game_console(GameState *game_state, NavigationState nav_state)
+void update_game_console(GameState *game_state, const NavigationState *nav_state)
 {
-    struct point_t position;
+    Point position;
 
     if (game_state->state == NAVIGATE)
     {
-        position.x = nav_state.navigate_offset.x;
-        position.y = nav_state.navigate_offset.y;
+        position.x = nav_state->navigate_offset.x;
+        position.y = nav_state->navigate_offset.y;
     }
     else if (game_state->state == MAP)
     {
-        position.x = nav_state.map_offset.x;
-        position.y = nav_state.map_offset.y;
+        position.x = nav_state->map_offset.x;
+        position.y = nav_state->map_offset.y;
     }
     else if (game_state->state == UNIVERSE)
     {
-        position.x = nav_state.universe_offset.x;
-        position.y = nav_state.universe_offset.y;
+        position.x = nav_state->universe_offset.x;
+        position.y = nav_state->universe_offset.y;
     }
 
     log_game_console(game_state->game_console_entries, X_INDEX, position.x);

@@ -17,16 +17,17 @@ extern SDL_Renderer *renderer;
 extern SDL_Color colors[];
 
 // Function prototypes
-void create_menu(struct menu_button menu[]);
-void create_logo(struct menu_button *logo);
-void update_menu(GameState *game_state, int game_started);
+void create_menu(MenuButton menu[]);
+void create_logo(MenuButton *logo);
+void update_menu(GameState *, int game_started);
+void onMenu(GameState *, InputState *, int game_started, const NavigationState *, Bstar bstars[], Gstar menustars[], Camera *);
 
 // External function prototypes
-void update_bstars(int state, int camera_on, NavigationState nav_state, struct bstar_t bstars[], const struct camera_t *camera, struct speed_t speed, double distance);
-void draw_menu_galaxy_cloud(const struct camera_t *camera, struct gstar_t menustars[]);
-void draw_speed_lines(float velocity, const struct camera_t *, struct speed_t);
+void update_bstars(int state, int camera_on, const NavigationState *, Bstar bstars[], const Camera *, Speed, double distance);
+void draw_menu_galaxy_cloud(const Camera *, Gstar menustars[]);
+void draw_speed_lines(float velocity, const Camera *, Speed);
 
-void create_menu(struct menu_button menu[])
+void create_menu(MenuButton menu[])
 {
     // Start
     strcpy(menu[MENU_BUTTON_START].text, "Start");
@@ -64,7 +65,7 @@ void create_menu(struct menu_button menu[])
     }
 }
 
-void create_logo(struct menu_button *logo)
+void create_logo(MenuButton *logo)
 {
     strcpy(logo->text, "Gravity");
 
@@ -118,12 +119,12 @@ void update_menu(GameState *game_state, int game_started)
     }
 }
 
-void onMenu(GameState *game_state, InputState *input_state, int game_started, NavigationState nav_state, struct bstar_t bstars[], struct gstar_t menustars[], struct camera_t *camera)
+void onMenu(GameState *game_state, InputState *input_state, int game_started, const NavigationState *nav_state, Bstar bstars[], Gstar menustars[], Camera *camera)
 {
     int num_buttons = 0;
 
     // Draw background stars
-    struct speed_t speed = {.vx = 1000, .vy = 0};
+    Speed speed = {.vx = 1000, .vy = 0};
     update_bstars(game_state->state, input_state->camera_on, nav_state, bstars, camera, speed, 0);
 
     // Draw logo
@@ -180,6 +181,6 @@ void onMenu(GameState *game_state, InputState *input_state, int game_started, Na
     draw_menu_galaxy_cloud(camera, menustars);
 
     // Draw speed lines
-    struct speed_t lines_speed = {.vx = 100, .vy = 0};
+    Speed lines_speed = {.vx = 100, .vy = 0};
     draw_speed_lines(1500, camera, lines_speed);
 }

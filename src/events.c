@@ -9,7 +9,7 @@
 #include "../include/structs.h"
 
 // Function prototypes
-void poll_events(GameState *game_state, InputState *input_state, GameEvents *game_events);
+void poll_events(GameState *, InputState *, GameEvents *);
 
 // External function prototypes
 void change_state(GameState *, GameEvents *, int new_state);

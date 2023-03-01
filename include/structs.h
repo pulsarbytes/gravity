@@ -2,7 +2,7 @@
 #define STRUCTS_H
 
 // Struct for a menu button
-struct menu_button
+typedef struct
 {
     char text[32];
     int state;
@@ -10,51 +10,48 @@ struct menu_button
     SDL_Texture *texture;
     SDL_Rect texture_rect;
     unsigned short disabled;
-};
+} MenuButton;
 
 // Struct for a game console entry
-struct game_console_entry
+typedef struct
 {
     char title[32];
     char value[16];
     SDL_Surface *surface;
     SDL_Texture *texture;
     SDL_Rect rect;
-};
+} ConsoleEntry;
 
-// Struct for a point
-struct point_t
+typedef struct
 {
     double x;
     double y;
-};
+} Point;
 
-// Struct for a vector
-struct vector_t
+typedef struct
 {
-    float x;
-    float y;
+    double x;
+    double y;
     float magnitude;
     float angle; // radians between the positive x-axis and the line connecting the origin to the point (vx, vy)
-};
+} Vector;
 
-struct speed_t
+typedef struct
 {
     float vx;
     float vy;
-};
+} Speed;
 
 // Struct for 2 points
-struct point_state
+typedef struct
 {
     double current_x;
     double current_y;
     double buffer_x;
     double buffer_y;
-};
+} PointState;
 
-// Struct for a planet
-struct planet_t
+typedef struct CelestialBody
 {
     int initialized;
     char name[MAX_OBJECT_NAME];
@@ -62,7 +59,7 @@ struct planet_t
     int class;
     float radius;
     float cutoff;
-    struct point_t position;
+    Point position;
     float vx;
     float vy;
     float dx;
@@ -71,30 +68,32 @@ struct planet_t
     SDL_Rect rect;
     SDL_Rect projection;
     SDL_Color color;
-    struct planet_t *planets[MAX_PLANETS_MOONS];
-    struct planet_t *parent;
+    struct CelestialBody *planets[MAX_PLANETS_MOONS];
+    struct CelestialBody *parent;
     int level;
-};
+} CelestialBody;
+
+typedef CelestialBody Planet;
+typedef CelestialBody Star;
 
 // Struct for a star entry in stars hash table
-struct star_entry
+typedef struct StarEntry
 {
     double x;
     double y;
-    struct planet_t *star;
-    struct star_entry *next;
-};
+    Star *star;
+    struct StarEntry *next;
+} StarEntry;
 
 // Struct for a galaxy cloud star
-struct gstar_t
+typedef struct
 {
-    struct point_t position;
+    Point position;
     unsigned short opacity;
     unsigned short final_star;
-};
+} Gstar;
 
-// Struct for a galaxy
-struct galaxy_t
+typedef struct
 {
     int initialized;
     int initialized_hd;
@@ -102,60 +101,57 @@ struct galaxy_t
     int class;
     float radius;
     float cutoff;
-    struct point_t position;
+    Point position;
     SDL_Rect projection;
     SDL_Color color;
-    struct gstar_t gstars[MAX_GSTARS];
-    struct gstar_t gstars_hd[MAX_GSTARS];
-};
+    Gstar gstars[MAX_GSTARS];
+    Gstar gstars_hd[MAX_GSTARS];
+} Galaxy;
 
 // Struct for a galaxy entry in galaxies hash table
-struct galaxy_entry
+typedef struct GalaxyEntry
 {
     double x;
     double y;
-    struct galaxy_t *galaxy;
-    struct galaxy_entry *next;
-};
+    Galaxy *galaxy;
+    struct GalaxyEntry *next;
+} GalaxyEntry;
 
-// Struct for a ship
-struct ship_t
+typedef struct Ship
 {
     char *image;
     int radius;
-    struct point_t position;
-    struct point_t previous_position;
+    Point position;
+    Point previous_position;
     float angle;
     float vx;
     float vy;
     SDL_Texture *texture;
     SDL_Rect rect;
-    struct ship_t *projection;
+    struct Ship *projection;
     SDL_Rect main_img_rect;
     SDL_Rect thrust_img_rect;
     SDL_Rect reverse_img_rect;
     SDL_Point rotation_pt;
-};
+} Ship;
 
 // Struct for a background star
-struct bstar_t
+typedef struct
 {
-    struct point_t position;
+    Point position;
     SDL_Rect rect;
     unsigned short opacity;
     unsigned short final_star;
-};
+} Bstar;
 
-// Struct for camera
-struct camera_t
+typedef struct
 {
     double x;
     double y;
     int w;
     int h;
-};
+} Camera;
 
-// Struct for input state
 typedef struct
 {
     int left;
@@ -173,7 +169,6 @@ typedef struct
     int selected_button;
 } InputState;
 
-// Struct for game events
 typedef struct
 {
     int stars_start;
@@ -191,21 +186,20 @@ typedef struct
     int galaxy_found;
 } GameEvents;
 
-// Struct for navigation state
 typedef struct
 {
-    struct star_entry *stars[MAX_STARS];         // Hash table for stars
-    struct galaxy_entry *galaxies[MAX_GALAXIES]; // Hash table for galaxies
-    struct galaxy_t *current_galaxy;
-    struct galaxy_t *buffer_galaxy; // Stores galaxy of current ship position
-    struct galaxy_t *previous_galaxy;
-    struct point_state galaxy_offset;
-    struct point_t universe_cross_axis; // Keep track of nearest axis coordinates
-    struct point_t navigate_offset;
-    struct point_t map_offset;
-    struct point_t universe_offset;
-    struct point_t cross_axis; // Keep track of nearest axis coordinates
-    struct vector_t velocity;
+    StarEntry *stars[MAX_STARS];         // Hash table for stars
+    GalaxyEntry *galaxies[MAX_GALAXIES]; // Hash table for galaxies
+    Galaxy *current_galaxy;
+    Galaxy *buffer_galaxy; // Stores galaxy of current ship position
+    Galaxy *previous_galaxy;
+    PointState galaxy_offset;
+    Point universe_cross_axis; // Keep track of nearest axis coordinates
+    Point navigate_offset;
+    Point map_offset;
+    Point universe_offset;
+    Point cross_axis; // Keep track of nearest axis coordinates
+    Vector velocity;
     uint64_t initseq; // Output sequence for the RNG of stars; Changes for every new current_galaxy
 } NavigationState;
 
@@ -215,11 +209,11 @@ typedef struct
     int speed_limit;
     int landing_stage;
     long double game_scale;
-    float save_scale;
+    long double save_scale;
     int galaxy_region_size;
-    struct menu_button menu[MENU_BUTTON_COUNT];
-    struct menu_button logo;
-    struct game_console_entry game_console_entries[LOG_COUNT];
+    MenuButton menu[MENU_BUTTON_COUNT];
+    MenuButton logo;
+    ConsoleEntry game_console_entries[LOG_COUNT];
 } GameState;
 
 #endif /* STRUCTS_H */

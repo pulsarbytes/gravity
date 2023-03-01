@@ -13,16 +13,16 @@
 #include "../include/structs.h"
 
 // Function prototypes
-void cleanup_resources(GameState *game_state, NavigationState *nav_state, struct ship_t *ship);
+void cleanup_resources(GameState *, NavigationState *, Ship *);
 
 // External function prototypes
-void cleanup_galaxies(struct galaxy_entry *galaxies[]);
-void cleanup_stars(struct star_entry *stars[]);
+void cleanup_galaxies(GalaxyEntry *galaxies[]);
+void cleanup_stars(StarEntry *stars[]);
 
 /*
  * Clean up resources.
  */
-void cleanup_resources(GameState *game_state, NavigationState *nav_state, struct ship_t *ship)
+void cleanup_resources(GameState *game_state, NavigationState *nav_state, Ship *ship)
 {
     // Clean up galaxies
     cleanup_galaxies(nav_state->galaxies);
