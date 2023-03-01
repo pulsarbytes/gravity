@@ -9,6 +9,7 @@
 #include <SDL2/SDL2_gfxPrimitives.h>
 
 #include "../include/constants.h"
+#include "../include/enums.h"
 #include "../include/structs.h"
 
 // External variable definitions

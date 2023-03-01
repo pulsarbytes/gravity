@@ -9,6 +9,7 @@
 #include <SDL2/SDL.h>
 
 #include "../include/constants.h"
+#include "../include/enums.h"
 #include "../include/structs.h"
 #include "../lib/pcg-c-basic-0.9/pcg_basic.h"
 

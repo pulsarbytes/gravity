@@ -30,6 +30,7 @@
 #include "../lib/pcg-c-basic-0.9/pcg_basic.h"
 
 #include "../include/constants.h"
+#include "../include/enums.h"
 #include "../include/structs.h"
 
 // Global variable definitions

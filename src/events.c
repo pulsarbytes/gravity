@@ -5,6 +5,7 @@
 #include <SDL2/SDL.h>
 
 #include "../include/constants.h"
+#include "../include/enums.h"
 #include "../include/structs.h"
 
 void change_state(GameState *, GameEvents *, int new_state);
