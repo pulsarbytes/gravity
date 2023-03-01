@@ -17,6 +17,13 @@ extern TTF_Font *fonts[];
 extern SDL_DisplayMode display_mode;
 extern SDL_Renderer *renderer;
 
+// Function prototypes
+int init_sdl(SDL_Window *window);
+void close_sdl(SDL_Window *window);
+void SDL_DrawCircle(SDL_Renderer *renderer, const struct camera_t *camera, int xc, int yc, int radius, SDL_Color color);
+void SDL_DrawCircleApprox(SDL_Renderer *renderer, const struct camera_t *camera, int x, int y, int r, SDL_Color color);
+
+// External function prototypes
 int in_camera_relative(const struct camera_t *camera, int x, int y);
 bool line_intersects_viewport(const struct camera_t *camera, double x1, double y1, double x2, double y2);
 

@@ -11,6 +11,11 @@
 #include "../include/enums.h"
 #include "../include/structs.h"
 
+// Function prototypes
+void update_velocity(struct vector_t *velocity, struct ship_t *ship);
+void calc_orbital_velocity(float distance, float angle, float radius, float *vx, float *vy);
+double find_nearest_section_axis(double offset, int size);
+
 /*
  * Update velocity vector.
  */

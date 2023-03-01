@@ -17,20 +17,53 @@
 extern SDL_Renderer *renderer;
 extern SDL_Color colors[];
 
-static void cleanup_planets(struct planet_t *);
-void cleanup_stars(struct star_entry *stars[]);
+// Function prototypes
+static void cleanup_planets(struct planet_t *planet);
 void cleanup_galaxies(struct galaxy_entry *galaxies[]);
+void cleanup_stars(struct star_entry *stars[]);
+void cleanup_resources(GameState *game_state, NavigationState *nav_state, struct ship_t *ship);
+void put_galaxy(struct galaxy_entry *galaxies[], struct point_t position, struct galaxy_t *galaxy);
+int galaxy_exists(struct galaxy_entry *galaxies[], struct point_t position);
+struct galaxy_t *get_galaxy(struct galaxy_entry *galaxies[], struct point_t position);
+void delete_galaxy(struct galaxy_entry *galaxies[], struct point_t position);
+void put_star(struct star_entry *stars[], struct point_t position, struct planet_t *star);
+int star_exists(struct star_entry *stars[], struct point_t position);
+void delete_star(struct star_entry *stars[], struct point_t position);
+void update_projection_coordinates(NavigationState nav_state, void *ptr, int entity_type, const struct camera_t *camera, int state, long double scale);
+void project_ship(int state, InputState input_state, NavigationState nav_state, struct ship_t *ship, const struct camera_t *camera, long double scale);
+void project_planet(GameState game_state, NavigationState nav_state, struct planet_t *planet, const struct camera_t *camera);
+void project_galaxy(int state, NavigationState nav_state, struct galaxy_t *galaxy, const struct camera_t *camera, long double scale);
+int calculate_projection_opacity(double distance, int region_size, int section_size);
+double nearest_galaxy_center_distance(struct point_t position);
+double find_distance(double x1, double y1, double x2, double y2);
+struct galaxy_t *find_nearest_galaxy(NavigationState nav_state, struct point_t position, int exclude);
+double nearest_star_distance(struct point_t position, struct galaxy_t *current_galaxy, uint64_t initseq, int galaxy_density);
+int get_galaxy_class(float distance);
+int get_star_class(float distance);
+int get_planet_class(float width);
+bool point_eq(struct point_t a, struct point_t b);
+bool point_in_array(struct point_t p, struct point_t arr[], int len);
+void zoom_star(struct planet_t *planet, long double scale);
+int in_camera_relative(const struct camera_t *camera, int x, int y);
+int in_camera(const struct camera_t *camera, double x, double y, float radius, long double scale);
+void draw_screen_frame(struct camera_t *camera);
+bool line_intersects_viewport(const struct camera_t *camera, double x1, double y1, double x2, double y2);
+void draw_section_lines(struct camera_t *camera, int section_size, SDL_Color color, long double scale);
+void create_menu_galaxy_cloud(struct galaxy_t *galaxy, struct gstar_t menustars[]);
+void draw_menu_galaxy_cloud(const struct camera_t *camera, struct gstar_t menustars[]);
+void create_galaxy_cloud(struct galaxy_t *galaxy, unsigned short high_definition);
+void draw_galaxy_cloud(struct galaxy_t *galaxy, const struct camera_t *camera, int gstars_count, unsigned short high_definition, long double scale);
+void draw_speed_arc(struct ship_t *ship, const struct camera_t *camera, long double scale);
+void delete_stars_outside_region(struct star_entry *stars[], double bx, double by, int region_size);
+void draw_speed_lines(float velocity, const struct camera_t *camera, struct speed_t speed);
+void create_colors(void);
+
+// External function prototypes
 uint64_t pair_hash_order_sensitive(struct point_t);
 uint64_t pair_hash_order_sensitive_2(struct point_t);
 uint64_t double_hash(double x);
-bool point_eq(struct point_t, struct point_t);
-bool point_in_array(struct point_t, struct point_t arr[], int len);
-int calculate_projection_opacity(double distance, int region_size, int section_size);
 double find_nearest_section_axis(double offset, int size);
 uint64_t unique_index(struct point_t, int modulo, int entity_type);
-void delete_star(struct star_entry *stars[], struct point_t position);
-void delete_galaxy(struct galaxy_entry *galaxies[], struct point_t position);
-void update_projection_coordinates(NavigationState, void *, int entity_type, const struct camera_t *, int state, long double scale);
 
 /*
  * Clean up planets (recursive).

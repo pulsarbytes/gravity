@@ -17,7 +17,27 @@ extern TTF_Font *fonts[];
 extern SDL_Renderer *renderer;
 extern SDL_Color colors[];
 
+// Function prototypes
 void log_game_console(struct game_console_entry entries[], int index, double value);
+void log_fps(struct game_console_entry entries[], unsigned int time_diff);
+void update_game_console(GameState *game_state, NavigationState nav_state);
+
+/*
+ * Save data to game_console_entries array.
+ */
+void log_game_console(struct game_console_entry entries[], int index, double value)
+{
+    char text[16];
+    float rounded_value;
+
+    if (index == SCALE_INDEX)
+        rounded_value = value;
+    else
+        rounded_value = (int)value;
+
+    sprintf(text, "%f", rounded_value);
+    strcpy(entries[index].value, text);
+}
 
 /*
  * Calculate and log FPS to game console.
@@ -36,23 +56,6 @@ void log_fps(struct game_console_entry entries[], unsigned int time_diff)
         total_time = 0;
         current_fps = 0;
     }
-}
-
-/*
- * Save data to game_console_entries array.
- */
-void log_game_console(struct game_console_entry entries[], int index, double value)
-{
-    char text[16];
-    float rounded_value;
-
-    if (index == SCALE_INDEX)
-        rounded_value = value;
-    else
-        rounded_value = (int)value;
-
-    sprintf(text, "%f", rounded_value);
-    strcpy(entries[index].value, text);
 }
 
 /*

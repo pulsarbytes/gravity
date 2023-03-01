@@ -10,6 +10,13 @@
 #include "../include/enums.h"
 #include "../include/structs.h"
 
+// Function prototypes
+uint64_t double_hash(double x);
+uint64_t pair_hash_order_sensitive(struct point_t position);
+uint64_t pair_hash_order_sensitive_2(struct point_t position);
+uint64_t unique_index(struct point_t position, int modulo, int entity_type);
+int point_in_rect(struct point_t p, struct point_t rect[]);
+
 /**
  * Generates a hash value for a given double number `x`.
  *

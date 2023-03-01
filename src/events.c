@@ -8,6 +8,10 @@
 #include "../include/enums.h"
 #include "../include/structs.h"
 
+// Function prototypes
+void poll_events(GameState *game_state, InputState *input_state, GameEvents *game_events);
+
+// External function prototypes
 void change_state(GameState *, GameEvents *, int new_state);
 
 /*
