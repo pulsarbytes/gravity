@@ -1,5 +1,5 @@
-#ifndef COMMON_H
-#define COMMON_H
+#ifndef CONSTANTS_H
+#define CONSTANTS_H
 
 // System settings
 #define FPS 60 // Default: 60
@@ -96,7 +96,7 @@
                                  // Class 4: -100000, -40000
                                  // Class 5: -110000, -120000
                                  // Class 6: -250000, -60000
-#define GALAXY_START_X -30000000 // Default: 0
+#define GALAXY_START_X -15000000 // Default: 0
 #define GALAXY_START_Y -0        // Default: 0
 
 // Galaxies
@@ -294,4 +294,4 @@ enum
     ENTITY_GALAXY
 };
 
-#endif /* COMMON_H */
+#endif /* CONSTANTS_H */

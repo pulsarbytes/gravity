@@ -6,6 +6,8 @@
         "cmath": "c",
         "limits": "c",
         "pcg_basic.h": "c",
-        "sdl_timer.h": "c"
+        "sdl_timer.h": "c",
+        "constants.h": "c",
+        "sdl2_gfxprimitives.h": "c"
     }
 }

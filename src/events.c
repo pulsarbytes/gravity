@@ -4,7 +4,7 @@
 
 #include <SDL2/SDL.h>
 
-#include "../include/common.h"
+#include "../include/constants.h"
 #include "../include/structs.h"
 
 void change_state(GameState *, GameEvents *, int new_state);

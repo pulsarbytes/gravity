@@ -7,7 +7,7 @@
 
 #include <SDL2/SDL.h>
 
-#include "../include/common.h"
+#include "../include/constants.h"
 #include "../include/structs.h"
 
 /*
