@@ -3,6 +3,7 @@
  */
 
 #include <stdint.h>
+#include <stdbool.h>
 
 #include <SDL2/SDL.h>
 
@@ -16,6 +17,14 @@ uint64_t pair_hash_order_sensitive(struct point_t position);
 uint64_t pair_hash_order_sensitive_2(struct point_t position);
 uint64_t unique_index(struct point_t position, int modulo, int entity_type);
 int point_in_rect(struct point_t p, struct point_t rect[]);
+double find_nearest_section_axis(double offset, int size);
+double find_distance(double x1, double y1, double x2, double y2);
+bool points_equal(struct point_t a, struct point_t b);
+bool line_intersects_viewport(const struct camera_t *camera, double x1, double y1, double x2, double y2);
+bool point_in_array(struct point_t p, struct point_t arr[], int len);
+
+// External function prototypes
+int in_camera_relative(const struct camera_t *camera, int x, int y);
 
 /**
  * Generates a hash value for a given double number `x`.
@@ -100,4 +109,113 @@ int point_in_rect(struct point_t p, struct point_t rect[])
     }
 
     return 1; // point is inside the rectangle
+}
+
+/*
+ * Transform a double to the nearest section point,
+ * rounding up or down whichever is nearest.
+ */
+double find_nearest_section_axis(double offset, int size)
+{
+    double round_down = floorf(offset / size) * size;
+    double round_up = round_down + size;
+    double diff_down = fabs(offset - round_down);
+    double diff_up = fabs(offset - round_up);
+
+    return diff_down < diff_up ? round_down : round_up;
+}
+
+/*
+ * Find distance between two points.
+ */
+double find_distance(double x1, double y1, double x2, double y2)
+{
+    return sqrt((x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2));
+}
+
+/*
+ * Compares two points.
+ */
+bool points_equal(struct point_t a, struct point_t b)
+{
+    return a.x == b.x && a.y == b.y;
+}
+
+/**
+ * This function checks if the line segment specified by (x1,y1) and (x2,y2) intersects with the viewport defined by `camera`.
+ *
+ * @param camera Pointer to a camera structure that defines the viewport
+ * @param x1 x-coordinate of the first end point of the line segment
+ * @param y1 y-coordinate of the first end point of the line segment
+ * @param x2 x-coordinate of the second end point of the line segment
+ * @param y2 y-coordinate of the second end point of the line segment
+ *
+ * @return: Returns true if the line segment intersects with the viewport, and false otherwise
+ */
+bool line_intersects_viewport(const struct camera_t *camera, double x1, double y1, double x2, double y2)
+{
+    double left = 0;
+    double right = camera->w;
+    double top = 0;
+    double bottom = camera->h;
+
+    // Check if both endpoints of the line are inside the viewport.
+    if (in_camera_relative(camera, x1, y1) || in_camera_relative(camera, x2, y2))
+        return true;
+
+    // Check if the line intersects the left edge of the viewport.
+    if (x1 < left && x2 >= left)
+    {
+        double y = y1 + (y2 - y1) * (left - x1) / (x2 - x1);
+        if (y >= top && y <= bottom)
+        {
+            return true;
+        }
+    }
+
+    // Check if the line intersects the right edge of the viewport.
+    if (x1 > right && x2 <= right)
+    {
+        double y = y1 + (y2 - y1) * (right - x1) / (x2 - x1);
+        if (y >= top && y <= bottom)
+        {
+            return true;
+        }
+    }
+
+    // Check if the line intersects the top edge of the viewport.
+    if (y1 < top && y2 >= top)
+    {
+        double x = x1 + (x2 - x1) * (top - y1) / (y2 - y1);
+        if (x >= left && x <= right)
+        {
+            return true;
+        }
+    }
+
+    // Check if the line intersects the bottom edge of the viewport.
+    if (y1 > bottom && y2 <= bottom)
+    {
+        double x = x1 + (x2 - x1) * (bottom - y1) / (y2 - y1);
+        if (x >= left && x <= right)
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+/*
+ * Checks whether a point exists in an array.
+ */
+bool point_in_array(struct point_t p, struct point_t arr[], int len)
+{
+    for (int i = 0; i < len; ++i)
+    {
+        if (points_equal(p, arr[i]))
+            return true;
+    }
+
+    return false;
 }

@@ -14,7 +14,6 @@
 // Function prototypes
 void update_velocity(struct vector_t *velocity, struct ship_t *ship);
 void calc_orbital_velocity(float distance, float angle, float radius, float *vx, float *vy);
-double find_nearest_section_axis(double offset, int size);
 
 /*
  * Update velocity vector.
@@ -47,18 +46,4 @@ void calc_orbital_velocity(float distance, float angle, float radius, float *vx,
 {
     *vx = -COSMIC_CONSTANT * sqrt(G_CONSTANT * radius * radius / distance) * sin(angle * M_PI / 180); // negative for clockwise rotation
     *vy = COSMIC_CONSTANT * sqrt(G_CONSTANT * radius * radius / distance) * cos(angle * M_PI / 180);
-}
-
-/*
- * Transform a double to the nearest section point,
- * rounding up or down whichever is nearest.
- */
-double find_nearest_section_axis(double offset, int size)
-{
-    double round_down = floorf(offset / size) * size;
-    double round_up = round_down + size;
-    double diff_down = fabs(offset - round_down);
-    double diff_up = fabs(offset - round_up);
-
-    return diff_down < diff_up ? round_down : round_up;
 }

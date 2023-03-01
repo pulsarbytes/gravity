@@ -17,10 +17,11 @@
 #define G_THRUST 1 * G_CONSTANT   // Default: 1 * G_CONSTANT
 
 // Background stars
-#define BSTARS_SPEED_FACTOR 0.012                 // Default: 0.012
-#define BSTARS_OPACITY 185                        // Default: 185
+#define BSTARS_SPEED_FACTOR 0.04                  // Default: 0.04
+#define BSTARS_MAX_OPACITY 140                    // Default: 140
+#define BSTARS_MIN_OPACITY 45                     // Default: 45
 #define BSTARS_SQUARE 10000                       // Groups X pixels. Default: 10000
-#define BSTARS_PER_SQUARE 2                       // X stars per square. Default: 1
+#define BSTARS_PER_SQUARE 4                       // X stars per square. Default: 4
 #define MAX_GSTARS_ROW 100                        // Default: 100
 #define MAX_GSTARS MAX_GSTARS_ROW *MAX_GSTARS_ROW // Default: MAX_GSTARS_ROW *MAX_GSTARS_ROW
 #define GSTARS_SCALE 10                           // Designates gstars scaling compared to universe mode. Default: 10
@@ -50,7 +51,8 @@
 #define UNIVERSE_SPEED_MIN 4      // Zoom out. Default: 4
 
 // Menu
-#define MENU_GALAXY_CLOUD_DENSITY 300 // Default: 300 (max 500)
+#define MENU_GALAXY_CLOUD_DENSITY 300  // Default: 300 (max 500)
+#define MENU_BSTARS_SPEED_FACTOR 0.012 // Default: 0.012
 
 // Zoom
 #define ZOOM_NAVIGATE 1.0      // Default: 1.0

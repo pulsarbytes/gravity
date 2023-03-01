@@ -36,14 +36,14 @@ int init_sdl(SDL_Window *window)
     if (SDL_Init(SDL_INIT_EVERYTHING) != 0)
     {
         SDL_Log("Could not initialize SDL: %s\n", SDL_GetError());
-        return FALSE;
+        return false;
     }
 
     // Get display mode
     if (SDL_GetDesktopDisplayMode(0, &display_mode))
     {
         SDL_Log("Could not get desktop display mode: %s\n", SDL_GetError());
-        return FALSE;
+        return false;
     }
 
     // Create a window
@@ -59,7 +59,7 @@ int init_sdl(SDL_Window *window)
     {
         SDL_Log("Could not create window: %s\n", SDL_GetError());
         SDL_Quit();
-        return FALSE;
+        return false;
     }
 
     // Make Fullscreen
@@ -75,7 +75,7 @@ int init_sdl(SDL_Window *window)
         SDL_Log("Could not create renderer: %s\n", SDL_GetError());
         SDL_DestroyWindow(window);
         SDL_Quit();
-        return FALSE;
+        return false;
     }
 
     // Initialize SDL_ttf library
@@ -85,7 +85,7 @@ int init_sdl(SDL_Window *window)
         SDL_DestroyRenderer(renderer);
         SDL_DestroyWindow(window);
         SDL_Quit();
-        return FALSE;
+        return false;
     }
 
     // Load fonts into memory
@@ -98,7 +98,7 @@ int init_sdl(SDL_Window *window)
         SDL_DestroyRenderer(renderer);
         SDL_DestroyWindow(window);
         SDL_Quit();
-        return FALSE;
+        return false;
     }
 
     fonts[FONT_SIZE_36] = TTF_OpenFont("../assets/fonts/consola.ttf", 36);
@@ -110,13 +110,13 @@ int init_sdl(SDL_Window *window)
         SDL_DestroyRenderer(renderer);
         SDL_DestroyWindow(window);
         SDL_Quit();
-        return FALSE;
+        return false;
     }
 
     // Set blend mode
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
 
-    return TRUE;
+    return true;
 }
 
 /*

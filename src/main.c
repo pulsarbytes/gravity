@@ -22,6 +22,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
+#include <stdbool.h>
 
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
@@ -472,7 +473,7 @@ void update_menu(GameState *game_state, int game_started)
     if (game_started)
     {
         // Update Start button
-        game_state->menu[MENU_BUTTON_START].disabled = TRUE;
+        game_state->menu[MENU_BUTTON_START].disabled = true;
         SDL_Surface *start_surface = TTF_RenderText_Solid(fonts[FONT_SIZE_14], game_state->menu[MENU_BUTTON_START].text, colors[COLOR_WHITE_100]);
         SDL_DestroyTexture(game_state->menu[MENU_BUTTON_START].texture);
         SDL_Texture *start_texture = SDL_CreateTextureFromSurface(renderer, start_surface);
@@ -480,7 +481,7 @@ void update_menu(GameState *game_state, int game_started)
         SDL_FreeSurface(start_surface);
 
         // Update Resume button
-        game_state->menu[MENU_BUTTON_RESUME].disabled = FALSE;
+        game_state->menu[MENU_BUTTON_RESUME].disabled = false;
         SDL_Surface *resume_surface = TTF_RenderText_Solid(fonts[FONT_SIZE_14], game_state->menu[MENU_BUTTON_RESUME].text, colors[COLOR_WHITE_255]);
         SDL_DestroyTexture(game_state->menu[MENU_BUTTON_RESUME].texture);
         SDL_Texture *resume_texture = SDL_CreateTextureFromSurface(renderer, resume_surface);
@@ -488,7 +489,7 @@ void update_menu(GameState *game_state, int game_started)
         SDL_FreeSurface(resume_surface);
 
         // Update New button
-        game_state->menu[MENU_BUTTON_NEW].disabled = FALSE;
+        game_state->menu[MENU_BUTTON_NEW].disabled = false;
         SDL_Surface *new_surface = TTF_RenderText_Solid(fonts[FONT_SIZE_14], game_state->menu[MENU_BUTTON_NEW].text, colors[COLOR_WHITE_255]);
         SDL_DestroyTexture(game_state->menu[MENU_BUTTON_NEW].texture);
         SDL_Texture *new_texture = SDL_CreateTextureFromSurface(renderer, new_surface);
@@ -526,22 +527,22 @@ void create_menu(struct menu_button menu[])
     // Start
     strcpy(menu[MENU_BUTTON_START].text, "Start");
     menu[MENU_BUTTON_START].state = NAVIGATE;
-    menu[MENU_BUTTON_START].disabled = FALSE;
+    menu[MENU_BUTTON_START].disabled = false;
 
     // Resume
     strcpy(menu[MENU_BUTTON_RESUME].text, "Resume");
     menu[MENU_BUTTON_RESUME].state = RESUME;
-    menu[MENU_BUTTON_RESUME].disabled = TRUE;
+    menu[MENU_BUTTON_RESUME].disabled = true;
 
     // New
     strcpy(menu[MENU_BUTTON_NEW].text, "New Game");
     menu[MENU_BUTTON_NEW].state = NEW;
-    menu[MENU_BUTTON_NEW].disabled = TRUE;
+    menu[MENU_BUTTON_NEW].disabled = true;
 
     // Exit
     strcpy(menu[MENU_BUTTON_EXIT].text, "Exit");
     menu[MENU_BUTTON_EXIT].state = QUIT;
-    menu[MENU_BUTTON_EXIT].disabled = FALSE;
+    menu[MENU_BUTTON_EXIT].disabled = false;
 
     for (int i = 0; i < MENU_BUTTON_COUNT; i++)
     {
@@ -843,7 +844,7 @@ void onNavigate(GameState *game_state, InputState *input_state, GameEvents *game
             .w = camera->w,
             .h = camera->h};
 
-        struct galaxy_t *nearest_galaxy = find_nearest_galaxy(*nav_state, universe_position, TRUE);
+        struct galaxy_t *nearest_galaxy = find_nearest_galaxy(*nav_state, universe_position, true);
 
         if (nearest_galaxy != NULL &&
             (nearest_galaxy->position.x != nav_state->current_galaxy->position.x ||
@@ -859,7 +860,7 @@ void onNavigate(GameState *game_state, InputState *input_state, GameEvents *game
 
     // Create galaxy cloud
     if (!nav_state->current_galaxy->initialized_hd)
-        create_galaxy_cloud(nav_state->current_galaxy, TRUE);
+        create_galaxy_cloud(nav_state->current_galaxy, true);
 
     // Draw screen frame
     draw_screen_frame(camera);
@@ -1067,7 +1068,7 @@ void onMap(GameState *game_state, InputState *input_state, GameEvents *game_even
             .w = camera->w,
             .h = camera->h};
 
-        struct galaxy_t *nearest_galaxy = find_nearest_galaxy(*nav_state, universe_position, TRUE);
+        struct galaxy_t *nearest_galaxy = find_nearest_galaxy(*nav_state, universe_position, true);
 
         if (nearest_galaxy != NULL &&
             (nearest_galaxy->position.x != nav_state->current_galaxy->position.x ||
@@ -1083,7 +1084,7 @@ void onMap(GameState *game_state, InputState *input_state, GameEvents *game_even
 
     // Create galaxy cloud
     if (!nav_state->current_galaxy->initialized_hd)
-        create_galaxy_cloud(nav_state->current_galaxy, TRUE);
+        create_galaxy_cloud(nav_state->current_galaxy, true);
 
     // Move through map
     double rate_x = 0, rate_y = 0;
@@ -1639,7 +1640,7 @@ void generate_stars_preview(NavigationState *nav_state, const struct camera_t *c
                 else
                 {
                     // Create star
-                    struct planet_t *star = create_star(*nav_state, position, TRUE, scale);
+                    struct planet_t *star = create_star(*nav_state, position, true, scale);
 
                     // Add star to hash table
                     put_star(nav_state->stars, position, star);
@@ -1716,7 +1717,7 @@ void generate_stars(GameState *game_state, GameEvents *game_events, NavigationSt
         generate_galaxies(game_events, nav_state, cross_section_offset);
 
         // Search for nearest galaxy to universe_position, including current galaxy
-        struct galaxy_t *next_galaxy = find_nearest_galaxy(*nav_state, universe_position, FALSE);
+        struct galaxy_t *next_galaxy = find_nearest_galaxy(*nav_state, universe_position, false);
 
         // Found a new galaxy
         if (next_galaxy != NULL &&
@@ -1849,7 +1850,7 @@ void generate_stars(GameState *game_state, GameEvents *game_events, NavigationSt
                 else
                 {
                     // Create star
-                    struct planet_t *star = create_star(*nav_state, position, FALSE, game_state->game_scale);
+                    struct planet_t *star = create_star(*nav_state, position, false, game_state->game_scale);
 
                     // Add star to hash table
                     put_star(nav_state->stars, position, star);
@@ -1973,7 +1974,7 @@ void generate_galaxies(GameEvents *game_events, NavigationState *nav_state, stru
 void create_bstars(NavigationState *nav_state, struct bstar_t bstars[], const struct camera_t *camera)
 {
     int i = 0, row, column, is_star;
-    int end = FALSE;
+    int end = false;
     int max_bstars = (int)(camera->w * camera->h * BSTARS_PER_SQUARE / BSTARS_SQUARE);
 
     // Use a local rng
@@ -2017,15 +2018,15 @@ void create_bstars(NavigationState *nav_state, struct bstar_t bstars[], const st
                     star.rect.h = 1;
                 }
 
-                // Get a color between 15 - BSTARS_OPACITY
-                star.opacity = ((rand() % (BSTARS_OPACITY + 1 - 15)) + 15);
+                // Get a color between BSTARS_MIN_OPACITY - BSTARS_MAX_OPACITY
+                star.opacity = ((rand() % (BSTARS_MAX_OPACITY + 1 - BSTARS_MIN_OPACITY)) + BSTARS_MIN_OPACITY);
 
                 star.final_star = 1;
                 bstars[i++] = star;
             }
 
             if (i >= max_bstars)
-                end = TRUE;
+                end = true;
         }
     }
 }
@@ -2047,8 +2048,8 @@ void update_bstars(int state, int camera_on, NavigationState nav_state, struct b
 
             if (state == MENU)
             {
-                dx = BSTARS_SPEED_FACTOR * speed.vx / FPS;
-                dy = BSTARS_SPEED_FACTOR * speed.vy / FPS;
+                dx = MENU_BSTARS_SPEED_FACTOR * speed.vx / FPS;
+                dy = MENU_BSTARS_SPEED_FACTOR * speed.vy / FPS;
             }
             else
             {
@@ -2686,7 +2687,7 @@ void update_galaxy(NavigationState *nav_state, struct galaxy_t *galaxy, const st
 
         // Create gstars_hd
         if (!galaxy->initialized_hd)
-            create_galaxy_cloud(galaxy, TRUE);
+            create_galaxy_cloud(galaxy, true);
 
         double zoom_universe_stars = ZOOM_UNIVERSE_STARS;
 
@@ -2704,7 +2705,7 @@ void update_galaxy(NavigationState *nav_state, struct galaxy_t *galaxy, const st
         const double epsilon = ZOOM_EPSILON / GALAXY_SCALE;
 
         if (scale < zoom_universe_stars + epsilon)
-            draw_galaxy_cloud(galaxy, camera, galaxy->initialized_hd, TRUE, scale);
+            draw_galaxy_cloud(galaxy, camera, galaxy->initialized_hd, true, scale);
     }
     else
     {
@@ -2712,9 +2713,9 @@ void update_galaxy(NavigationState *nav_state, struct galaxy_t *galaxy, const st
         if (in_camera(camera, galaxy->position.x, galaxy->position.y, galaxy->radius, scale * GALAXY_SCALE))
         {
             if (!galaxy->initialized)
-                create_galaxy_cloud(galaxy, FALSE);
+                create_galaxy_cloud(galaxy, false);
 
-            draw_galaxy_cloud(galaxy, camera, galaxy->initialized, FALSE, scale);
+            draw_galaxy_cloud(galaxy, camera, galaxy->initialized, false, scale);
         }
         // Draw galaxy projection
         else if (PROJECTIONS_ON)

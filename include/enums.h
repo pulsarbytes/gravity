@@ -54,11 +54,6 @@ enum
 
 enum
 {
-    FALSE,
-    TRUE
-};
-enum
-{
     OFF,
     ON
 };
