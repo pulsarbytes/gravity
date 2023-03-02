@@ -37,7 +37,8 @@ SDL_Renderer *renderer = NULL;
 SDL_Color colors[COLOR_COUNT];
 
 // External function prototypes
-int init_sdl(SDL_Window *);
+int sdl_initialize(SDL_Window *);
+int sdl_ttf_load_fonts(SDL_Window *);
 void create_colors(void);
 void create_menu(MenuButton menu[]);
 void create_logo(MenuButton *logo);
@@ -57,7 +58,7 @@ void onUniverse(GameState *, InputState *, GameEvents *, NavigationState *, Ship
 void reset_game(GameState *, InputState *, GameEvents *, NavigationState *, Ship *);
 void console_render(ConsoleEntry entries[]);
 void cleanup_resources(GameState *, NavigationState *, Ship *);
-void close_sdl(SDL_Window *);
+void sdl_cleanup(SDL_Window *);
 
 int main(int argc, char *argv[])
 {
@@ -71,9 +72,16 @@ int main(int argc, char *argv[])
     // Initialize SDL
     SDL_Window *window = NULL;
 
-    if (!init_sdl(window))
+    if (!sdl_initialize(window))
     {
         fprintf(stderr, "Error: could not initialize SDL.\n");
+        return 1;
+    }
+
+    // Initialize SDL_ttf and load fonts
+    if (!sdl_ttf_load_fonts(window))
+    {
+        fprintf(stderr, "Error: could not initialize SDL_ttf and load fonts.\n");
         return 1;
     }
 
@@ -328,7 +336,7 @@ int main(int argc, char *argv[])
     cleanup_resources(&game_state, &nav_state, &ship);
 
     // Close SDL
-    close_sdl(window);
+    sdl_cleanup(window);
 
     return 0;
 }

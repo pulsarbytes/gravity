@@ -21,7 +21,7 @@ extern SDL_Renderer *renderer;
 /*
  * Initialize SDL.
  */
-int init_sdl(SDL_Window *window)
+int sdl_initialize(SDL_Window *window)
 {
     // Attempt to initialize SDL
     if (SDL_Init(SDL_INIT_EVERYTHING) != 0)
@@ -69,6 +69,17 @@ int init_sdl(SDL_Window *window)
         return false;
     }
 
+    // Set blend mode
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+
+    return true;
+}
+
+/*
+ * Initialize SDL_ttf library and load fonts into memory.
+ */
+int sdl_ttf_load_fonts(SDL_Window *window)
+{
     // Initialize SDL_ttf library
     if (TTF_Init() == -1)
     {
@@ -104,16 +115,13 @@ int init_sdl(SDL_Window *window)
         return false;
     }
 
-    // Set blend mode
-    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
-
     return true;
 }
 
 /*
  * Clean up SDL resources.
  */
-void close_sdl(SDL_Window *window)
+void sdl_cleanup(SDL_Window *window)
 {
     for (int i = 0; i < FONT_COUNT; i++)
     {
