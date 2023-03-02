@@ -42,20 +42,20 @@ void create_colors(void);
 void create_menu(MenuButton menu[]);
 void create_logo(MenuButton *logo);
 Ship create_ship(int radius, Point, long double scale);
-void generate_galaxies(GameEvents *, NavigationState *, Point);
-Galaxy *get_galaxy(GalaxyEntry *galaxies[], Point);
+void galaxies_generate(GameEvents *, NavigationState *, Point);
+Galaxy *galaxies_get_entry(GalaxyEntry *galaxies[], Point);
 void create_bstars(NavigationState *, Bstar bstars[], const Camera *);
-void generate_stars(GameState *, GameEvents *, NavigationState *, Bstar bstars[], Ship *, const Camera *);
+void stars_generate(GameState *, GameEvents *, NavigationState *, Bstar bstars[], Ship *, const Camera *);
 void create_menu_galaxy_cloud(Galaxy *, Gstar menustars[]);
-void poll_events(GameState *, InputState *, GameEvents *);
+void events_loop(GameState *, InputState *, GameEvents *);
 void onMenu(GameState *, InputState *, int game_started, const NavigationState *, Bstar bstars[], Gstar menustars[], Camera *);
 void onNavigate(GameState *, InputState *, GameEvents *, NavigationState *, Bstar bstars[], Ship *, Camera *);
-void log_console(ConsoleEntry entries[], int index, double value);
+void console_update_entry(ConsoleEntry entries[], int index, double value);
+void console_measure_fps(unsigned int *fps, unsigned int *last_time, unsigned int *frame_count);
 void onMap(GameState *, InputState *, GameEvents *, NavigationState *, Bstar bstars[], Ship *, Camera *);
 void onUniverse(GameState *, InputState *, GameEvents *, NavigationState *, Ship *, Camera *);
 void reset_game(GameState *, InputState *, GameEvents *, NavigationState *, Ship *);
-void update_console(GameState *, const NavigationState *);
-void log_fps(ConsoleEntry entries[], unsigned int time_diff);
+void console_render(ConsoleEntry entries[]);
 void cleanup_resources(GameState *, NavigationState *, Ship *);
 void close_sdl(SDL_Window *);
 
@@ -184,13 +184,13 @@ int main(int argc, char *argv[])
     Point initial_position = {
         .x = nav_state.galaxy_offset.current_x,
         .y = nav_state.galaxy_offset.current_y};
-    generate_galaxies(&game_events, &nav_state, initial_position);
+    galaxies_generate(&game_events, &nav_state, initial_position);
 
     // Get a copy of current galaxy from the hash table
     Point galaxy_position = {
         .x = nav_state.galaxy_offset.current_x,
         .y = nav_state.galaxy_offset.current_y};
-    Galaxy *current_galaxy_copy = get_galaxy(nav_state.galaxies, galaxy_position);
+    Galaxy *current_galaxy_copy = galaxies_get_entry(nav_state.galaxies, galaxy_position);
 
     // Copy current_galaxy_copy to current_galaxy
     memcpy(nav_state.current_galaxy, current_galaxy_copy, sizeof(Galaxy));
@@ -217,16 +217,20 @@ int main(int argc, char *argv[])
     create_bstars(&nav_state, bstars, &camera);
 
     // Generate stars
-    generate_stars(&game_state, &game_events, &nav_state, bstars, &ship, &camera);
+    stars_generate(&game_state, &game_events, &nav_state, bstars, &ship, &camera);
 
     // Create galaxy for menu
     Point menu_galaxy_position = {.x = -140000, .y = -70000};
-    Galaxy *menu_galaxy = get_galaxy(nav_state.galaxies, menu_galaxy_position);
+    Galaxy *menu_galaxy = galaxies_get_entry(nav_state.galaxies, menu_galaxy_position);
     Gstar menustars[MAX_GSTARS];
     create_menu_galaxy_cloud(menu_galaxy, menustars);
 
     // Set time keeping variables
     unsigned int start_time;
+    unsigned int end_time;
+    unsigned int fps = 0;
+    unsigned int last_time = SDL_GetTicks();
+    unsigned int frame_count = 0;
 
     // Main loop
     while (game_state.state != QUIT)
@@ -234,7 +238,7 @@ int main(int argc, char *argv[])
         start_time = SDL_GetTicks();
 
         // Process events
-        poll_events(&game_state, &input_state, &game_events);
+        events_loop(&game_state, &input_state, &game_events);
 
         // Set background color
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
@@ -249,7 +253,7 @@ int main(int argc, char *argv[])
             break;
         case NAVIGATE:
             onNavigate(&game_state, &input_state, &game_events, &nav_state, bstars, &ship, &camera);
-            log_console(game_state.console_entries, V_INDEX, nav_state.velocity.magnitude);
+            console_update_entry(game_state.console_entries, V_INDEX, nav_state.velocity.magnitude);
             break;
         case MAP:
             onMap(&game_state, &input_state, &game_events, &nav_state, bstars, &ship, &camera);
@@ -259,7 +263,7 @@ int main(int argc, char *argv[])
             break;
         case NEW:
             reset_game(&game_state, &input_state, &game_events, &nav_state, &ship);
-            generate_stars(&game_state, &game_events, &nav_state, bstars, &ship, &camera);
+            stars_generate(&game_state, &game_events, &nav_state, bstars, &ship, &camera);
 
             for (int i = 0; i < max_bstars; i++)
             {
@@ -273,24 +277,51 @@ int main(int argc, char *argv[])
             break;
         }
 
-        // Update console
-        if (input_state.console && CONSOLE_ON && (game_state.state == NAVIGATE || game_state.state == MAP || game_state.state == UNIVERSE))
+        // Log position
+        Point position;
+
+        if (game_state.state == NAVIGATE)
         {
-            update_console(&game_state, &nav_state);
+            position.x = nav_state.navigate_offset.x;
+            position.y = nav_state.navigate_offset.y;
+        }
+        else if (game_state.state == MAP)
+        {
+            position.x = nav_state.map_offset.x;
+            position.y = nav_state.map_offset.y;
+        }
+        else if (game_state.state == UNIVERSE)
+        {
+            position.x = nav_state.universe_offset.x;
+            position.y = nav_state.universe_offset.y;
+        }
+
+        console_update_entry(game_state.console_entries, X_INDEX, position.x);
+        console_update_entry(game_state.console_entries, Y_INDEX, position.y);
+
+        // Log game scale
+        console_update_entry(game_state.console_entries, SCALE_INDEX, game_state.game_scale);
+
+        // Log FPS
+        console_measure_fps(&fps, &last_time, &frame_count);
+        console_update_entry(game_state.console_entries, FPS_INDEX, fps);
+
+        // Render console
+        if (input_state.console && CONSOLE_ON &&
+            (game_state.state == NAVIGATE || game_state.state == MAP || game_state.state == UNIVERSE))
+        {
+            console_render(game_state.console_entries);
         }
 
         // Switch buffers, display back buffer
         SDL_RenderPresent(renderer);
 
-        // Set FPS
-        unsigned int end_time;
+        // Get end time for this frame
+        end_time = SDL_GetTicks();
 
-        if ((1000 / FPS) > ((end_time = SDL_GetTicks()) - start_time))
+        // Set frame rate
+        if ((1000 / FPS) > end_time - start_time)
             SDL_Delay((1000 / FPS) - (end_time - start_time));
-
-        // Log FPS
-        unsigned int time_diff = end_time - start_time;
-        log_fps(game_state.console_entries, time_diff);
     }
 
     // Cleanup resources

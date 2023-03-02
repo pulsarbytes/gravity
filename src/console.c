@@ -19,9 +19,9 @@ extern SDL_Renderer *renderer;
 extern SDL_Color colors[];
 
 /*
- * Save data to console_entries array.
+ * Update entry in console_entries array.
  */
-void log_console(ConsoleEntry entries[], int index, double value)
+void console_update_entry(ConsoleEntry entries[], int index, double value)
 {
     char text[16];
     float rounded_value;
@@ -36,62 +36,40 @@ void log_console(ConsoleEntry entries[], int index, double value)
 }
 
 /*
- * Calculate and log FPS to console.
+ * Measure FPS.
  */
-void log_fps(ConsoleEntry entries[], unsigned int time_diff)
+void console_measure_fps(unsigned int *fps, unsigned int *last_time, unsigned int *frame_count)
 {
-    static unsigned total_time = 0, current_fps = 0;
+    unsigned int current_time = SDL_GetTicks();
+    unsigned int time_diff = current_time - *last_time;
 
-    total_time += time_diff;
-    current_fps++;
-
-    if (total_time >= 1000)
+    // Only update FPS once per second
+    if (time_diff >= 1000)
     {
-        log_console(entries, FPS_INDEX, (float)current_fps);
-
-        total_time = 0;
-        current_fps = 0;
+        *fps = *frame_count;
+        *frame_count = 0;
+        *last_time = current_time;
     }
+    else
+        *frame_count += 1;
 }
 
 /*
- * Update console.
+ * Render console.
  */
-void update_console(GameState *game_state, const NavigationState *nav_state)
+void console_render(ConsoleEntry entries[])
 {
-    Point position;
-
-    if (game_state->state == NAVIGATE)
-    {
-        position.x = nav_state->navigate_offset.x;
-        position.y = nav_state->navigate_offset.y;
-    }
-    else if (game_state->state == MAP)
-    {
-        position.x = nav_state->map_offset.x;
-        position.y = nav_state->map_offset.y;
-    }
-    else if (game_state->state == UNIVERSE)
-    {
-        position.x = nav_state->universe_offset.x;
-        position.y = nav_state->universe_offset.y;
-    }
-
-    log_console(game_state->console_entries, X_INDEX, position.x);
-    log_console(game_state->console_entries, Y_INDEX, position.y);
-    log_console(game_state->console_entries, SCALE_INDEX, game_state->game_scale);
-
     for (int i = 0; i < LOG_COUNT; i++)
     {
-        game_state->console_entries[i].surface = TTF_RenderText_Solid(fonts[FONT_SIZE_14], game_state->console_entries[i].value, colors[COLOR_WHITE_255]);
-        game_state->console_entries[i].texture = SDL_CreateTextureFromSurface(renderer, game_state->console_entries[i].surface);
-        SDL_FreeSurface(game_state->console_entries[i].surface);
-        game_state->console_entries[i].rect.x = 120;
-        game_state->console_entries[i].rect.y = (i + 1) * 20;
-        game_state->console_entries[i].rect.w = 100;
-        game_state->console_entries[i].rect.h = 15;
-        SDL_RenderCopy(renderer, game_state->console_entries[i].texture, NULL, &game_state->console_entries[i].rect);
-        SDL_DestroyTexture(game_state->console_entries[i].texture);
-        game_state->console_entries[i].texture = NULL;
+        entries[i].surface = TTF_RenderText_Solid(fonts[FONT_SIZE_14], entries[i].value, colors[COLOR_WHITE_255]);
+        entries[i].texture = SDL_CreateTextureFromSurface(renderer, entries[i].surface);
+        SDL_FreeSurface(entries[i].surface);
+        entries[i].rect.x = 120;
+        entries[i].rect.y = (i + 1) * 20;
+        entries[i].rect.w = 100;
+        entries[i].rect.h = 15;
+        SDL_RenderCopy(renderer, entries[i].texture, NULL, &entries[i].rect);
+        SDL_DestroyTexture(entries[i].texture);
+        entries[i].texture = NULL;
     }
 }

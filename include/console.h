@@ -2,8 +2,8 @@
 #define CONSOLE_H
 
 // Function prototypes
-void log_console(ConsoleEntry entries[], int index, double value);
-void log_fps(ConsoleEntry entries[], unsigned int time_diff);
-void update_console(GameState *, const NavigationState *);
+void console_update_entry(ConsoleEntry entries[], int index, double value);
+void console_measure_fps(unsigned int *fps, unsigned int *last_time, unsigned int *frame_count);
+void console_render(ConsoleEntry entries[]);
 
 #endif
