@@ -11,13 +11,7 @@
 #include "../include/constants.h"
 #include "../include/enums.h"
 #include "../include/structs.h"
-
-// Function prototypes
-void cleanup_resources(GameState *, NavigationState *, Ship *);
-
-// External function prototypes
-void cleanup_galaxies(GalaxyEntry *galaxies[]);
-void cleanup_stars(StarEntry *stars[]);
+#include "../include/utilities.h"
 
 /*
  * Clean up resources.

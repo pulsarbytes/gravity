@@ -1,5 +1,5 @@
 /*
- * console.c - Function definitions for game console.
+ * console.c - Function definitions for console.
  */
 
 #include <stdio.h>
@@ -11,21 +11,17 @@
 #include "../include/constants.h"
 #include "../include/enums.h"
 #include "../include/structs.h"
+#include "../include/console.h"
 
 // External variable definitions
 extern TTF_Font *fonts[];
 extern SDL_Renderer *renderer;
 extern SDL_Color colors[];
 
-// Function prototypes
-void log_game_console(ConsoleEntry entries[], int index, double value);
-void log_fps(ConsoleEntry entries[], unsigned int time_diff);
-void update_game_console(GameState *, const NavigationState *);
-
 /*
- * Save data to game_console_entries array.
+ * Save data to console_entries array.
  */
-void log_game_console(ConsoleEntry entries[], int index, double value)
+void log_console(ConsoleEntry entries[], int index, double value)
 {
     char text[16];
     float rounded_value;
@@ -40,7 +36,7 @@ void log_game_console(ConsoleEntry entries[], int index, double value)
 }
 
 /*
- * Calculate and log FPS to game console.
+ * Calculate and log FPS to console.
  */
 void log_fps(ConsoleEntry entries[], unsigned int time_diff)
 {
@@ -51,7 +47,7 @@ void log_fps(ConsoleEntry entries[], unsigned int time_diff)
 
     if (total_time >= 1000)
     {
-        log_game_console(entries, FPS_INDEX, (float)current_fps);
+        log_console(entries, FPS_INDEX, (float)current_fps);
 
         total_time = 0;
         current_fps = 0;
@@ -59,9 +55,9 @@ void log_fps(ConsoleEntry entries[], unsigned int time_diff)
 }
 
 /*
- * Update game console.
+ * Update console.
  */
-void update_game_console(GameState *game_state, const NavigationState *nav_state)
+void update_console(GameState *game_state, const NavigationState *nav_state)
 {
     Point position;
 
@@ -81,21 +77,21 @@ void update_game_console(GameState *game_state, const NavigationState *nav_state
         position.y = nav_state->universe_offset.y;
     }
 
-    log_game_console(game_state->game_console_entries, X_INDEX, position.x);
-    log_game_console(game_state->game_console_entries, Y_INDEX, position.y);
-    log_game_console(game_state->game_console_entries, SCALE_INDEX, game_state->game_scale);
+    log_console(game_state->console_entries, X_INDEX, position.x);
+    log_console(game_state->console_entries, Y_INDEX, position.y);
+    log_console(game_state->console_entries, SCALE_INDEX, game_state->game_scale);
 
     for (int i = 0; i < LOG_COUNT; i++)
     {
-        game_state->game_console_entries[i].surface = TTF_RenderText_Solid(fonts[FONT_SIZE_14], game_state->game_console_entries[i].value, colors[COLOR_WHITE_255]);
-        game_state->game_console_entries[i].texture = SDL_CreateTextureFromSurface(renderer, game_state->game_console_entries[i].surface);
-        SDL_FreeSurface(game_state->game_console_entries[i].surface);
-        game_state->game_console_entries[i].rect.x = 120;
-        game_state->game_console_entries[i].rect.y = (i + 1) * 20;
-        game_state->game_console_entries[i].rect.w = 100;
-        game_state->game_console_entries[i].rect.h = 15;
-        SDL_RenderCopy(renderer, game_state->game_console_entries[i].texture, NULL, &game_state->game_console_entries[i].rect);
-        SDL_DestroyTexture(game_state->game_console_entries[i].texture);
-        game_state->game_console_entries[i].texture = NULL;
+        game_state->console_entries[i].surface = TTF_RenderText_Solid(fonts[FONT_SIZE_14], game_state->console_entries[i].value, colors[COLOR_WHITE_255]);
+        game_state->console_entries[i].texture = SDL_CreateTextureFromSurface(renderer, game_state->console_entries[i].surface);
+        SDL_FreeSurface(game_state->console_entries[i].surface);
+        game_state->console_entries[i].rect.x = 120;
+        game_state->console_entries[i].rect.y = (i + 1) * 20;
+        game_state->console_entries[i].rect.w = 100;
+        game_state->console_entries[i].rect.h = 15;
+        SDL_RenderCopy(renderer, game_state->console_entries[i].texture, NULL, &game_state->console_entries[i].rect);
+        SDL_DestroyTexture(game_state->console_entries[i].texture);
+        game_state->console_entries[i].texture = NULL;
     }
 }

@@ -12,37 +12,11 @@
 #include "../include/constants.h"
 #include "../include/enums.h"
 #include "../include/structs.h"
+#include "../include/galaxies.h"
 
 // External variable definitions
 extern SDL_Renderer *renderer;
 extern SDL_Color colors[];
-
-// Function prototypes
-void cleanup_galaxies(GalaxyEntry *galaxies[]);
-void put_galaxy(GalaxyEntry *galaxies[], Point, Galaxy *);
-int galaxy_exists(GalaxyEntry *galaxies[], Point);
-Galaxy *get_galaxy(GalaxyEntry *galaxies[], Point);
-void delete_galaxy(GalaxyEntry *galaxies[], Point);
-double nearest_galaxy_center_distance(Point);
-Galaxy *find_nearest_galaxy(const NavigationState *, Point, int exclude);
-int get_galaxy_class(float distance);
-Galaxy *create_galaxy(Point);
-void update_galaxy(NavigationState *, Galaxy *, const Camera *, int state, long double scale);
-void generate_galaxies(GameEvents *, NavigationState *, Point);
-
-// External function prototypes
-uint64_t pair_hash_order_sensitive(Point);
-uint64_t pair_hash_order_sensitive_2(Point);
-uint64_t unique_index(Point, int modulo, int entity_type);
-double find_distance(double x1, double y1, double x2, double y2);
-bool point_in_array(Point, Point arr[], int len);
-void create_galaxy_cloud(Galaxy *, unsigned short high_definition);
-void draw_galaxy_cloud(Galaxy *, const Camera *, int gstars_count, unsigned short high_definition, long double scale);
-void cleanup_stars(StarEntry *stars[]);
-void project_galaxy(int state, const NavigationState *, Galaxy *, const Camera *, long double scale);
-void SDL_DrawCircle(SDL_Renderer *renderer, const Camera *, int xc, int yc, int radius, SDL_Color color);
-int in_camera(const Camera *, double x, double y, float radius, long double scale);
-double find_nearest_section_axis(double offset, int size);
 
 /*
  * Clean up galaxies.
@@ -200,7 +174,7 @@ double nearest_galaxy_center_distance(Point position)
 
                 if (has_galaxy)
                 {
-                    double distance = sqrt(pow(ix - position.x, 2) + pow(iy - position.y, 2));
+                    double distance = find_distance(ix, iy, position.x, position.y);
 
                     return distance;
                 }
@@ -367,9 +341,7 @@ Galaxy *create_galaxy(Point position)
 void update_galaxy(NavigationState *nav_state, Galaxy *galaxy, const Camera *camera, int state, long double scale)
 {
     // Get galaxy distance from position
-    double delta_x = galaxy->position.x - nav_state->universe_offset.x;
-    double delta_y = galaxy->position.y - nav_state->universe_offset.y;
-    double distance = sqrt(delta_x * delta_x + delta_y * delta_y);
+    double distance = find_distance(galaxy->position.x, galaxy->position.y, nav_state->universe_offset.x, nav_state->universe_offset.y);
 
     // Draw cutoff circle
     if (distance < galaxy->cutoff)
@@ -519,9 +491,7 @@ void generate_galaxies(GameEvents *game_events, NavigationState *nav_state, Poin
             }
 
             // Get distance from center of region
-            double dx = position.x - bx;
-            double dy = position.y - by;
-            double distance = sqrt(dx * dx + dy * dy);
+            double distance = find_distance(position.x, position.y, bx, by);
             double region_radius = sqrt((double)2 * ((UNIVERSE_REGION_SIZE + 1) / 2) * UNIVERSE_SECTION_SIZE * ((UNIVERSE_REGION_SIZE + 1) / 2) * UNIVERSE_SECTION_SIZE);
 
             // If galaxy outside region, delete it

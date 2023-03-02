@@ -11,15 +11,12 @@
 #include "../include/constants.h"
 #include "../include/enums.h"
 #include "../include/structs.h"
+#include "../include/sdl.h"
 
 // External variable definitions
 extern TTF_Font *fonts[];
 extern SDL_DisplayMode display_mode;
 extern SDL_Renderer *renderer;
-
-// Function prototypes
-int init_sdl(SDL_Window *);
-void close_sdl(SDL_Window *);
 
 /*
  * Initialize SDL.

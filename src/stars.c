@@ -13,43 +13,11 @@
 #include "../include/constants.h"
 #include "../include/enums.h"
 #include "../include/structs.h"
+#include "../include/stars.h"
 
 // External variable definitions
 extern SDL_Renderer *renderer;
 extern SDL_Color colors[];
-
-// Function prototypes
-static void cleanup_planets(CelestialBody *);
-void cleanup_stars(StarEntry *stars[]);
-void put_star(StarEntry *stars[], Point, Star *);
-int star_exists(StarEntry *stars[], Point);
-void delete_star(StarEntry *stars[], Point);
-double nearest_star_distance(Point, Galaxy *, uint64_t initseq, int galaxy_density);
-int get_star_class(float distance);
-int get_planet_class(float width);
-void delete_stars_outside_region(StarEntry *stars[], double bx, double by, int region_size);
-Star *create_star(const NavigationState *, Point, int preview, long double scale);
-void generate_stars(GameState *, GameEvents *, NavigationState *, Bstar bstars[], Ship *ship, const Camera *);
-void generate_stars_preview(NavigationState *, const Camera *, Point *, int zoom_preview, long double scale);
-void populate_star_system(CelestialBody *, Point, pcg32_random_t rng, long double scale);
-void update_star_system(GameState *, const InputState *, NavigationState *, CelestialBody *, Ship *ship, const Camera *);
-
-// External function prototypes
-uint64_t pair_hash_order_sensitive(Point);
-uint64_t pair_hash_order_sensitive_2(Point);
-uint64_t unique_index(Point, int modulo, int entity_type);
-bool point_in_array(Point, Point arr[], int len);
-double find_nearest_section_axis(double offset, int size);
-void generate_galaxies(GameEvents *, NavigationState *, Point);
-Galaxy *find_nearest_galaxy(const NavigationState *, Point, int exclude);
-double find_distance(double x1, double y1, double x2, double y2);
-void create_bstars(NavigationState *, Bstar bstars[], const Camera *);
-int point_in_rect(Point, Point rect[]);
-void calc_orbital_velocity(float distance, float angle, float radius, float *vx, float *vy);
-void SDL_DrawCircle(SDL_Renderer *renderer, const Camera *, int xc, int yc, int radius, SDL_Color color);
-void project_body(const GameState *, const NavigationState *, CelestialBody *, const Camera *);
-void apply_gravity_to_ship(GameState *, int thrust, NavigationState *, CelestialBody *, Ship *ship, const Camera *);
-int in_camera(const Camera *, double x, double y, float radius, long double scale);
 
 /*
  * Clean up planets (recursive).
@@ -211,14 +179,22 @@ double nearest_star_distance(Point position, Galaxy *current_galaxy, uint64_t in
                 pcg32_srandom_r(&rng, seed, initseq);
 
                 // Calculate density based on distance from center
-                double distance_from_center = sqrt((ix - position.x) * (ix - position.x) + (iy - position.y) * (iy - position.y));
+                /*
+                 * If we do this like in generate_stars, this will result in large stars at the edges,
+                 * and small stars at the center.
+                 * Instead, we use the trick of calculating density only in this small region.
+                 * This may find fake near stars that do not really exist and force star sizes to be smaller.
+                 */
+                // double distance_from_center = find_distance(ix, iy, 0, 0);
+                double distance_from_center = find_distance(ix, iy, position.x, position.y);
+
                 double density = (galaxy_density / pow((distance_from_center / a + 1), 6));
 
                 int has_star = abs(pcg32_random_r(&rng)) % 1000 < density;
 
                 if (has_star)
                 {
-                    double distance = sqrt(pow(ix - position.x, 2) + pow(iy - position.y, 2));
+                    double distance = find_distance(ix, iy, position.x, position.y);
 
                     return distance;
                 }
@@ -287,9 +263,7 @@ void delete_stars_outside_region(StarEntry *stars[], double bx, double by, int r
             Point position = {.x = entry->x, .y = entry->y};
 
             // Get distance from center of region
-            double dx = position.x - bx;
-            double dy = position.y - by;
-            double distance = sqrt(dx * dx + dy * dy);
+            double distance = find_distance(position.x, position.y, bx, by);
             double region_radius = sqrt((double)2 * ((region_size + 1) / 2) * GALAXY_SECTION_SIZE * ((region_size + 1) / 2) * GALAXY_SECTION_SIZE);
 
             // If star outside region, delete it
@@ -1122,9 +1096,7 @@ void update_star_system(GameState *game_state, const InputState *input_state, Na
         else if (game_state->state == MAP)
         {
             // Find distance from parent
-            double delta_x = body->parent->position.x - body->position.x;
-            double delta_y = body->parent->position.y - body->position.y;
-            distance = sqrt(delta_x * delta_x + delta_y * delta_y);
+            distance = find_distance(body->parent->position.x, body->parent->position.y, body->position.x, body->position.y);
 
             orbit_opacity = 32;
         }
@@ -1155,9 +1127,7 @@ void update_star_system(GameState *game_state, const InputState *input_state, Na
     else if (body->level == LEVEL_STAR)
     {
         // Get star distance from position
-        double delta_x_star = body->position.x - position.x;
-        double delta_y_star = body->position.y - position.y;
-        double distance_star = sqrt(delta_x_star * delta_x_star + delta_y_star * delta_y_star);
+        double distance_star = find_distance(body->position.x, body->position.y, position.x, position.y);
 
         if (game_state->state == MAP)
         {
@@ -1257,9 +1227,7 @@ void update_star_system(GameState *game_state, const InputState *input_state, Na
     {
         if (body->level == LEVEL_MOON)
         {
-            double delta_x = body->parent->position.x - position.x;
-            double delta_y = body->parent->position.y - position.y;
-            double distance = sqrt(delta_x * delta_x + delta_y * delta_y);
+            double distance = find_distance(body->parent->position.x, body->parent->position.y, position.x, position.y);
 
             if (distance < 2 * body->parent->cutoff)
                 project_body(game_state, nav_state, body, camera);

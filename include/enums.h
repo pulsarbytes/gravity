@@ -58,7 +58,7 @@ enum
     ON
 };
 
-// Must be in sync with game_console_entries
+// Must be in sync with console_entries
 enum
 {
     FPS_INDEX,

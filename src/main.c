@@ -50,11 +50,11 @@ void create_menu_galaxy_cloud(Galaxy *, Gstar menustars[]);
 void poll_events(GameState *, InputState *, GameEvents *);
 void onMenu(GameState *, InputState *, int game_started, const NavigationState *, Bstar bstars[], Gstar menustars[], Camera *);
 void onNavigate(GameState *, InputState *, GameEvents *, NavigationState *, Bstar bstars[], Ship *, Camera *);
-void log_game_console(ConsoleEntry entries[], int index, double value);
+void log_console(ConsoleEntry entries[], int index, double value);
 void onMap(GameState *, InputState *, GameEvents *, NavigationState *, Bstar bstars[], Ship *, Camera *);
 void onUniverse(GameState *, InputState *, GameEvents *, NavigationState *, Ship *, Camera *);
 void reset_game(GameState *, InputState *, GameEvents *, NavigationState *, Ship *);
-void update_game_console(GameState *, const NavigationState *);
+void update_console(GameState *, const NavigationState *);
 void log_fps(ConsoleEntry entries[], unsigned int time_diff);
 void cleanup_resources(GameState *, NavigationState *, Ship *);
 void close_sdl(SDL_Window *);
@@ -249,7 +249,7 @@ int main(int argc, char *argv[])
             break;
         case NAVIGATE:
             onNavigate(&game_state, &input_state, &game_events, &nav_state, bstars, &ship, &camera);
-            log_game_console(game_state.game_console_entries, V_INDEX, nav_state.velocity.magnitude);
+            log_console(game_state.console_entries, V_INDEX, nav_state.velocity.magnitude);
             break;
         case MAP:
             onMap(&game_state, &input_state, &game_events, &nav_state, bstars, &ship, &camera);
@@ -273,10 +273,10 @@ int main(int argc, char *argv[])
             break;
         }
 
-        // Update game console
+        // Update console
         if (input_state.console && CONSOLE_ON && (game_state.state == NAVIGATE || game_state.state == MAP || game_state.state == UNIVERSE))
         {
-            update_game_console(&game_state, &nav_state);
+            update_console(&game_state, &nav_state);
         }
 
         // Switch buffers, display back buffer
@@ -290,7 +290,7 @@ int main(int argc, char *argv[])
 
         // Log FPS
         unsigned int time_diff = end_time - start_time;
-        log_fps(game_state.game_console_entries, time_diff);
+        log_fps(game_state.console_entries, time_diff);
     }
 
     // Cleanup resources

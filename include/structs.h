@@ -12,7 +12,7 @@ typedef struct
     unsigned short disabled;
 } MenuButton;
 
-// Struct for a game console entry
+// Struct for a console entry
 typedef struct
 {
     char title[32];
@@ -213,7 +213,7 @@ typedef struct
     int galaxy_region_size;
     MenuButton menu[MENU_BUTTON_COUNT];
     MenuButton logo;
-    ConsoleEntry game_console_entries[LOG_COUNT];
+    ConsoleEntry console_entries[LOG_COUNT];
 } GameState;
 
 #endif /* STRUCTS_H */
