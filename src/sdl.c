@@ -18,6 +18,22 @@ extern SDL_DisplayMode display_mode;
 extern SDL_Renderer *renderer;
 
 /*
+ * Clean up SDL resources.
+ */
+void sdl_cleanup(SDL_Window *window)
+{
+    for (int i = 0; i < FONT_COUNT; i++)
+    {
+        TTF_CloseFont(fonts[i]);
+    }
+
+    TTF_Quit();
+    SDL_DestroyRenderer(renderer);
+    SDL_DestroyWindow(window);
+    SDL_Quit();
+}
+
+/*
  * Initialize SDL.
  */
 bool sdl_initialize(SDL_Window *window)
@@ -115,20 +131,4 @@ bool sdl_ttf_load_fonts(SDL_Window *window)
     }
 
     return true;
-}
-
-/*
- * Clean up SDL resources.
- */
-void sdl_cleanup(SDL_Window *window)
-{
-    for (int i = 0; i < FONT_COUNT; i++)
-    {
-        TTF_CloseFont(fonts[i]);
-    }
-
-    TTF_Quit();
-    SDL_DestroyRenderer(renderer);
-    SDL_DestroyWindow(window);
-    SDL_Quit();
 }

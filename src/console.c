@@ -19,26 +19,36 @@ extern SDL_Renderer *renderer;
 extern SDL_Color colors[];
 
 /*
- * Update entry in console_entries array.
+ * Log position.
  */
-void console_update_entry(ConsoleEntry entries[], int index, double value)
+void console_log_position(GameState *game_state, NavigationState nav_state)
 {
-    char text[16];
-    float rounded_value;
+    Point position;
 
-    if (index == SCALE_INDEX)
-        rounded_value = value;
-    else
-        rounded_value = (int)value;
+    if (game_state->state == NAVIGATE)
+    {
+        position.x = nav_state.navigate_offset.x;
+        position.y = nav_state.navigate_offset.y;
+    }
+    else if (game_state->state == MAP)
+    {
+        position.x = nav_state.map_offset.x;
+        position.y = nav_state.map_offset.y;
+    }
+    else if (game_state->state == UNIVERSE)
+    {
+        position.x = nav_state.universe_offset.x;
+        position.y = nav_state.universe_offset.y;
+    }
 
-    sprintf(text, "%f", rounded_value);
-    strcpy(entries[index].value, text);
+    console_update_entry(game_state->console_entries, X_INDEX, position.x);
+    console_update_entry(game_state->console_entries, Y_INDEX, position.y);
 }
 
 /*
- * Measure FPS.
+ * Measure and log FPS.
  */
-void console_measure_fps(unsigned int *fps, unsigned int *last_time, unsigned int *frame_count)
+void console_log_fps(ConsoleEntry entries[], unsigned int *fps, unsigned int *last_time, unsigned int *frame_count)
 {
     unsigned int current_time = SDL_GetTicks();
     unsigned int time_diff = current_time - *last_time;
@@ -52,6 +62,8 @@ void console_measure_fps(unsigned int *fps, unsigned int *last_time, unsigned in
     }
     else
         *frame_count += 1;
+
+    console_update_entry(entries, FPS_INDEX, *fps);
 }
 
 /*
@@ -72,4 +84,21 @@ void console_render(ConsoleEntry entries[])
         SDL_DestroyTexture(entries[i].texture);
         entries[i].texture = NULL;
     }
+}
+
+/*
+ * Update entry in console_entries array.
+ */
+void console_update_entry(ConsoleEntry entries[], int index, double value)
+{
+    char text[16];
+    float rounded_value;
+
+    if (index == SCALE_INDEX)
+        rounded_value = value;
+    else
+        rounded_value = (int)value;
+
+    sprintf(text, "%f", rounded_value);
+    strcpy(entries[index].value, text);
 }

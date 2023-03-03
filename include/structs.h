@@ -194,11 +194,11 @@ typedef struct
     Galaxy *buffer_galaxy; // Stores galaxy of current ship position
     Galaxy *previous_galaxy;
     PointState galaxy_offset;
-    Point universe_cross_axis; // Keep track of nearest axis coordinates
+    Point universe_cross_line; // Keep track of nearest line position
     Point navigate_offset;
     Point map_offset;
     Point universe_offset;
-    Point cross_axis; // Keep track of nearest axis coordinates
+    Point cross_line; // Keep track of nearest line position
     Vector velocity;
     uint64_t initseq; // Output sequence for the RNG of stars; Changes for every new current_galaxy
 } NavigationState;

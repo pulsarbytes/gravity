@@ -12,39 +12,6 @@
 #include "../include/physics.h"
 
 /*
- * Update velocity vector.
- */
-void phys_update_velocity(Vector *velocity, const Ship *ship)
-{
-    velocity->x = ship->position.x;
-    velocity->y = ship->position.y;
-    velocity->magnitude = sqrt((ship->vx * ship->vx) + (ship->vy * ship->vy));
-    velocity->angle = atan2(ship->vy, ship->vx);
-}
-
-/*
- * Calculate orbital velocity for object orbiting
- * at <distance> and <angle> degrees around object with <radius>.
- *
- * Centripetal force:
- * Fc = m * v^2 / distance
- * In this project, we assume that m = radius^2
- *
- * Gravitational force:
- * Fg = G_CONSTANT * M * m / distance^2
- * In this project, we assume that M = R^2, m = radius^2
- *
- * Fc = Fg
- * radius^2 * v^2 / distance = G_CONSTANT * R^2 * radius^2 / distance^2
- * v = sqrt(G_CONSTANT * R^2 / distance);
- */
-void phys_calculate_orbital_velocity(float distance, float angle, float radius, float *vx, float *vy)
-{
-    *vx = -COSMIC_CONSTANT * sqrt(G_CONSTANT * radius * radius / distance) * sin(angle * M_PI / 180); // negative for clockwise rotation
-    *vy = COSMIC_CONSTANT * sqrt(G_CONSTANT * radius * radius / distance) * cos(angle * M_PI / 180);
-}
-
-/*
  * Apply body gravity to ship.
  */
 void phys_apply_gravity_to_ship(GameState *game_state, int thrust, NavigationState *nav_state, CelestialBody *body, Ship *ship, int star_class)
@@ -160,4 +127,37 @@ void phys_apply_gravity_to_ship(GameState *game_state, int thrust, NavigationSta
             phys_update_velocity(&nav_state->velocity, ship);
         }
     }
+}
+
+/*
+ * Calculate orbital velocity for object orbiting
+ * at <distance> and <angle> degrees around object with <radius>.
+ *
+ * Centripetal force:
+ * Fc = m * v^2 / distance
+ * In this project, we assume that m = radius^2
+ *
+ * Gravitational force:
+ * Fg = G_CONSTANT * M * m / distance^2
+ * In this project, we assume that M = R^2, m = radius^2
+ *
+ * Fc = Fg
+ * radius^2 * v^2 / distance = G_CONSTANT * R^2 * radius^2 / distance^2
+ * v = sqrt(G_CONSTANT * R^2 / distance);
+ */
+void phys_calculate_orbital_velocity(float distance, float angle, float radius, float *vx, float *vy)
+{
+    *vx = -COSMIC_CONSTANT * sqrt(G_CONSTANT * radius * radius / distance) * sin(angle * M_PI / 180); // negative for clockwise rotation
+    *vy = COSMIC_CONSTANT * sqrt(G_CONSTANT * radius * radius / distance) * cos(angle * M_PI / 180);
+}
+
+/*
+ * Update velocity vector.
+ */
+void phys_update_velocity(Vector *velocity, const Ship *ship)
+{
+    velocity->x = ship->position.x;
+    velocity->y = ship->position.y;
+    velocity->magnitude = sqrt((ship->vx * ship->vx) + (ship->vy * ship->vy));
+    velocity->angle = atan2(ship->vy, ship->vx);
 }
