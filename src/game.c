@@ -14,6 +14,7 @@
 #include "../include/game.h"
 
 // External variable definitions
+extern SDL_DisplayMode display_mode;
 extern SDL_Renderer *renderer;
 extern SDL_Color colors[];
 
@@ -21,10 +22,14 @@ extern SDL_Color colors[];
 static void game_draw_ship(GameState *, const InputState *, const NavigationState *, Ship *, const Camera *);
 static void game_update_ship_position(GameState *, const InputState *, Ship *, const Camera *);
 
-void game_initialize_module(GameState *game_state, InputState *input_state, GameEvents *game_events, NavigationState *nav_state, Ship *ship)
+void game_reset(GameState *game_state, InputState *input_state, GameEvents *game_events, NavigationState *nav_state, Bstar *bstars, Ship *ship, Camera *camera, bool reset)
 {
+    if (reset)
+        game_state->state = NAVIGATE;
+    else
+        game_state->state = MENU;
+
     // GameState
-    game_state->state = MENU;
     game_state->speed_limit = BASE_SPEED_LIMIT;
     game_state->landing_stage = STAGE_OFF;
     game_state->game_scale = ZOOM_NAVIGATE;
@@ -47,9 +52,13 @@ void game_initialize_module(GameState *game_state, InputState *input_state, Game
     input_state->selected_button = 0;
 
     // GameEvents
+    if (reset)
+        game_events->game_started = ON;
+    else
+        game_events->game_started = OFF;
+
     game_events->stars_start = ON;
     game_events->galaxies_start = ON;
-    game_events->game_started = OFF;
     game_events->map_enter = OFF;
     game_events->map_exit = OFF;
     game_events->map_center = OFF;
@@ -60,11 +69,6 @@ void game_initialize_module(GameState *game_state, InputState *input_state, Game
     game_events->universe_switch = OFF;
     game_events->exited_galaxy = OFF;
     game_events->galaxy_found = OFF;
-
-    // Allocate memory for galaxies
-    nav_state->current_galaxy = (Galaxy *)malloc(sizeof(Galaxy));
-    nav_state->buffer_galaxy = (Galaxy *)malloc(sizeof(Galaxy));
-    nav_state->previous_galaxy = (Galaxy *)malloc(sizeof(Galaxy));
 
     // Galaxy coordinates
     // Retrieved from saved game or use default values if this is a new game
@@ -98,116 +102,17 @@ void game_initialize_module(GameState *game_state, InputState *input_state, Game
     ship->previous_position.y = 0;
     ship->angle = 0;
 
+    // Sync camera position with ship
+    camera->x = ship->position.x - (display_mode.w / 2);
+    camera->y = ship->position.y - (display_mode.h / 2);
+    camera->w = display_mode.w;
+    camera->h = display_mode.h;
+
     // Initialize galaxy sections crossings
     nav_state->cross_axis.x = ship->position.x + GALAXY_SECTION_SIZE / 2;
     nav_state->cross_axis.y = ship->position.y + GALAXY_SECTION_SIZE / 2;
 
-    // Initialize stars hash table to NULL pointers
-    for (int i = 0; i < MAX_STARS; i++)
-    {
-        nav_state->stars[i] = NULL;
-    }
-
-    // Initialize galaxies hash table to NULL pointers
-    for (int i = 0; i < MAX_GALAXIES; i++)
-    {
-        nav_state->galaxies[i] = NULL;
-    }
-
-    // Generate galaxies
-    Point initial_position = {
-        .x = nav_state->galaxy_offset.current_x,
-        .y = nav_state->galaxy_offset.current_y};
-    galaxies_generate(game_events, nav_state, initial_position);
-
-    // Get a copy of current galaxy from the hash table
-    Point galaxy_position = {
-        .x = nav_state->galaxy_offset.current_x,
-        .y = nav_state->galaxy_offset.current_y};
-    Galaxy *current_galaxy_copy = galaxies_get_entry(nav_state->galaxies, galaxy_position);
-
-    // Copy current_galaxy_copy to current_galaxy
-    memcpy(nav_state->current_galaxy, current_galaxy_copy, sizeof(Galaxy));
-
-    // Copy current_galaxy to buffer_galaxy
-    memcpy(nav_state->buffer_galaxy, nav_state->current_galaxy, sizeof(Galaxy));
-}
-
-void game_reset_game(GameState *game_state, InputState *input_state, GameEvents *game_events, NavigationState *nav_state, Ship *ship)
-{
-    // GameState
-    game_state->landing_stage = STAGE_OFF;
-    game_state->game_scale = ZOOM_NAVIGATE;
-    game_state->save_scale = OFF;
-    game_state->galaxy_region_size = GALAXY_REGION_SIZE;
-
-    // InputState
-    input_state->left = OFF;
-    input_state->right = OFF;
-    input_state->up = OFF;
-    input_state->down = OFF;
-    input_state->thrust = OFF;
-    input_state->reverse = OFF;
-    input_state->camera_on = CAMERA_ON;
-    input_state->stop = OFF;
-    input_state->zoom_in = OFF;
-    input_state->zoom_out = OFF;
-    input_state->console = ON;
-    input_state->orbits_on = SHOW_ORBITS;
-    input_state->selected_button = 0;
-
-    // GameEvents
-    game_events->stars_start = ON;
-    game_events->galaxies_start = ON;
-    game_events->game_started = ON;
-    game_events->map_enter = OFF;
-    game_events->map_exit = OFF;
-    game_events->map_center = OFF;
-    game_events->map_switch = OFF;
-    game_events->universe_enter = OFF;
-    game_events->universe_exit = OFF;
-    game_events->universe_center = OFF;
-    game_events->universe_switch = OFF;
-    game_events->exited_galaxy = OFF;
-    game_events->galaxy_found = OFF;
-
-    // Galaxy coordinates
-    // Retrieved from saved game or use default values if this is a new game
-    nav_state->galaxy_offset.current_x = UNIVERSE_START_X;
-    nav_state->galaxy_offset.current_y = UNIVERSE_START_Y;
-    nav_state->galaxy_offset.buffer_x = UNIVERSE_START_X;
-    nav_state->galaxy_offset.buffer_y = UNIVERSE_START_Y;
-
-    // Initialize universe sections crossings
-    nav_state->universe_cross_axis.x = nav_state->galaxy_offset.current_x;
-    nav_state->universe_cross_axis.y = nav_state->galaxy_offset.current_x;
-
-    // Navigation coordinates
-    nav_state->navigate_offset.x = GALAXY_START_X;
-    nav_state->navigate_offset.y = GALAXY_START_Y;
-
-    // Map coordinates
-    nav_state->map_offset.x = GALAXY_START_X;
-    nav_state->map_offset.y = GALAXY_START_Y;
-
-    // Universe coordinates
-    nav_state->universe_offset.x = nav_state->galaxy_offset.current_x;
-    nav_state->universe_offset.y = nav_state->galaxy_offset.current_y;
-
-    // Ship
-    ship->position.x = GALAXY_START_X;
-    ship->position.y = GALAXY_START_Y;
-    ship->vx = 0;
-    ship->vy = 0;
-    ship->previous_position.x = 0;
-    ship->previous_position.y = 0;
-    ship->angle = 0;
-
-    // Galaxy sections crossings
-    nav_state->cross_axis.x = ship->position.x;
-    nav_state->cross_axis.y = ship->position.y;
-
-    // Velocity
+    // Initialize velocity
     nav_state->velocity.magnitude = 0;
     nav_state->velocity.angle = 0;
 
@@ -239,13 +144,42 @@ void game_reset_game(GameState *game_state, InputState *input_state, GameEvents 
         .y = nav_state->galaxy_offset.current_y};
     Galaxy *current_galaxy_copy = galaxies_get_entry(nav_state->galaxies, galaxy_position);
 
+    if (!reset)
+    {
+        // Allocate memory for galaxies
+        nav_state->current_galaxy = (Galaxy *)malloc(sizeof(Galaxy));
+
+        if (nav_state->current_galaxy == NULL)
+        {
+            fprintf(stderr, "Error: Could not create Galaxy for current galaxy.\n");
+            return;
+        }
+
+        nav_state->buffer_galaxy = (Galaxy *)malloc(sizeof(Galaxy));
+
+        if (nav_state->buffer_galaxy == NULL)
+        {
+            fprintf(stderr, "Error: Could not create Galaxy for buffer galaxy.\n");
+            return;
+        }
+
+        nav_state->previous_galaxy = (Galaxy *)malloc(sizeof(Galaxy));
+
+        if (nav_state->previous_galaxy == NULL)
+        {
+            fprintf(stderr, "Error: Could not create Galaxy for previous galaxy.\n");
+            return;
+        }
+    }
+
     // Copy current_galaxy_copy to current_galaxy
     memcpy(nav_state->current_galaxy, current_galaxy_copy, sizeof(Galaxy));
 
     // Copy current_galaxy to buffer_galaxy
     memcpy(nav_state->buffer_galaxy, nav_state->current_galaxy, sizeof(Galaxy));
 
-    game_state->state = NAVIGATE;
+    // Generate background stars
+    gfx_generate_bstars(nav_state, bstars, camera);
 }
 
 void game_change_state(GameState *game_state, GameEvents *game_events, int new_state)
@@ -259,7 +193,7 @@ void game_change_state(GameState *game_state, GameEvents *game_events, int new_s
         menu_update_menu_entries(game_state);
 }
 
-void game_run_navigate_state(GameState *game_state, InputState *input_state, GameEvents *game_events, NavigationState *nav_state, Bstar bstars[], Ship *ship, Camera *camera)
+void game_run_navigate_state(GameState *game_state, InputState *input_state, GameEvents *game_events, NavigationState *nav_state, Bstar *bstars, Ship *ship, Camera *camera)
 {
     if (game_events->map_exit || game_events->universe_exit)
     {
@@ -502,6 +436,9 @@ void game_run_navigate_state(GameState *game_state, InputState *input_state, Gam
     // Draw screen frame
     gfx_draw_screen_frame(camera);
 
+    // Update velocity in console
+    console_update_entry(game_state->console_entries, V_INDEX, nav_state->velocity.magnitude);
+
     if (game_events->map_exit)
         game_events->map_exit = OFF;
 
@@ -509,7 +446,7 @@ void game_run_navigate_state(GameState *game_state, InputState *input_state, Gam
         game_events->universe_exit = OFF;
 }
 
-void game_run_map_state(GameState *game_state, InputState *input_state, GameEvents *game_events, NavigationState *nav_state, Bstar bstars[], Ship *ship, Camera *camera)
+void game_run_map_state(GameState *game_state, InputState *input_state, GameEvents *game_events, NavigationState *nav_state, Bstar *bstars, Ship *ship, Camera *camera)
 {
     // Add small tolerance to account for floating-point precision errors
     const double epsilon = ZOOM_EPSILON;

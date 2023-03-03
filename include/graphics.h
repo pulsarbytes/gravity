@@ -21,8 +21,8 @@ void gfx_create_default_colors(void);
 void gfx_draw_circle(SDL_Renderer *, const Camera *, int xc, int yc, int radius, SDL_Color);
 void gfx_draw_circle_approximation(SDL_Renderer *, const Camera *, int x, int y, int r, SDL_Color);
 void gfx_update_gstars_position(Galaxy *, Point, const Camera *, double distance, double limit);
-void gfx_generate_bstars(NavigationState *nav_state, Bstar bstars[], const Camera *camera);
-void gfx_update_bstars_position(int state, int camera_on, const NavigationState *, Bstar bstars[], const Camera *, Speed, double distance);
+void gfx_generate_bstars(NavigationState *nav_state, Bstar *bstars, const Camera *camera);
+void gfx_update_bstars_position(int state, int camera_on, const NavigationState *, Bstar *bstars, const Camera *, Speed, double distance);
 
 // External function prototypes
 uint64_t maths_hash_position_to_uint64(Point);

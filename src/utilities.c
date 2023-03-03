@@ -14,7 +14,7 @@
 /*
  * Clean up resources.
  */
-void utils_cleanup_resources(GameState *game_state, NavigationState *nav_state, Ship *ship)
+void utils_cleanup_resources(GameState *game_state, NavigationState *nav_state, Bstar *bstars, Ship *ship)
 {
     // Clean up galaxies
     galaxies_clear_table(nav_state->galaxies);
@@ -41,4 +41,7 @@ void utils_cleanup_resources(GameState *game_state, NavigationState *nav_state, 
 
     // Clean up logo texture
     SDL_DestroyTexture(game_state->logo.texture);
+
+    // Clean up bstars
+    free(bstars);
 }

@@ -158,7 +158,7 @@ static void menu_draw_menu(GameState *game_state, InputState *input_state, int g
     }
 }
 
-void menu_run_menu_state(GameState *game_state, InputState *input_state, int game_started, const NavigationState *nav_state, Bstar bstars[], Gstar menustars[], Camera *camera)
+void menu_run_menu_state(GameState *game_state, InputState *input_state, int game_started, const NavigationState *nav_state, Bstar *bstars, Gstar menustars[], Camera *camera)
 {
     // Draw background stars
     Speed speed = {.vx = 1000, .vy = 0};

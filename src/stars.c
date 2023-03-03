@@ -73,6 +73,13 @@ static void stars_add_entry(StarEntry *stars[], Point position, Star *star)
     uint64_t index = maths_hash_position_to_index(position, MAX_STARS, ENTITY_STAR);
 
     StarEntry *entry = (StarEntry *)malloc(sizeof(StarEntry));
+
+    if (entry == NULL)
+    {
+        fprintf(stderr, "Error: Could not create StarEntry.\n");
+        return;
+    }
+
     entry->x = position.x;
     entry->y = position.y;
     entry->star = star;
@@ -334,6 +341,12 @@ static Star *stars_create_star(const NavigationState *nav_state, Point position,
     // Create star
     Star *star = (Star *)malloc(sizeof(Star));
 
+    if (star == NULL)
+    {
+        fprintf(stderr, "Error: Could not create Star.\n");
+        return NULL;
+    }
+
     // Get unique star index
     uint64_t index = maths_hash_position_to_uint64(position);
 
@@ -380,7 +393,7 @@ static Star *stars_create_star(const NavigationState *nav_state, Point position,
  * The region has intervals of size GALAXY_SECTION_SIZE.
  * The function checks for galaxy boundaries and switches to a new galaxy if close enough.
  */
-void stars_generate(GameState *game_state, GameEvents *game_events, NavigationState *nav_state, Bstar bstars[], Ship *ship, const Camera *camera)
+void stars_generate(GameState *game_state, GameEvents *game_events, NavigationState *nav_state, Bstar *bstars, Ship *ship, const Camera *camera)
 {
     Point offset;
 
@@ -872,6 +885,12 @@ static void stars_populate_body(CelestialBody *body, Point position, pcg32_rando
 
                 Planet *planet = (Planet *)malloc(sizeof(Planet));
 
+                if (planet == NULL)
+                {
+                    fprintf(stderr, "Error: Could not create Planet.\n");
+                    return;
+                }
+
                 strcpy(planet->name, body->name);                               // Copy star name to planet name
                 sprintf(planet->name + strlen(planet->name), "-%s-%d", "P", i); // Append to planet name
                 planet->image = "../assets/images/earth.png";
@@ -1007,6 +1026,12 @@ static void stars_populate_body(CelestialBody *body, Point position, pcg32_rando
                 width += orbit_width + 2 * radius;
 
                 Planet *moon = (Planet *)malloc(sizeof(Planet));
+
+                if (moon == NULL)
+                {
+                    fprintf(stderr, "Error: Could not create Planet.\n");
+                    return;
+                }
 
                 strcpy(moon->name, body->name);                             // Copy planet name to moon name
                 sprintf(moon->name + strlen(moon->name), "-%s-%d", "M", i); // Append to moon name

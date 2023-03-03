@@ -1226,7 +1226,7 @@ void gfx_update_gstars_position(Galaxy *galaxy, Point ship_position, const Camer
     }
 }
 
-void gfx_generate_bstars(NavigationState *nav_state, Bstar bstars[], const Camera *camera)
+void gfx_generate_bstars(NavigationState *nav_state, Bstar *bstars, const Camera *camera)
 {
     int i = 0, row, column, is_star;
     int end = false;
@@ -1237,6 +1237,11 @@ void gfx_generate_bstars(NavigationState *nav_state, Bstar bstars[], const Camer
 
     // Seed with a fixed constant
     srand(1200);
+
+    for (int j = 0; j < max_bstars; j++)
+    {
+        bstars[j].final_star = 0;
+    }
 
     for (row = 0; row < camera->h && !end; row++)
     {
@@ -1289,7 +1294,7 @@ void gfx_generate_bstars(NavigationState *nav_state, Bstar bstars[], const Camer
 /*
  * Move and draw background stars.
  */
-void gfx_update_bstars_position(int state, int camera_on, const NavigationState *nav_state, Bstar bstars[], const Camera *camera, Speed speed, double distance)
+void gfx_update_bstars_position(int state, int camera_on, const NavigationState *nav_state, Bstar *bstars, const Camera *camera, Speed speed, double distance)
 {
     int i = 0;
     int max_bstars = (int)(camera->w * camera->h * BSTARS_PER_SQUARE / BSTARS_SQUARE);

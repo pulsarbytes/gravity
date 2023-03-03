@@ -41,24 +41,22 @@ SDL_Color colors[COLOR_COUNT];
 bool sdl_initialize(SDL_Window *);
 bool sdl_ttf_load_fonts(SDL_Window *);
 void gfx_create_default_colors(void);
-void game_initialize_module(GameState *, InputState *, GameEvents *, NavigationState *, Ship *);
+void game_reset(GameState *, InputState *, GameEvents *, NavigationState *, Bstar *bstars, Ship *, Camera *, bool reset);
 void menu_populate_menu_array(MenuButton menu[]);
 void menu_create_logo(MenuButton *logo);
 Ship game_create_ship(int radius, Point, long double scale);
 Galaxy *galaxies_get_entry(GalaxyEntry *galaxies[], Point);
-void gfx_generate_bstars(NavigationState *, Bstar bstars[], const Camera *);
-void stars_generate(GameState *, GameEvents *, NavigationState *, Bstar bstars[], Ship *, const Camera *);
+void stars_generate(GameState *, GameEvents *, NavigationState *, Bstar *bstars, Ship *, const Camera *);
 void gfx_generate_menu_gstars(Galaxy *, Gstar menustars[]);
 void events_loop(GameState *, InputState *, GameEvents *);
-void menu_run_menu_state(GameState *, InputState *, int game_started, const NavigationState *, Bstar bstars[], Gstar menustars[], Camera *);
-void game_run_navigate_state(GameState *, InputState *, GameEvents *, NavigationState *, Bstar bstars[], Ship *, Camera *);
+void menu_run_menu_state(GameState *, InputState *, int game_started, const NavigationState *, Bstar *bstars, Gstar menustars[], Camera *);
+void game_run_navigate_state(GameState *, InputState *, GameEvents *, NavigationState *, Bstar *bstars, Ship *, Camera *);
 void console_update_entry(ConsoleEntry entries[], int index, double value);
 void console_measure_fps(unsigned int *fps, unsigned int *last_time, unsigned int *frame_count);
-void game_run_map_state(GameState *, InputState *, GameEvents *, NavigationState *, Bstar bstars[], Ship *, Camera *);
+void game_run_map_state(GameState *, InputState *, GameEvents *, NavigationState *, Bstar *bstars, Ship *, Camera *);
 void game_run_universe_state(GameState *, InputState *, GameEvents *, NavigationState *, Ship *, Camera *);
-void game_reset_game(GameState *, InputState *, GameEvents *, NavigationState *, Ship *);
 void console_render(ConsoleEntry entries[]);
-void utils_cleanup_resources(GameState *, NavigationState *, Ship *);
+void utils_cleanup_resources(GameState *, NavigationState *, Bstar *bstars, Ship *);
 void sdl_cleanup(SDL_Window *);
 
 int main(int argc, char *argv[])
@@ -89,38 +87,33 @@ int main(int argc, char *argv[])
     // Create colors
     gfx_create_default_colors();
 
-    // Game module variables
+    // Game variables
     GameState game_state;
     InputState input_state;
     GameEvents game_events;
     NavigationState nav_state;
 
-    // Create ship and ship projection
+    // Create ship
     Point zero_position = {.x = 0, .y = 0};
     Ship ship = game_create_ship(SHIP_RADIUS, zero_position, ZOOM_NAVIGATE);
     Ship ship_projection = game_create_ship(SHIP_PROJECTION_RADIUS, zero_position, ZOOM_NAVIGATE);
     ship.projection = &ship_projection;
 
-    // Initialize game module
-    game_initialize_module(&game_state, &input_state, &game_events, &nav_state, &ship);
-
-    // Create camera, sync initial position with ship
-    Camera camera = {
-        .x = ship.position.x - (display_mode.w / 2),
-        .y = ship.position.y - (display_mode.h / 2),
-        .w = display_mode.w,
-        .h = display_mode.h};
+    // Create camera
+    Camera camera;
 
     // Create background stars
-    int max_bstars = (int)(camera.w * camera.h * BSTARS_PER_SQUARE / BSTARS_SQUARE);
-    Bstar bstars[max_bstars];
+    int max_bstars = (int)(display_mode.w * display_mode.h * BSTARS_PER_SQUARE / BSTARS_SQUARE);
+    Bstar *bstars = malloc(max_bstars * sizeof(Bstar));
 
-    for (int i = 0; i < max_bstars; i++)
+    if (bstars == NULL)
     {
-        bstars[i].final_star = 0;
+        fprintf(stderr, "Error: could not create bstars.\n");
+        return 1;
     }
 
-    gfx_generate_bstars(&nav_state, bstars, &camera);
+    // Initialize game module
+    game_reset(&game_state, &input_state, &game_events, &nav_state, bstars, &ship, &camera, false);
 
     // Generate stars
     stars_generate(&game_state, &game_events, &nav_state, bstars, &ship, &camera);
@@ -165,7 +158,6 @@ int main(int argc, char *argv[])
             break;
         case NAVIGATE:
             game_run_navigate_state(&game_state, &input_state, &game_events, &nav_state, bstars, &ship, &camera);
-            console_update_entry(game_state.console_entries, V_INDEX, nav_state.velocity.magnitude);
             break;
         case MAP:
             game_run_map_state(&game_state, &input_state, &game_events, &nav_state, bstars, &ship, &camera);
@@ -174,15 +166,7 @@ int main(int argc, char *argv[])
             game_run_universe_state(&game_state, &input_state, &game_events, &nav_state, &ship, &camera);
             break;
         case NEW:
-            game_reset_game(&game_state, &input_state, &game_events, &nav_state, &ship);
-            stars_generate(&game_state, &game_events, &nav_state, bstars, &ship, &camera);
-
-            for (int i = 0; i < max_bstars; i++)
-            {
-                bstars[i].final_star = 0;
-            }
-
-            gfx_generate_bstars(&nav_state, bstars, &camera);
+            game_reset(&game_state, &input_state, &game_events, &nav_state, bstars, &ship, &camera, true);
             break;
         default:
             menu_run_menu_state(&game_state, &input_state, game_events.game_started, &nav_state, bstars, menustars, &camera);
@@ -237,7 +221,7 @@ int main(int argc, char *argv[])
     }
 
     // Cleanup resources
-    utils_cleanup_resources(&game_state, &nav_state, &ship);
+    utils_cleanup_resources(&game_state, &nav_state, bstars, &ship);
 
     // Close SDL
     sdl_cleanup(window);

@@ -2,7 +2,7 @@
 #define UTILITIES_H
 
 // Function prototypes
-void utils_cleanup_resources(GameState *, NavigationState *, Ship *);
+void utils_cleanup_resources(GameState *, NavigationState *, Bstar *bstars, Ship *);
 
 // External function prototypes
 void galaxies_clear_table(GalaxyEntry *galaxies[]);

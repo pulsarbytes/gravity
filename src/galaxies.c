@@ -54,6 +54,13 @@ static void galaxies_add_entry(GalaxyEntry *galaxies[], Point position, Galaxy *
     uint64_t index = maths_hash_position_to_index(position, MAX_GALAXIES, ENTITY_GALAXY);
 
     GalaxyEntry *entry = (GalaxyEntry *)malloc(sizeof(GalaxyEntry));
+
+    if (entry == NULL)
+    {
+        fprintf(stderr, "Error: Could not create GalaxyEntry.\n");
+        return;
+    }
+
     entry->x = position.x;
     entry->y = position.y;
     entry->galaxy = galaxy;
@@ -318,6 +325,12 @@ static Galaxy *galaxies_create_galaxy(Point position)
 
     // Create galaxy
     Galaxy *galaxy = (Galaxy *)malloc(sizeof(Galaxy));
+
+    if (galaxy == NULL)
+    {
+        fprintf(stderr, "Error: Could not create Galaxy.\n");
+        return NULL;
+    }
 
     // Get unique galaxy index
     uint64_t index = maths_hash_position_to_uint64_2(position);
