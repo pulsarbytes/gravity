@@ -17,25 +17,30 @@
 extern SDL_Renderer *renderer;
 extern SDL_Color colors[];
 
-void change_state(GameState *game_state, GameEvents *game_events, int new_state)
+// Static function prototypes
+static void game_draw_ship(GameState *, const InputState *, const NavigationState *, Ship *, const Camera *);
+static void game_update_ship_position(GameState *, const InputState *, Ship *, const Camera *);
+
+void game_change_state(GameState *game_state, GameEvents *game_events, int new_state)
 {
     game_state->state = new_state;
 
     if (game_state->state == NAVIGATE)
         game_events->game_started = ON;
 
-    update_menu(game_state, game_events->game_started);
+    if (game_events->game_started)
+        menu_update_menu_entries(game_state);
 }
 
-void reset_game(GameState *game_state, InputState *input_state, GameEvents *game_events, NavigationState *nav_state, Ship *ship)
+void game_reset_game(GameState *game_state, InputState *input_state, GameEvents *game_events, NavigationState *nav_state, Ship *ship)
 {
-    // Game state
+    // GameState
     game_state->landing_stage = STAGE_OFF;
     game_state->game_scale = ZOOM_NAVIGATE;
     game_state->save_scale = OFF;
     game_state->galaxy_region_size = GALAXY_REGION_SIZE;
 
-    // Input state
+    // InputState
     input_state->left = OFF;
     input_state->right = OFF;
     input_state->up = OFF;
@@ -50,7 +55,7 @@ void reset_game(GameState *game_state, InputState *input_state, GameEvents *game
     input_state->orbits_on = SHOW_ORBITS;
     input_state->selected_button = 0;
 
-    // Game events
+    // GameEvents
     game_events->stars_start = ON;
     game_events->galaxies_start = ON;
     game_events->game_started = ON;
@@ -65,7 +70,7 @@ void reset_game(GameState *game_state, InputState *input_state, GameEvents *game
     game_events->exited_galaxy = OFF;
     game_events->galaxy_found = OFF;
 
-    // Navigation state & ship
+    // NavigationState & Ship
     nav_state->galaxy_offset.current_x = UNIVERSE_START_X;
     nav_state->galaxy_offset.current_y = UNIVERSE_START_Y;
     nav_state->galaxy_offset.buffer_x = UNIVERSE_START_X;
@@ -92,7 +97,7 @@ void reset_game(GameState *game_state, InputState *input_state, GameEvents *game
     nav_state->velocity.magnitude = 0;
     nav_state->velocity.angle = 0;
 
-    cleanup_stars(nav_state->stars);
+    stars_clear_table(nav_state->stars);
 
     // Initialize stars hash table to NULL pointers
     for (int i = 0; i < MAX_STARS; i++)
@@ -100,7 +105,7 @@ void reset_game(GameState *game_state, InputState *input_state, GameEvents *game
         nav_state->stars[i] = NULL;
     }
 
-    cleanup_galaxies(nav_state->galaxies);
+    galaxies_clear_table(nav_state->galaxies);
 
     // Initialize galaxies hash table to NULL pointers
     for (int i = 0; i < MAX_GALAXIES; i++)
@@ -112,13 +117,13 @@ void reset_game(GameState *game_state, InputState *input_state, GameEvents *game
     Point initial_position = {
         .x = nav_state->galaxy_offset.current_x,
         .y = nav_state->galaxy_offset.current_y};
-    generate_galaxies(game_events, nav_state, initial_position);
+    galaxies_generate(game_events, nav_state, initial_position);
 
     // Get a copy of current galaxy from the hash table
     Point galaxy_position = {
         .x = nav_state->galaxy_offset.current_x,
         .y = nav_state->galaxy_offset.current_y};
-    Galaxy *current_galaxy_copy = get_galaxy(nav_state->galaxies, galaxy_position);
+    Galaxy *current_galaxy_copy = galaxies_get_entry(nav_state->galaxies, galaxy_position);
 
     // Copy current_galaxy_copy to current_galaxy
     memcpy(nav_state->current_galaxy, current_galaxy_copy, sizeof(Galaxy));
@@ -129,7 +134,7 @@ void reset_game(GameState *game_state, InputState *input_state, GameEvents *game
     game_state->state = NAVIGATE;
 }
 
-void onNavigate(GameState *game_state, InputState *input_state, GameEvents *game_events, NavigationState *nav_state, Bstar bstars[], Ship *ship, Camera *camera)
+void game_run_navigate_state(GameState *game_state, InputState *input_state, GameEvents *game_events, NavigationState *nav_state, Bstar bstars[], Ship *ship, Camera *camera)
 {
     if (game_events->map_exit || game_events->universe_exit)
     {
@@ -137,7 +142,7 @@ void onNavigate(GameState *game_state, InputState *input_state, GameEvents *game
         if (nav_state->current_galaxy->position.x != nav_state->buffer_galaxy->position.x ||
             nav_state->current_galaxy->position.y != nav_state->buffer_galaxy->position.y)
         {
-            cleanup_stars(nav_state->stars);
+            stars_clear_table(nav_state->stars);
             memcpy(nav_state->current_galaxy, nav_state->buffer_galaxy, sizeof(Galaxy));
 
             // Reset galaxy_offset
@@ -156,10 +161,10 @@ void onNavigate(GameState *game_state, InputState *input_state, GameEvents *game
         game_state->galaxy_region_size = GALAXY_REGION_SIZE;
 
         // Delete stars that end up outside the region
-        double bx = find_nearest_section_axis(ship->position.x, GALAXY_SECTION_SIZE);
-        double by = find_nearest_section_axis(ship->position.y, GALAXY_SECTION_SIZE);
+        double bx = maths_get_nearest_section_axis(ship->position.x, GALAXY_SECTION_SIZE);
+        double by = maths_get_nearest_section_axis(ship->position.y, GALAXY_SECTION_SIZE);
 
-        delete_stars_outside_region(nav_state->stars, bx, by, game_state->galaxy_region_size);
+        stars_delete_outside_region(nav_state->stars, bx, by, game_state->galaxy_region_size);
 
         // Reset saved game_scale
         if (game_state->save_scale)
@@ -171,13 +176,13 @@ void onNavigate(GameState *game_state, InputState *input_state, GameEvents *game
 
         // Update camera
         if (input_state->camera_on)
-            update_camera(camera, ship->position, game_state->game_scale);
+            gfx_update_camera(camera, ship->position, game_state->game_scale);
 
         // Zoom in
         for (int s = 0; s < MAX_STARS; s++)
         {
             if (nav_state->stars[s] != NULL && nav_state->stars[s]->star != NULL)
-                zoom_star(nav_state->stars[s]->star, game_state->game_scale);
+                gfx_zoom_star_system(nav_state->stars[s]->star, game_state->game_scale);
         }
     }
 
@@ -195,7 +200,7 @@ void onNavigate(GameState *game_state, InputState *input_state, GameEvents *game
             for (int s = 0; s < MAX_STARS; s++)
             {
                 if (nav_state->stars[s] != NULL && nav_state->stars[s]->star != NULL)
-                    zoom_star(nav_state->stars[s]->star, game_state->game_scale);
+                    gfx_zoom_star_system(nav_state->stars[s]->star, game_state->game_scale);
             }
         }
 
@@ -213,7 +218,7 @@ void onNavigate(GameState *game_state, InputState *input_state, GameEvents *game
             for (int s = 0; s < MAX_STARS; s++)
             {
                 if (nav_state->stars[s] != NULL && nav_state->stars[s]->star != NULL)
-                    zoom_star(nav_state->stars[s]->star, game_state->game_scale);
+                    gfx_zoom_star_system(nav_state->stars[s]->star, game_state->game_scale);
             }
         }
 
@@ -222,14 +227,14 @@ void onNavigate(GameState *game_state, InputState *input_state, GameEvents *game
 
     // Generate stars
     if (input_state->camera_on)
-        generate_stars(game_state, game_events, nav_state, bstars, ship, camera);
+        stars_generate(game_state, game_events, nav_state, bstars, ship, camera);
 
     // Update camera
     if (input_state->camera_on)
-        update_camera(camera, nav_state->navigate_offset, game_state->game_scale);
+        gfx_update_camera(camera, nav_state->navigate_offset, game_state->game_scale);
 
     // Get distance from galaxy center
-    double distance_current = find_distance(ship->position.x, ship->position.y, 0, 0);
+    double distance_current = maths_distance_between_points(ship->position.x, ship->position.y, 0, 0);
 
     if (BSTARS_ON || GSTARS_ON || SPEED_LINES_ON)
     {
@@ -250,7 +255,7 @@ void onNavigate(GameState *game_state, InputState *input_state, GameEvents *game
                 game_events->galaxy_found = OFF;
             }
 
-            update_gstars(nav_state->current_galaxy, ship_position_current, camera, distance_current, limit_current);
+            gfx_update_gstars_position(nav_state->current_galaxy, ship_position_current, camera, distance_current, limit_current);
 
             if (game_events->exited_galaxy && nav_state->previous_galaxy != NULL && nav_state->previous_galaxy->initialized_hd)
             {
@@ -264,26 +269,26 @@ void onNavigate(GameState *game_state, InputState *input_state, GameEvents *game
                     .x = (universe_position.x - nav_state->previous_galaxy->position.x) * GALAXY_SCALE,
                     .y = (universe_position.y - nav_state->previous_galaxy->position.y) * GALAXY_SCALE};
 
-                double distance_previous = find_distance(universe_position.x, universe_position.y, nav_state->previous_galaxy->position.x, nav_state->previous_galaxy->position.y);
+                double distance_previous = maths_distance_between_points(universe_position.x, universe_position.y, nav_state->previous_galaxy->position.x, nav_state->previous_galaxy->position.y);
                 distance_previous *= GALAXY_SCALE;
                 double limit_previous = 2 * nav_state->previous_galaxy->radius * GALAXY_SCALE;
 
-                update_gstars(nav_state->previous_galaxy, ship_position_previous, camera, distance_previous, limit_previous);
+                gfx_update_gstars_position(nav_state->previous_galaxy, ship_position_previous, camera, distance_previous, limit_previous);
             }
         }
 
         // Draw background stars
         if (BSTARS_ON)
-            update_bstars(game_state->state, input_state->camera_on, nav_state, bstars, camera, speed, distance_current);
+            gfx_update_bstars_position(game_state->state, input_state->camera_on, nav_state, bstars, camera, speed, distance_current);
 
         // Draw speed lines
         if (SPEED_LINES_ON && input_state->camera_on)
-            draw_speed_lines(nav_state->velocity.magnitude, camera, speed);
+            gfx_draw_speed_lines(nav_state->velocity.magnitude, camera, speed);
     }
 
     // Draw speed tail
     if (nav_state->velocity.magnitude > GALAXY_SPEED_LIMIT)
-        draw_speed_arc(ship, camera, game_state->game_scale);
+        gfx_draw_speed_arc(ship, camera, game_state->game_scale);
 
     // Update system
     if ((!game_events->map_exit && !game_events->universe_exit && !input_state->zoom_in && !input_state->zoom_out) || game_state->game_scale > ZOOM_NAVIGATE_MIN)
@@ -297,7 +302,8 @@ void onNavigate(GameState *game_state, InputState *input_state, GameEvents *game
 
                 while (entry != NULL)
                 {
-                    update_star_system(game_state, input_state, nav_state, entry->star, ship, camera);
+                    stars_update_orbital_positions(game_state, input_state, nav_state, entry->star, ship, entry->star->class);
+                    stars_draw_star_system(game_state, input_state, nav_state, entry->star, camera);
                     entry = entry->next;
                 }
             }
@@ -323,14 +329,17 @@ void onNavigate(GameState *game_state, InputState *input_state, GameEvents *game
     }
 
     // Update velocity
-    update_velocity(&nav_state->velocity, ship);
+    phys_update_velocity(&nav_state->velocity, ship);
 
-    // Update ship
-    update_ship(game_state, input_state, nav_state, ship, camera);
+    // Update ship position
+    game_update_ship_position(game_state, input_state, ship, camera);
 
     // Update coordinates
     nav_state->navigate_offset.x = ship->position.x;
     nav_state->navigate_offset.y = ship->position.y;
+
+    // Draw ship
+    game_draw_ship(game_state, input_state, nav_state, ship, camera);
 
     // Check for nearest galaxy, excluding current galaxy
     if (game_events->exited_galaxy && PROJECTIONS_ON)
@@ -347,26 +356,26 @@ void onNavigate(GameState *game_state, InputState *input_state, GameEvents *game
             .w = camera->w,
             .h = camera->h};
 
-        Galaxy *nearest_galaxy = find_nearest_galaxy(nav_state, universe_position, true);
+        Galaxy *nearest_galaxy = galaxies_nearest_circumference(nav_state, universe_position, true);
 
         if (nearest_galaxy != NULL &&
             (nearest_galaxy->position.x != nav_state->current_galaxy->position.x ||
              nearest_galaxy->position.y != nav_state->current_galaxy->position.y))
         {
             // Project nearest galaxy
-            project_galaxy(MAP, nav_state, nearest_galaxy, &universe_camera, game_state->game_scale);
+            gfx_project_galaxy_on_edge(MAP, nav_state, nearest_galaxy, &universe_camera, game_state->game_scale);
         }
 
         // Project current galaxy
-        project_galaxy(MAP, nav_state, nav_state->current_galaxy, &universe_camera, game_state->game_scale);
+        gfx_project_galaxy_on_edge(MAP, nav_state, nav_state->current_galaxy, &universe_camera, game_state->game_scale);
     }
 
     // Create galaxy cloud
     if (!nav_state->current_galaxy->initialized_hd)
-        create_galaxy_cloud(nav_state->current_galaxy, true);
+        gfx_generate_gstars(nav_state->current_galaxy, true);
 
     // Draw screen frame
-    draw_screen_frame(camera);
+    gfx_draw_screen_frame(camera);
 
     if (game_events->map_exit)
         game_events->map_exit = OFF;
@@ -375,7 +384,7 @@ void onNavigate(GameState *game_state, InputState *input_state, GameEvents *game
         game_events->universe_exit = OFF;
 }
 
-void onMap(GameState *game_state, InputState *input_state, GameEvents *game_events, NavigationState *nav_state, Bstar bstars[], Ship *ship, Camera *camera)
+void game_run_map_state(GameState *game_state, InputState *input_state, GameEvents *game_events, NavigationState *nav_state, Bstar bstars[], Ship *ship, Camera *camera)
 {
     // Add small tolerance to account for floating-point precision errors
     const double epsilon = ZOOM_EPSILON;
@@ -383,7 +392,7 @@ void onMap(GameState *game_state, InputState *input_state, GameEvents *game_even
     double zoom_step = ZOOM_STEP;
 
     if (game_events->universe_switch)
-        cleanup_stars(nav_state->stars);
+        stars_clear_table(nav_state->stars);
 
     // Reset region_size
     if (game_state->game_scale < ZOOM_MAP_REGION_SWITCH - epsilon)
@@ -420,11 +429,11 @@ void onMap(GameState *game_state, InputState *input_state, GameEvents *game_even
         for (int s = 0; s < MAX_STARS; s++)
         {
             if (nav_state->stars[s] != NULL && nav_state->stars[s]->star != NULL)
-                zoom_star(nav_state->stars[s]->star, game_state->game_scale);
+                gfx_zoom_star_system(nav_state->stars[s]->star, game_state->game_scale);
         }
 
         // Update camera
-        update_camera(camera, nav_state->map_offset, game_state->game_scale);
+        gfx_update_camera(camera, nav_state->map_offset, game_state->game_scale);
     }
 
     if (game_events->map_center)
@@ -433,7 +442,7 @@ void onMap(GameState *game_state, InputState *input_state, GameEvents *game_even
         if (nav_state->current_galaxy->position.x != nav_state->buffer_galaxy->position.x ||
             nav_state->current_galaxy->position.y != nav_state->buffer_galaxy->position.y)
         {
-            cleanup_stars(nav_state->stars);
+            stars_clear_table(nav_state->stars);
             memcpy(nav_state->current_galaxy, nav_state->buffer_galaxy, sizeof(Galaxy));
 
             // Reset galaxy_offset
@@ -451,10 +460,10 @@ void onMap(GameState *game_state, InputState *input_state, GameEvents *game_even
         // Delete stars that end up outside the region
         if (game_state->game_scale - zoom_step <= ZOOM_MAP_REGION_SWITCH + epsilon)
         {
-            double bx = find_nearest_section_axis(nav_state->map_offset.x, GALAXY_SECTION_SIZE);
-            double by = find_nearest_section_axis(nav_state->map_offset.y, GALAXY_SECTION_SIZE);
+            double bx = maths_get_nearest_section_axis(nav_state->map_offset.x, GALAXY_SECTION_SIZE);
+            double by = maths_get_nearest_section_axis(nav_state->map_offset.y, GALAXY_SECTION_SIZE);
 
-            delete_stars_outside_region(nav_state->stars, bx, by, game_state->galaxy_region_size);
+            stars_delete_outside_region(nav_state->stars, bx, by, game_state->galaxy_region_size);
         }
 
         game_events->map_center = OFF;
@@ -479,10 +488,10 @@ void onMap(GameState *game_state, InputState *input_state, GameEvents *game_even
                 // Delete stars that end up outside the region
                 if (game_state->game_scale <= ZOOM_MAP_REGION_SWITCH + zoom_step + epsilon)
                 {
-                    double bx = find_nearest_section_axis(nav_state->map_offset.x, GALAXY_SECTION_SIZE);
-                    double by = find_nearest_section_axis(nav_state->map_offset.y, GALAXY_SECTION_SIZE);
+                    double bx = maths_get_nearest_section_axis(nav_state->map_offset.x, GALAXY_SECTION_SIZE);
+                    double by = maths_get_nearest_section_axis(nav_state->map_offset.y, GALAXY_SECTION_SIZE);
 
-                    delete_stars_outside_region(nav_state->stars, bx, by, game_state->galaxy_region_size);
+                    stars_delete_outside_region(nav_state->stars, bx, by, game_state->galaxy_region_size);
                 }
             }
 
@@ -490,7 +499,7 @@ void onMap(GameState *game_state, InputState *input_state, GameEvents *game_even
             for (int s = 0; s < MAX_STARS; s++)
             {
                 if (nav_state->stars[s] != NULL && nav_state->stars[s]->star != NULL)
-                    zoom_star(nav_state->stars[s]->star, game_state->game_scale);
+                    gfx_zoom_star_system(nav_state->stars[s]->star, game_state->game_scale);
             }
         }
 
@@ -522,7 +531,7 @@ void onMap(GameState *game_state, InputState *input_state, GameEvents *game_even
                 game_events->map_exit = ON;
                 game_events->map_switch = ON;
                 game_events->universe_enter = ON;
-                change_state(game_state, game_events, UNIVERSE);
+                game_change_state(game_state, game_events, UNIVERSE);
 
                 // Update universe_offset
                 nav_state->universe_offset.x = nav_state->current_galaxy->position.x + nav_state->map_offset.x / GALAXY_SCALE;
@@ -533,7 +542,7 @@ void onMap(GameState *game_state, InputState *input_state, GameEvents *game_even
             for (int s = 0; s < MAX_STARS; s++)
             {
                 if (nav_state->stars[s] != NULL && nav_state->stars[s]->star != NULL)
-                    zoom_star(nav_state->stars[s]->star, game_state->game_scale);
+                    gfx_zoom_star_system(nav_state->stars[s]->star, game_state->game_scale);
             }
         }
 
@@ -541,10 +550,10 @@ void onMap(GameState *game_state, InputState *input_state, GameEvents *game_even
     }
 
     // Generate stars
-    generate_stars(game_state, game_events, nav_state, bstars, ship, camera);
+    stars_generate(game_state, game_events, nav_state, bstars, ship, camera);
 
     // Update camera
-    update_camera(camera, nav_state->map_offset, game_state->game_scale);
+    gfx_update_camera(camera, nav_state->map_offset, game_state->game_scale);
 
     // Draw section lines
     int section_lines_grouping;
@@ -554,7 +563,7 @@ void onMap(GameState *game_state, InputState *input_state, GameEvents *game_even
     else
         section_lines_grouping = GALAXY_SECTION_SIZE;
 
-    draw_section_lines(camera, section_lines_grouping, colors[COLOR_ORANGE_32], game_state->game_scale);
+    gfx_draw_section_lines(camera, section_lines_grouping, colors[COLOR_ORANGE_32], game_state->game_scale);
 
     // Check for nearest galaxy, excluding current galaxy
     if (game_events->exited_galaxy && PROJECTIONS_ON)
@@ -571,23 +580,23 @@ void onMap(GameState *game_state, InputState *input_state, GameEvents *game_even
             .w = camera->w,
             .h = camera->h};
 
-        Galaxy *nearest_galaxy = find_nearest_galaxy(nav_state, universe_position, true);
+        Galaxy *nearest_galaxy = galaxies_nearest_circumference(nav_state, universe_position, true);
 
         if (nearest_galaxy != NULL &&
             (nearest_galaxy->position.x != nav_state->current_galaxy->position.x ||
              nearest_galaxy->position.y != nav_state->current_galaxy->position.y))
         {
             // Project nearest galaxy
-            project_galaxy(MAP, nav_state, nearest_galaxy, &universe_camera, game_state->game_scale);
+            gfx_project_galaxy_on_edge(MAP, nav_state, nearest_galaxy, &universe_camera, game_state->game_scale);
         }
 
         // Project current galaxy
-        project_galaxy(MAP, nav_state, nav_state->current_galaxy, &universe_camera, game_state->game_scale);
+        gfx_project_galaxy_on_edge(MAP, nav_state, nav_state->current_galaxy, &universe_camera, game_state->game_scale);
     }
 
     // Create galaxy cloud
     if (!nav_state->current_galaxy->initialized_hd)
-        create_galaxy_cloud(nav_state->current_galaxy, true);
+        gfx_generate_gstars(nav_state->current_galaxy, true);
 
     // Move through map
     double rate_x = 0, rate_y = 0;
@@ -618,7 +627,8 @@ void onMap(GameState *game_state, InputState *input_state, GameEvents *game_even
 
                 while (entry != NULL)
                 {
-                    update_star_system(game_state, input_state, nav_state, entry->star, ship, camera);
+                    stars_update_orbital_positions(game_state, input_state, nav_state, entry->star, ship, entry->star->class);
+                    stars_draw_star_system(game_state, input_state, nav_state, entry->star, camera);
                     entry = entry->next;
                 }
             }
@@ -635,7 +645,7 @@ void onMap(GameState *game_state, InputState *input_state, GameEvents *game_even
                                      ship->projection->rect.y + ship->projection->radius < 0 ||
                                      ship->projection->rect.y + ship->projection->radius > camera->h))
     {
-        project_ship(game_state->state, input_state, nav_state, ship, camera, game_state->game_scale);
+        gfx_project_ship_on_edge(game_state->state, input_state, nav_state, ship, camera, game_state->game_scale);
     }
     else
         SDL_RenderCopyEx(renderer, ship->projection->texture, &ship->projection->main_img_rect, &ship->projection->rect, ship->projection->angle, &ship->projection->rotation_pt, SDL_FLIP_NONE);
@@ -644,7 +654,7 @@ void onMap(GameState *game_state, InputState *input_state, GameEvents *game_even
     int cutoff = nav_state->current_galaxy->cutoff * GALAXY_SCALE * game_state->game_scale;
     int cx = -camera->x * game_state->game_scale;
     int cy = -camera->y * game_state->game_scale;
-    SDL_DrawCircleApprox(renderer, camera, cx, cy, cutoff, colors[COLOR_CYAN_70]);
+    gfx_draw_circle_approximation(renderer, camera, cx, cy, cutoff, colors[COLOR_CYAN_70]);
 
     // Draw cross at position
     SDL_SetRenderDrawColor(renderer, 255, 255, 255, 128);
@@ -652,7 +662,7 @@ void onMap(GameState *game_state, InputState *input_state, GameEvents *game_even
     SDL_RenderDrawLine(renderer, camera->w / 2, (camera->h / 2) - 7, camera->w / 2, (camera->h / 2) + 7);
 
     // Draw screen frame
-    draw_screen_frame(camera);
+    gfx_draw_screen_frame(camera);
 
     if (game_events->universe_switch)
         game_events->universe_switch = OFF;
@@ -661,7 +671,7 @@ void onMap(GameState *game_state, InputState *input_state, GameEvents *game_even
         game_events->map_enter = OFF;
 }
 
-void onUniverse(GameState *game_state, InputState *input_state, GameEvents *game_events, NavigationState *nav_state, Ship *ship, Camera *camera)
+void game_run_universe_state(GameState *game_state, InputState *input_state, GameEvents *game_events, NavigationState *nav_state, Ship *ship, Camera *camera)
 {
     static int stars_preview_start = ON;
     static int zoom_preview = OFF;
@@ -672,7 +682,7 @@ void onUniverse(GameState *game_state, InputState *input_state, GameEvents *game
         // Reset stars
         if (nav_state->current_galaxy->position.x != nav_state->buffer_galaxy->position.x ||
             nav_state->current_galaxy->position.y != nav_state->buffer_galaxy->position.y)
-            cleanup_stars(nav_state->stars);
+            stars_clear_table(nav_state->stars);
 
         // Reset galaxy_offset
         nav_state->galaxy_offset.current_x = nav_state->galaxy_offset.buffer_x;
@@ -686,10 +696,10 @@ void onUniverse(GameState *game_state, InputState *input_state, GameEvents *game
         game_state->galaxy_region_size = GALAXY_REGION_SIZE;
 
         // Delete stars that end up outside the region
-        double bx = find_nearest_section_axis(ship->position.x, GALAXY_SECTION_SIZE);
-        double by = find_nearest_section_axis(ship->position.y, GALAXY_SECTION_SIZE);
+        double bx = maths_get_nearest_section_axis(ship->position.x, GALAXY_SECTION_SIZE);
+        double by = maths_get_nearest_section_axis(ship->position.y, GALAXY_SECTION_SIZE);
 
-        delete_stars_outside_region(nav_state->stars, bx, by, game_state->galaxy_region_size);
+        stars_delete_outside_region(nav_state->stars, bx, by, game_state->galaxy_region_size);
     }
 
     if (game_events->universe_enter || game_events->universe_center)
@@ -701,21 +711,42 @@ void onUniverse(GameState *game_state, InputState *input_state, GameEvents *game
         // Initialize cross points for stars preview
         // Add GALAXY_SECTION_SIZE to map_offset so that stars generation is triggered on startup
         if (cross_point.x == 0.0)
-            cross_point.x = find_nearest_section_axis(nav_state->map_offset.x + GALAXY_SECTION_SIZE, GALAXY_SECTION_SIZE);
+            cross_point.x = maths_get_nearest_section_axis(nav_state->map_offset.x + GALAXY_SECTION_SIZE, GALAXY_SECTION_SIZE);
 
         if (cross_point.y == 0.0)
-            cross_point.y = find_nearest_section_axis(nav_state->map_offset.y + GALAXY_SECTION_SIZE, GALAXY_SECTION_SIZE);
+            cross_point.y = maths_get_nearest_section_axis(nav_state->map_offset.y + GALAXY_SECTION_SIZE, GALAXY_SECTION_SIZE);
 
         // Generate galaxies
         Point offset = {.x = nav_state->galaxy_offset.current_x, .y = nav_state->galaxy_offset.current_y};
-        generate_galaxies(game_events, nav_state, offset);
+        galaxies_generate(game_events, nav_state, offset);
 
         if (game_events->universe_enter && !game_state->save_scale)
             game_state->save_scale = game_state->game_scale;
 
         if (!game_events->map_switch)
         {
-            game_state->game_scale = ZOOM_UNIVERSE / GALAXY_SCALE;
+            double zoom_universe;
+
+            switch (nav_state->current_galaxy->class)
+            {
+            case 1:
+                zoom_universe = ZOOM_UNIVERSE * 10;
+                break;
+            case 2:
+                zoom_universe = ZOOM_UNIVERSE * 5;
+                break;
+            case 3:
+                zoom_universe = ZOOM_UNIVERSE * 3;
+                break;
+            case 4:
+                zoom_universe = ZOOM_UNIVERSE * 2;
+                break;
+            default:
+                zoom_universe = ZOOM_UNIVERSE;
+                break;
+            }
+
+            game_state->game_scale = zoom_universe / GALAXY_SCALE;
 
             // Reset universe_offset
             nav_state->universe_offset.x = nav_state->galaxy_offset.current_x + ship->position.x / GALAXY_SCALE;
@@ -723,7 +754,7 @@ void onUniverse(GameState *game_state, InputState *input_state, GameEvents *game
         }
 
         // Update camera
-        update_camera(camera, nav_state->universe_offset, game_state->game_scale * GALAXY_SCALE);
+        gfx_update_camera(camera, nav_state->universe_offset, game_state->game_scale * GALAXY_SCALE);
 
         // Generate stars preview
         stars_preview_start = ON;
@@ -733,7 +764,7 @@ void onUniverse(GameState *game_state, InputState *input_state, GameEvents *game
     }
     else
         // Generate galaxies
-        generate_galaxies(game_events, nav_state, nav_state->universe_offset);
+        galaxies_generate(game_events, nav_state, nav_state->universe_offset);
 
     // Add small tolerance to account for floating-point precision errors
     const double epsilon = ZOOM_EPSILON / GALAXY_SCALE;
@@ -762,7 +793,7 @@ void onUniverse(GameState *game_state, InputState *input_state, GameEvents *game
             section_lines_grouping = UNIVERSE_SECTION_SIZE;
     }
 
-    draw_section_lines(camera, section_lines_grouping, colors[COLOR_ORANGE_32], game_state->game_scale * GALAXY_SCALE);
+    gfx_draw_section_lines(camera, section_lines_grouping, colors[COLOR_ORANGE_32], game_state->game_scale * GALAXY_SCALE);
 
     // Generate stars preview
     double zoom_universe_stars = ZOOM_UNIVERSE_STARS;
@@ -772,7 +803,6 @@ void onUniverse(GameState *game_state, InputState *input_state, GameEvents *game
     case 1:
         zoom_universe_stars = 0.00005;
         break;
-
     default:
         zoom_universe_stars = ZOOM_UNIVERSE_STARS;
         break;
@@ -786,7 +816,7 @@ void onUniverse(GameState *game_state, InputState *input_state, GameEvents *game
             nav_state->map_offset.x = (nav_state->universe_offset.x - nav_state->current_galaxy->position.x) * GALAXY_SCALE;
             nav_state->map_offset.y = (nav_state->universe_offset.y - nav_state->current_galaxy->position.y) * GALAXY_SCALE;
 
-            generate_stars_preview(nav_state, camera, &cross_point, zoom_preview, game_state->game_scale);
+            stars_generate_preview(nav_state, camera, &cross_point, zoom_preview, game_state->game_scale);
             stars_preview_start = OFF;
             zoom_preview = OFF;
         }
@@ -812,7 +842,7 @@ void onUniverse(GameState *game_state, InputState *input_state, GameEvents *game
         }
     }
 
-    // Update galaxies
+    // Draw galaxies
     if (!game_events->universe_enter)
     {
         for (int i = 0; i < MAX_GALAXIES; i++)
@@ -824,7 +854,7 @@ void onUniverse(GameState *game_state, InputState *input_state, GameEvents *game
 
                 while (entry != NULL)
                 {
-                    update_galaxy(nav_state, entry->galaxy, camera, game_state->state, game_state->game_scale);
+                    galaxies_draw_galaxy(nav_state, entry->galaxy, camera, game_state->state, game_state->game_scale);
                     entry = entry->next;
                 }
             }
@@ -889,9 +919,9 @@ void onUniverse(GameState *game_state, InputState *input_state, GameEvents *game
             {
                 game_events->universe_switch = ON;
                 game_events->map_enter = ON;
-                change_state(game_state, game_events, MAP);
+                game_change_state(game_state, game_events, MAP);
 
-                cleanup_stars(nav_state->stars);
+                stars_clear_table(nav_state->stars);
 
                 // Update map_offset
                 nav_state->map_offset.x = (nav_state->universe_offset.x - nav_state->current_galaxy->position.x) * GALAXY_SCALE;
@@ -921,7 +951,7 @@ void onUniverse(GameState *game_state, InputState *input_state, GameEvents *game
             game_state->game_scale -= zoom_universe_step;
         }
 
-        cleanup_stars(nav_state->stars);
+        stars_clear_table(nav_state->stars);
 
         zoom_preview = ON;
         input_state->zoom_out = OFF;
@@ -931,7 +961,7 @@ void onUniverse(GameState *game_state, InputState *input_state, GameEvents *game
     }
 
     // Update camera
-    update_camera(camera, nav_state->universe_offset, game_state->game_scale * GALAXY_SCALE);
+    gfx_update_camera(camera, nav_state->universe_offset, game_state->game_scale * GALAXY_SCALE);
 
     // Draw ship projection
     ship->projection->rect.x = (nav_state->galaxy_offset.current_x + ship->position.x / GALAXY_SCALE - camera->x) * (game_state->game_scale * GALAXY_SCALE) - SHIP_PROJECTION_RADIUS;
@@ -943,7 +973,7 @@ void onUniverse(GameState *game_state, InputState *input_state, GameEvents *game
                                           ship->projection->rect.y + ship->projection->radius < 0 ||
                                           ship->projection->rect.y + ship->projection->radius > camera->h))
     {
-        project_ship(game_state->state, input_state, nav_state, ship, camera, game_state->game_scale);
+        gfx_project_ship_on_edge(game_state->state, input_state, nav_state, ship, camera, game_state->game_scale);
     }
     else
         SDL_RenderCopyEx(renderer, ship->projection->texture, &ship->projection->main_img_rect, &ship->projection->rect, ship->projection->angle, &ship->projection->rotation_pt, SDL_FLIP_NONE);
@@ -954,7 +984,7 @@ void onUniverse(GameState *game_state, InputState *input_state, GameEvents *game
     SDL_RenderDrawLine(renderer, camera->w / 2, (camera->h / 2) - 7, camera->w / 2, (camera->h / 2) + 7);
 
     // Draw screen frame
-    draw_screen_frame(camera);
+    gfx_draw_screen_frame(camera);
 
     if (game_events->map_exit)
         game_events->map_exit = OFF;
@@ -969,7 +999,7 @@ void onUniverse(GameState *game_state, InputState *input_state, GameEvents *game
 /*
  * Create a ship.
  */
-Ship create_ship(int radius, Point position, long double scale)
+Ship game_create_ship(int radius, Point position, long double scale)
 {
     Ship ship;
 
@@ -1009,10 +1039,29 @@ Ship create_ship(int radius, Point position, long double scale)
     return ship;
 }
 
+static void game_draw_ship(GameState *game_state, const InputState *input_state, const NavigationState *nav_state, Ship *ship, const Camera *camera)
+{
+    if (gfx_object_in_camera(camera, ship->position.x, ship->position.y, ship->radius, game_state->game_scale))
+    {
+        SDL_RenderCopyEx(renderer, ship->texture, &ship->main_img_rect, &ship->rect, ship->angle, &ship->rotation_pt, SDL_FLIP_NONE);
+    }
+    // Draw ship projection
+    else if (PROJECTIONS_ON)
+        gfx_project_ship_on_edge(NAVIGATE, input_state, nav_state, ship, camera, game_state->game_scale);
+
+    // Draw ship thrust
+    if (input_state->thrust)
+        SDL_RenderCopyEx(renderer, ship->texture, &ship->thrust_img_rect, &ship->rect, ship->angle, &ship->rotation_pt, SDL_FLIP_NONE);
+
+    // Draw reverse thrust
+    if (input_state->reverse)
+        SDL_RenderCopyEx(renderer, ship->texture, &ship->reverse_img_rect, &ship->rect, ship->angle, &ship->rotation_pt, SDL_FLIP_NONE);
+}
+
 /*
- * Update ship position, listen for key controls and draw ship.
+ * Update ship position while listening for key controls.
  */
-void update_ship(GameState *game_state, const InputState *input_state, const NavigationState *nav_state, Ship *ship, const Camera *camera)
+static void game_update_ship_position(GameState *game_state, const InputState *input_state, Ship *ship, const Camera *camera)
 {
     float radians;
 
@@ -1068,21 +1117,4 @@ void update_ship(GameState *game_state, const InputState *input_state, const Nav
         ship->rect.x = (int)((ship->position.x - camera->x) * game_state->game_scale - ship->radius);
         ship->rect.y = (int)((ship->position.y - camera->y) * game_state->game_scale - ship->radius);
     }
-
-    // Draw ship if in camera
-    if (in_camera(camera, ship->position.x, ship->position.y, ship->radius, game_state->game_scale))
-    {
-        SDL_RenderCopyEx(renderer, ship->texture, &ship->main_img_rect, &ship->rect, ship->angle, &ship->rotation_pt, SDL_FLIP_NONE);
-    }
-    // Draw ship projection
-    else if (PROJECTIONS_ON)
-        project_ship(NAVIGATE, input_state, nav_state, ship, camera, game_state->game_scale);
-
-    // Draw ship thrust
-    if (input_state->thrust)
-        SDL_RenderCopyEx(renderer, ship->texture, &ship->thrust_img_rect, &ship->rect, ship->angle, &ship->rotation_pt, SDL_FLIP_NONE);
-
-    // Draw reverse thrust
-    if (input_state->reverse)
-        SDL_RenderCopyEx(renderer, ship->texture, &ship->reverse_img_rect, &ship->rect, ship->angle, &ship->rotation_pt, SDL_FLIP_NONE);
 }

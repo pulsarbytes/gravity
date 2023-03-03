@@ -11,6 +11,9 @@
         "sdl2_gfxprimitives.h": "c",
         "sdl_image.h": "c",
         "enums.h": "c",
-        "stdbool.h": "c"
+        "stdbool.h": "c",
+        "stars.h": "c",
+        "math.h": "c",
+        "sdl.h": "c"
     }
 }

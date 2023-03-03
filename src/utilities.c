@@ -3,8 +3,6 @@
  */
 
 #include <stdlib.h>
-#include <math.h>
-#include <stdbool.h>
 
 #include <SDL2/SDL.h>
 
@@ -16,13 +14,13 @@
 /*
  * Clean up resources.
  */
-void cleanup_resources(GameState *game_state, NavigationState *nav_state, Ship *ship)
+void utils_cleanup_resources(GameState *game_state, NavigationState *nav_state, Ship *ship)
 {
     // Clean up galaxies
-    cleanup_galaxies(nav_state->galaxies);
+    galaxies_clear_table(nav_state->galaxies);
 
     // Clean up stars
-    cleanup_stars(nav_state->stars);
+    stars_clear_table(nav_state->stars);
 
     // Clean up ship
     SDL_DestroyTexture(ship->projection->texture);
@@ -30,12 +28,12 @@ void cleanup_resources(GameState *game_state, NavigationState *nav_state, Ship *
     SDL_DestroyTexture(ship->texture);
     ship->texture = NULL;
 
-    // Clean up galaxies
+    // Free memory
     free(nav_state->current_galaxy);
     free(nav_state->buffer_galaxy);
     free(nav_state->previous_galaxy);
 
-    // Clean up menu texttures
+    // Clean up menu textures
     for (int i = 0; i < MENU_BUTTON_COUNT; i++)
     {
         SDL_DestroyTexture(game_state->menu[i].texture);

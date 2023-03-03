@@ -17,7 +17,10 @@ extern TTF_Font *fonts[];
 extern SDL_Renderer *renderer;
 extern SDL_Color colors[];
 
-void create_menu(MenuButton menu[])
+// Static function prototypes
+static void menu_draw_menu(GameState *, InputState *, int game_started);
+
+void menu_populate_menu_array(MenuButton menu[])
 {
     // Start
     strcpy(menu[MENU_BUTTON_START].text, "Start");
@@ -55,7 +58,7 @@ void create_menu(MenuButton menu[])
     }
 }
 
-void create_logo(MenuButton *logo)
+void menu_create_logo(MenuButton *logo)
 {
     strcpy(logo->text, "Gravity");
 
@@ -79,50 +82,37 @@ void create_logo(MenuButton *logo)
     SDL_FreeSurface(logo_surface);
 }
 
-void update_menu(GameState *game_state, int game_started)
+void menu_update_menu_entries(GameState *game_state)
 {
-    if (game_started)
-    {
-        // Update Start button
-        game_state->menu[MENU_BUTTON_START].disabled = true;
-        SDL_Surface *start_surface = TTF_RenderText_Solid(fonts[FONT_SIZE_14], game_state->menu[MENU_BUTTON_START].text, colors[COLOR_WHITE_100]);
-        SDL_DestroyTexture(game_state->menu[MENU_BUTTON_START].texture);
-        SDL_Texture *start_texture = SDL_CreateTextureFromSurface(renderer, start_surface);
-        game_state->menu[MENU_BUTTON_START].texture = start_texture;
-        SDL_FreeSurface(start_surface);
+    // Update Start button
+    game_state->menu[MENU_BUTTON_START].disabled = true;
+    SDL_Surface *start_surface = TTF_RenderText_Solid(fonts[FONT_SIZE_14], game_state->menu[MENU_BUTTON_START].text, colors[COLOR_WHITE_100]);
+    SDL_DestroyTexture(game_state->menu[MENU_BUTTON_START].texture);
+    SDL_Texture *start_texture = SDL_CreateTextureFromSurface(renderer, start_surface);
+    game_state->menu[MENU_BUTTON_START].texture = start_texture;
+    SDL_FreeSurface(start_surface);
 
-        // Update Resume button
-        game_state->menu[MENU_BUTTON_RESUME].disabled = false;
-        SDL_Surface *resume_surface = TTF_RenderText_Solid(fonts[FONT_SIZE_14], game_state->menu[MENU_BUTTON_RESUME].text, colors[COLOR_WHITE_255]);
-        SDL_DestroyTexture(game_state->menu[MENU_BUTTON_RESUME].texture);
-        SDL_Texture *resume_texture = SDL_CreateTextureFromSurface(renderer, resume_surface);
-        game_state->menu[MENU_BUTTON_RESUME].texture = resume_texture;
-        SDL_FreeSurface(resume_surface);
+    // Update Resume button
+    game_state->menu[MENU_BUTTON_RESUME].disabled = false;
+    SDL_Surface *resume_surface = TTF_RenderText_Solid(fonts[FONT_SIZE_14], game_state->menu[MENU_BUTTON_RESUME].text, colors[COLOR_WHITE_255]);
+    SDL_DestroyTexture(game_state->menu[MENU_BUTTON_RESUME].texture);
+    SDL_Texture *resume_texture = SDL_CreateTextureFromSurface(renderer, resume_surface);
+    game_state->menu[MENU_BUTTON_RESUME].texture = resume_texture;
+    SDL_FreeSurface(resume_surface);
 
-        // Update New button
-        game_state->menu[MENU_BUTTON_NEW].disabled = false;
-        SDL_Surface *new_surface = TTF_RenderText_Solid(fonts[FONT_SIZE_14], game_state->menu[MENU_BUTTON_NEW].text, colors[COLOR_WHITE_255]);
-        SDL_DestroyTexture(game_state->menu[MENU_BUTTON_NEW].texture);
-        SDL_Texture *new_texture = SDL_CreateTextureFromSurface(renderer, new_surface);
-        game_state->menu[MENU_BUTTON_NEW].texture = new_texture;
-        SDL_FreeSurface(new_surface);
-    }
+    // Update New button
+    game_state->menu[MENU_BUTTON_NEW].disabled = false;
+    SDL_Surface *new_surface = TTF_RenderText_Solid(fonts[FONT_SIZE_14], game_state->menu[MENU_BUTTON_NEW].text, colors[COLOR_WHITE_255]);
+    SDL_DestroyTexture(game_state->menu[MENU_BUTTON_NEW].texture);
+    SDL_Texture *new_texture = SDL_CreateTextureFromSurface(renderer, new_surface);
+    game_state->menu[MENU_BUTTON_NEW].texture = new_texture;
+    SDL_FreeSurface(new_surface);
 }
 
-void onMenu(GameState *game_state, InputState *input_state, int game_started, const NavigationState *nav_state, Bstar bstars[], Gstar menustars[], Camera *camera)
+static void menu_draw_menu(GameState *game_state, InputState *input_state, int game_started)
 {
     int num_buttons = 0;
 
-    // Draw background stars
-    Speed speed = {.vx = 1000, .vy = 0};
-    update_bstars(game_state->state, input_state->camera_on, nav_state, bstars, camera, speed, 0);
-
-    // Draw logo
-    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
-    SDL_RenderFillRect(renderer, &game_state->logo.rect);
-    SDL_RenderCopy(renderer, game_state->logo.texture, NULL, &game_state->logo.texture_rect);
-
-    // Draw menu
     for (int i = 0; i < MENU_BUTTON_COUNT; i++)
     {
         if (i == input_state->selected_button && game_state->menu[i].disabled)
@@ -166,11 +156,26 @@ void onMenu(GameState *game_state, InputState *input_state, int game_started, co
 
         num_buttons++;
     }
+}
+
+void menu_run_menu_state(GameState *game_state, InputState *input_state, int game_started, const NavigationState *nav_state, Bstar bstars[], Gstar menustars[], Camera *camera)
+{
+    // Draw background stars
+    Speed speed = {.vx = 1000, .vy = 0};
+    gfx_update_bstars_position(game_state->state, input_state->camera_on, nav_state, bstars, camera, speed, 0);
+
+    // Draw logo
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
+    SDL_RenderFillRect(renderer, &game_state->logo.rect);
+    SDL_RenderCopy(renderer, game_state->logo.texture, NULL, &game_state->logo.texture_rect);
+
+    // Draw menu
+    menu_draw_menu(game_state, input_state, game_started);
 
     // Draw galaxy
-    draw_menu_galaxy_cloud(camera, menustars);
+    gfx_draw_menu_galaxy_cloud(camera, menustars);
 
     // Draw speed lines
     Speed lines_speed = {.vx = 100, .vy = 0};
-    draw_speed_lines(1500, camera, lines_speed);
+    gfx_draw_speed_lines(1500, camera, lines_speed);
 }

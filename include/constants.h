@@ -92,14 +92,14 @@
 
 // Starting position
 #define UNIVERSE_START_X -140000
-#define UNIVERSE_START_Y -70000  // Class 1: -140000, -70000
-                                 // Class 2: -280000, 520000
-                                 // Class 3: -240000, -210000
-                                 // Class 4: -100000, -40000
-                                 // Class 5: -110000, -120000
-                                 // Class 6: -250000, -60000
-#define GALAXY_START_X -15000000 // Default: 0
-#define GALAXY_START_Y -0        // Default: 0
+#define UNIVERSE_START_Y -70000 // Class 1: -140000, -70000
+                                // Class 2: -280000, 520000
+                                // Class 3: -240000, -210000
+                                // Class 4: -100000, -40000
+                                // Class 5: -110000, -120000
+                                // Class 6: -250000, -60000
+#define GALAXY_START_X -150000  // Default: 0
+#define GALAXY_START_Y -60000   // Default: 0
 
 // Galaxies
 #define GALAXY_SCALE 10000              // We multiply by this factor to get values in galaxy scale. Default: 10000 (min 1000)

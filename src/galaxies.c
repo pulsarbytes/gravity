@@ -18,10 +18,18 @@
 extern SDL_Renderer *renderer;
 extern SDL_Color colors[];
 
+// Static function prototypes
+static void galaxies_add_entry(GalaxyEntry *galaxies[], Point, Galaxy *);
+static bool galaxies_entry_exists(GalaxyEntry *galaxies[], Point);
+static void galaxies_delete_entry(GalaxyEntry *galaxies[], Point);
+static double galaxies_nearest_center_distance(Point);
+static int galaxies_size_class(float distance);
+static Galaxy *galaxies_create_galaxy(Point);
+
 /*
  * Clean up galaxies.
  */
-void cleanup_galaxies(GalaxyEntry *galaxies[])
+void galaxies_clear_table(GalaxyEntry *galaxies[])
 {
     // Loop through hash table
     for (int s = 0; s < MAX_GALAXIES; s++)
@@ -31,7 +39,7 @@ void cleanup_galaxies(GalaxyEntry *galaxies[])
         while (entry != NULL)
         {
             Point position = {.x = entry->x, .y = entry->y};
-            delete_galaxy(galaxies, position);
+            galaxies_delete_entry(galaxies, position);
             entry = entry->next;
         }
     }
@@ -40,10 +48,10 @@ void cleanup_galaxies(GalaxyEntry *galaxies[])
 /*
  * Insert a new galaxy entry in galaxies hash table.
  */
-void put_galaxy(GalaxyEntry *galaxies[], Point position, Galaxy *galaxy)
+static void galaxies_add_entry(GalaxyEntry *galaxies[], Point position, Galaxy *galaxy)
 {
-    // Generate unique index for hash table
-    uint64_t index = unique_index(position, MAX_GALAXIES, ENTITY_GALAXY);
+    // Generate index for hash table
+    uint64_t index = maths_hash_position_to_index(position, MAX_GALAXIES, ENTITY_GALAXY);
 
     GalaxyEntry *entry = (GalaxyEntry *)malloc(sizeof(GalaxyEntry));
     entry->x = position.x;
@@ -56,10 +64,10 @@ void put_galaxy(GalaxyEntry *galaxies[], Point position, Galaxy *galaxy)
 /*
  * Check whether a galaxy entry exists in the galaxies hash table.
  */
-int galaxy_exists(GalaxyEntry *galaxies[], Point position)
+static bool galaxies_entry_exists(GalaxyEntry *galaxies[], Point position)
 {
-    // Generate unique index for hash table
-    uint64_t index = unique_index(position, MAX_GALAXIES, ENTITY_GALAXY);
+    // Generate index for hash table
+    uint64_t index = maths_hash_position_to_index(position, MAX_GALAXIES, ENTITY_GALAXY);
 
     GalaxyEntry *entry = galaxies[index];
 
@@ -80,10 +88,10 @@ int galaxy_exists(GalaxyEntry *galaxies[], Point position)
 /*
  * Get a galaxy entry from the galaxies hash table.
  */
-Galaxy *get_galaxy(GalaxyEntry *galaxies[], Point position)
+Galaxy *galaxies_get_entry(GalaxyEntry *galaxies[], Point position)
 {
-    // Generate unique index for hash table
-    uint64_t index = unique_index(position, MAX_GALAXIES, ENTITY_GALAXY);
+    // Generate index for hash table
+    uint64_t index = maths_hash_position_to_index(position, MAX_GALAXIES, ENTITY_GALAXY);
 
     GalaxyEntry *entry = galaxies[index];
 
@@ -101,10 +109,10 @@ Galaxy *get_galaxy(GalaxyEntry *galaxies[], Point position)
 /*
  * Delete a galaxy entry from the galaxies hash table.
  */
-void delete_galaxy(GalaxyEntry *galaxies[], Point position)
+static void galaxies_delete_entry(GalaxyEntry *galaxies[], Point position)
 {
-    // Generate unique index for hash table
-    uint64_t index = unique_index(position, MAX_GALAXIES, ENTITY_GALAXY);
+    // Generate index for hash table
+    uint64_t index = maths_hash_position_to_index(position, MAX_GALAXIES, ENTITY_GALAXY);
 
     GalaxyEntry *previous = NULL;
     GalaxyEntry *entry = galaxies[index];
@@ -135,7 +143,7 @@ void delete_galaxy(GalaxyEntry *galaxies[], Point position)
 /*
  * Find distance to nearest galaxy.
  */
-double nearest_galaxy_center_distance(Point position)
+static double galaxies_nearest_center_distance(Point position)
 {
     // We use 6 * UNIVERSE_SECTION_SIZE as max, since a CLASS_6 galaxy needs 6 + 1 empty sections
     // We search inner circumferences of points first and work towards outward circumferences
@@ -159,13 +167,13 @@ double nearest_galaxy_center_distance(Point position)
 
                 Point p = {ix, iy};
 
-                if (point_in_array(p, checked_points, num_checked_points))
+                if (maths_check_point_in_array(p, checked_points, num_checked_points))
                     continue;
 
                 checked_points[num_checked_points++] = p;
 
                 // Create rng seed by combining x,y values
-                uint64_t seed = pair_hash_order_sensitive_2(p);
+                uint64_t seed = maths_hash_position_to_uint64_2(p);
 
                 // Seed with a fixed constant
                 pcg32_srandom_r(&rng, seed, 1);
@@ -174,7 +182,7 @@ double nearest_galaxy_center_distance(Point position)
 
                 if (has_galaxy)
                 {
-                    double distance = find_distance(ix, iy, position.x, position.y);
+                    double distance = maths_distance_between_points(ix, iy, position.x, position.y);
 
                     return distance;
                 }
@@ -190,7 +198,7 @@ double nearest_galaxy_center_distance(Point position)
  * The funtion finds the galaxy in the galaxies hash table
  * whose circumference is closest to the position.
  */
-Galaxy *find_nearest_galaxy(const NavigationState *nav_state, Point position, int exclude)
+Galaxy *galaxies_nearest_circumference(const NavigationState *nav_state, Point position, int exclude)
 {
     Galaxy *closest = NULL;
     double closest_distance = INFINITY;
@@ -216,14 +224,14 @@ Galaxy *find_nearest_galaxy(const NavigationState *nav_state, Point position, in
             double cx = entry->galaxy->position.x;
             double cy = entry->galaxy->position.y;
             double r = entry->galaxy->radius;
-            double d = find_distance(position.x, position.y, cx, cy);
+            double d = maths_distance_between_points(position.x, position.y, cx, cy);
 
             if (d <= r * GALAXY_SCALE + sections * UNIVERSE_SECTION_SIZE)
             {
                 double angle = atan2(position.y - cy, position.x - cx);
                 double px = cx + r * cos(angle);
                 double py = cy + r * sin(angle);
-                double pd = find_distance(position.x, position.y, px, py);
+                double pd = maths_distance_between_points(position.x, position.y, px, py);
 
                 if (pd < closest_distance)
                 {
@@ -243,7 +251,7 @@ Galaxy *find_nearest_galaxy(const NavigationState *nav_state, Point position, in
  * Find galaxy class.
  * <distance> is number of empty sections.
  */
-int get_galaxy_class(float distance)
+static int galaxies_size_class(float distance)
 {
     if (distance < 3 * UNIVERSE_SECTION_SIZE)
         return GALAXY_CLASS_1;
@@ -264,19 +272,19 @@ int get_galaxy_class(float distance)
 /*
  * Create a galaxy.
  */
-Galaxy *create_galaxy(Point position)
+static Galaxy *galaxies_create_galaxy(Point position)
 {
     // Find distance to nearest galaxy
-    double distance = nearest_galaxy_center_distance(position);
+    double distance = galaxies_nearest_center_distance(position);
 
     // Get galaxy class
-    int class = get_galaxy_class(distance);
+    int class = galaxies_size_class(distance);
 
     // Use a local rng
     pcg32_random_t rng;
 
     // Create rng seed by combining x,y values
-    uint64_t seed = pair_hash_order_sensitive_2(position);
+    uint64_t seed = maths_hash_position_to_uint64_2(position);
 
     // Seed with a fixed constant
     pcg32_srandom_r(&rng, seed, 1);
@@ -312,12 +320,12 @@ Galaxy *create_galaxy(Point position)
     Galaxy *galaxy = (Galaxy *)malloc(sizeof(Galaxy));
 
     // Get unique galaxy index
-    uint64_t index = pair_hash_order_sensitive_2(position);
+    uint64_t index = maths_hash_position_to_uint64_2(position);
 
     galaxy->initialized = 0;
     galaxy->initialized_hd = 0;
     sprintf(galaxy->name, "%s-%lu", "G", index);
-    galaxy->class = get_galaxy_class(distance);
+    galaxy->class = galaxies_size_class(distance);
     galaxy->radius = radius;
     galaxy->cutoff = UNIVERSE_SECTION_SIZE * class / 2;
     galaxy->position.x = position.x;
@@ -336,12 +344,12 @@ Galaxy *create_galaxy(Point position)
 }
 
 /*
- * Update and draw galaxy.
+ * Draw galaxy.
  */
-void update_galaxy(NavigationState *nav_state, Galaxy *galaxy, const Camera *camera, int state, long double scale)
+void galaxies_draw_galaxy(NavigationState *nav_state, Galaxy *galaxy, const Camera *camera, int state, long double scale)
 {
     // Get galaxy distance from position
-    double distance = find_distance(galaxy->position.x, galaxy->position.y, nav_state->universe_offset.x, nav_state->universe_offset.y);
+    double distance = maths_distance_between_points(galaxy->position.x, galaxy->position.y, nav_state->universe_offset.x, nav_state->universe_offset.y);
 
     // Draw cutoff circle
     if (distance < galaxy->cutoff)
@@ -349,7 +357,7 @@ void update_galaxy(NavigationState *nav_state, Galaxy *galaxy, const Camera *cam
         // Reset stars and update current_galaxy
         if (strcmp(nav_state->current_galaxy->name, galaxy->name) != 0)
         {
-            cleanup_stars(nav_state->stars);
+            stars_clear_table(nav_state->stars);
             memcpy(nav_state->current_galaxy, galaxy, sizeof(Galaxy));
         }
 
@@ -357,11 +365,11 @@ void update_galaxy(NavigationState *nav_state, Galaxy *galaxy, const Camera *cam
         int rx = (galaxy->position.x - camera->x) * scale * GALAXY_SCALE;
         int ry = (galaxy->position.y - camera->y) * scale * GALAXY_SCALE;
 
-        SDL_DrawCircle(renderer, camera, rx, ry, cutoff, colors[COLOR_CYAN_70]);
+        gfx_draw_circle(renderer, camera, rx, ry, cutoff, colors[COLOR_CYAN_70]);
 
         // Create gstars_hd
         if (!galaxy->initialized_hd)
-            create_galaxy_cloud(galaxy, true);
+            gfx_generate_gstars(galaxy, true);
 
         double zoom_universe_stars = ZOOM_UNIVERSE_STARS;
 
@@ -379,24 +387,24 @@ void update_galaxy(NavigationState *nav_state, Galaxy *galaxy, const Camera *cam
         const double epsilon = ZOOM_EPSILON / GALAXY_SCALE;
 
         if (scale < zoom_universe_stars + epsilon)
-            draw_galaxy_cloud(galaxy, camera, galaxy->initialized_hd, true, scale);
+            gfx_draw_galaxy_cloud(galaxy, camera, galaxy->initialized_hd, true, scale);
     }
     else
     {
         // Draw galaxy cloud
-        if (in_camera(camera, galaxy->position.x, galaxy->position.y, galaxy->radius, scale * GALAXY_SCALE))
+        if (gfx_object_in_camera(camera, galaxy->position.x, galaxy->position.y, galaxy->radius, scale * GALAXY_SCALE))
         {
             if (!galaxy->initialized)
-                create_galaxy_cloud(galaxy, false);
+                gfx_generate_gstars(galaxy, false);
 
-            draw_galaxy_cloud(galaxy, camera, galaxy->initialized, false, scale);
+            gfx_draw_galaxy_cloud(galaxy, camera, galaxy->initialized, false, scale);
         }
         // Draw galaxy projection
         else if (PROJECTIONS_ON)
         {
             // Show projections only if game scale < 50 * ZOOM_UNIVERSE_MIN
             if (scale / (ZOOM_UNIVERSE_MIN / GALAXY_SCALE) < 50)
-                project_galaxy(state, nav_state, galaxy, camera, scale * GALAXY_SCALE);
+                gfx_project_galaxy_on_edge(state, nav_state, galaxy, camera, scale * GALAXY_SCALE);
         }
     }
 }
@@ -405,11 +413,11 @@ void update_galaxy(NavigationState *nav_state, Galaxy *galaxy, const Camera *cam
  * Probe region for galaxies and create them procedurally.
  * The region has intervals of size UNIVERSE_SECTION_SIZE.
  */
-void generate_galaxies(GameEvents *game_events, NavigationState *nav_state, Point offset)
+void galaxies_generate(GameEvents *game_events, NavigationState *nav_state, Point offset)
 {
     // Keep track of current nearest section axis coordinates
-    double bx = find_nearest_section_axis(offset.x, UNIVERSE_SECTION_SIZE);
-    double by = find_nearest_section_axis(offset.y, UNIVERSE_SECTION_SIZE);
+    double bx = maths_get_nearest_section_axis(offset.x, UNIVERSE_SECTION_SIZE);
+    double by = maths_get_nearest_section_axis(offset.y, UNIVERSE_SECTION_SIZE);
 
     // Check if this is the first time calling this function
     if (!game_events->galaxies_start)
@@ -452,7 +460,7 @@ void generate_galaxies(GameEvents *game_events, NavigationState *nav_state, Poin
 
             // Create rng seed by combining x,y values
             Point position = {.x = ix, .y = iy};
-            uint64_t seed = pair_hash_order_sensitive_2(position);
+            uint64_t seed = maths_hash_position_to_uint64_2(position);
 
             // Seed with a fixed constant
             pcg32_srandom_r(&rng, seed, 1);
@@ -462,15 +470,15 @@ void generate_galaxies(GameEvents *game_events, NavigationState *nav_state, Poin
             if (has_galaxy)
             {
                 // Check whether galaxy exists in hash table
-                if (galaxy_exists(nav_state->galaxies, position))
+                if (galaxies_entry_exists(nav_state->galaxies, position))
                     continue;
                 else
                 {
                     // Create galaxy
-                    Galaxy *galaxy = create_galaxy(position);
+                    Galaxy *galaxy = galaxies_create_galaxy(position);
 
                     // Add galaxy to hash table
-                    put_galaxy(nav_state->galaxies, position, galaxy);
+                    galaxies_add_entry(nav_state->galaxies, position, galaxy);
                 }
             }
         }
@@ -491,12 +499,12 @@ void generate_galaxies(GameEvents *game_events, NavigationState *nav_state, Poin
             }
 
             // Get distance from center of region
-            double distance = find_distance(position.x, position.y, bx, by);
+            double distance = maths_distance_between_points(position.x, position.y, bx, by);
             double region_radius = sqrt((double)2 * ((UNIVERSE_REGION_SIZE + 1) / 2) * UNIVERSE_SECTION_SIZE * ((UNIVERSE_REGION_SIZE + 1) / 2) * UNIVERSE_SECTION_SIZE);
 
             // If galaxy outside region, delete it
             if (distance >= region_radius)
-                delete_galaxy(nav_state->galaxies, position);
+                galaxies_delete_entry(nav_state->galaxies, position);
         }
     }
 

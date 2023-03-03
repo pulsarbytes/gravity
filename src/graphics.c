@@ -17,10 +17,14 @@
 extern SDL_Renderer *renderer;
 extern SDL_Color colors[];
 
+// Static function prototypes
+static void gfx_update_projection_position(const NavigationState *, void *ptr, int entity_type, const Camera *, int state, long double scale);
+static int gfx_update_projection_opacity(double distance, int region_size, int section_size);
+
 /*
  * Update camera position.
  */
-void update_camera(Camera *camera, Point position, long double scale)
+void gfx_update_camera(Camera *camera, Point position, long double scale)
 {
     camera->x = position.x - (camera->w / 2) / scale;
     camera->y = position.y - (camera->h / 2) / scale;
@@ -31,7 +35,7 @@ void update_camera(Camera *camera, Point position, long double scale)
  * Projection rect top-left point is where the object projection crosses a quadrant line.
  * Projection rect can be centered by moving left or up by <offset>.
  */
-void update_projection_coordinates(const NavigationState *nav_state, void *ptr, int entity_type, const Camera *camera, int state, long double scale)
+static void gfx_update_projection_position(const NavigationState *nav_state, void *ptr, int entity_type, const Camera *camera, int state, long double scale)
 {
     Galaxy *galaxy = NULL;
     CelestialBody *body = NULL;
@@ -309,9 +313,9 @@ void update_projection_coordinates(const NavigationState *nav_state, void *ptr, 
 /*
  * Draw ship projection on axis.
  */
-void project_ship(int state, const InputState *input_state, const NavigationState *nav_state, Ship *ship, const Camera *camera, long double scale)
+void gfx_project_ship_on_edge(int state, const InputState *input_state, const NavigationState *nav_state, Ship *ship, const Camera *camera, long double scale)
 {
-    update_projection_coordinates(nav_state, ship, ENTITY_SHIP, camera, state, scale);
+    gfx_update_projection_position(nav_state, ship, ENTITY_SHIP, camera, state, scale);
 
     // Mirror ship angle
     ship->projection->angle = ship->angle;
@@ -331,25 +335,25 @@ void project_ship(int state, const InputState *input_state, const NavigationStat
 /*
  * Draw body projection on axis.
  */
-void project_body(const GameState *game_state, const NavigationState *nav_state, CelestialBody *body, const Camera *camera)
+void gfx_project_body_on_edge(const GameState *game_state, const NavigationState *nav_state, CelestialBody *body, const Camera *camera)
 {
-    update_projection_coordinates(nav_state, body, ENTITY_CELESTIALBODY, camera, game_state->state, game_state->game_scale);
+    gfx_update_projection_position(nav_state, body, ENTITY_CELESTIALBODY, camera, game_state->state, game_state->game_scale);
 
     body->projection.w = 2 * PROJECTION_RADIUS;
     body->projection.h = 2 * PROJECTION_RADIUS;
 
     double x = camera->x + (camera->w / 2) / game_state->game_scale;
     double y = camera->y + (camera->h / 2) / game_state->game_scale;
-    double distance = find_distance(x, y, body->position.x, body->position.y);
+    double distance = maths_distance_between_points(x, y, body->position.x, body->position.y);
     int opacity = colors[COLOR_YELLOW_255].a;
     SDL_Color color;
 
     if (body->level == LEVEL_STAR)
     {
         if (game_state->state == NAVIGATE)
-            opacity = calculate_projection_opacity(distance, GALAXY_REGION_SIZE, GALAXY_SECTION_SIZE);
+            opacity = gfx_update_projection_opacity(distance, GALAXY_REGION_SIZE, GALAXY_SECTION_SIZE);
         else if (game_state->state == MAP)
-            opacity = calculate_projection_opacity(distance, game_state->galaxy_region_size, GALAXY_SECTION_SIZE);
+            opacity = gfx_update_projection_opacity(distance, game_state->galaxy_region_size, GALAXY_SECTION_SIZE);
 
         color.r = colors[COLOR_YELLOW_255].r;
         color.g = colors[COLOR_YELLOW_255].g;
@@ -365,14 +369,14 @@ void project_body(const GameState *game_state, const NavigationState *nav_state,
 /*
  * Draw galaxy projection on axis.
  */
-void project_galaxy(int state, const NavigationState *nav_state, Galaxy *galaxy, const Camera *camera, long double scale)
+void gfx_project_galaxy_on_edge(int state, const NavigationState *nav_state, Galaxy *galaxy, const Camera *camera, long double scale)
 {
     int scaling_factor = 1;
 
     if (state == NAVIGATE || state == MAP)
         scaling_factor = GALAXY_SCALE;
 
-    update_projection_coordinates(nav_state, galaxy, ENTITY_GALAXY, camera, state, scale);
+    gfx_update_projection_position(nav_state, galaxy, ENTITY_GALAXY, camera, state, scale);
 
     galaxy->projection.w = 2 * PROJECTION_RADIUS;
     galaxy->projection.h = 2 * PROJECTION_RADIUS;
@@ -382,7 +386,7 @@ void project_galaxy(int state, const NavigationState *nav_state, Galaxy *galaxy,
     double delta_x = fabs(x - galaxy->position.x * scaling_factor) / scaling_factor;
     double delta_y = fabs(y - galaxy->position.y * scaling_factor) / scaling_factor;
     double distance = sqrt(pow(delta_x, 2) + pow(delta_y, 2));
-    int opacity = calculate_projection_opacity(distance, UNIVERSE_REGION_SIZE, UNIVERSE_SECTION_SIZE);
+    int opacity = gfx_update_projection_opacity(distance, UNIVERSE_REGION_SIZE, UNIVERSE_SECTION_SIZE);
 
     SDL_SetRenderDrawColor(renderer, galaxy->color.r, galaxy->color.g, galaxy->color.b, opacity);
     SDL_RenderFillRect(renderer, &galaxy->projection);
@@ -392,7 +396,7 @@ void project_galaxy(int state, const NavigationState *nav_state, Galaxy *galaxy,
  * Calculate projection opacity according to object distance.
  * Opacity fades to 128 for <near_sections> and then fades linearly to 0.
  */
-int calculate_projection_opacity(double distance, int region_size, int section_size)
+static int gfx_update_projection_opacity(double distance, int region_size, int section_size)
 {
     const int near_sections = 4;
     int a = (int)distance / section_size;
@@ -424,7 +428,7 @@ int calculate_projection_opacity(double distance, int region_size, int section_s
 /*
  * Zoom in/out a star system (recursive).
  */
-void zoom_star(CelestialBody *body, long double scale)
+void gfx_zoom_star_system(CelestialBody *body, long double scale)
 {
     body->rect.x = (body->position.x - body->radius) * scale;
     body->rect.y = (body->position.y - body->radius) * scale;
@@ -438,7 +442,7 @@ void zoom_star(CelestialBody *body, long double scale)
 
         for (int i = 0; i < max_planets && body->planets[i] != NULL; i++)
         {
-            zoom_star(body->planets[i], scale);
+            gfx_zoom_star_system(body->planets[i], scale);
         }
     }
 }
@@ -447,7 +451,7 @@ void zoom_star(CelestialBody *body, long double scale)
  * Check whether relative point is in camera.
  * x, y are relative to camera->x, camera->y.
  */
-int in_camera_relative(const Camera *camera, int x, int y)
+bool gfx_relative_position_in_camera(const Camera *camera, int x, int y)
 {
     return x >= 0 && x < camera->w && y >= 0 && y < camera->h;
 }
@@ -456,7 +460,7 @@ int in_camera_relative(const Camera *camera, int x, int y)
  * Check whether object with center (x,y) and radius r is in camera.
  * x, y are absolute galaxy scale coordinates. Radius is galaxy scale.
  */
-int in_camera(const Camera *camera, double x, double y, float radius, long double scale)
+bool gfx_object_in_camera(const Camera *camera, double x, double y, float radius, long double scale)
 {
     return x + radius >= camera->x && x - radius - camera->x < camera->w / scale &&
            y + radius >= camera->y && y - radius - camera->y < camera->h / scale;
@@ -465,7 +469,7 @@ int in_camera(const Camera *camera, double x, double y, float radius, long doubl
 /*
  * Draw screen frame.
  */
-void draw_screen_frame(Camera *camera)
+void gfx_draw_screen_frame(Camera *camera)
 {
     SDL_Rect top_frame;
     top_frame.x = 0;
@@ -498,10 +502,10 @@ void draw_screen_frame(Camera *camera)
     SDL_RenderFillRect(renderer, &right_frame);
 }
 
-void draw_section_lines(Camera *camera, int section_size, SDL_Color color, long double scale)
+void gfx_draw_section_lines(Camera *camera, int section_size, SDL_Color color, long double scale)
 {
-    double bx = find_nearest_section_axis(camera->x, section_size);
-    double by = find_nearest_section_axis(camera->y, section_size);
+    double bx = maths_get_nearest_section_axis(camera->x, section_size);
+    double by = maths_get_nearest_section_axis(camera->y, section_size);
     SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a);
 
     for (int ix = bx; ix <= bx + camera->w / scale; ix = ix + section_size)
@@ -515,7 +519,7 @@ void draw_section_lines(Camera *camera, int section_size, SDL_Color color, long 
     }
 }
 
-void create_menu_galaxy_cloud(Galaxy *galaxy, Gstar menustars[])
+void gfx_generate_menu_gstars(Galaxy *galaxy, Gstar menustars[])
 {
     float radius = galaxy->radius;
     double full_size_radius = radius * GALAXY_SCALE;
@@ -545,7 +549,7 @@ void create_menu_galaxy_cloud(Galaxy *galaxy, Gstar menustars[])
     pcg32_random_t rng;
 
     // Set galaxy hash as initseq
-    uint64_t initseq = pair_hash_order_sensitive_2(galaxy->position);
+    uint64_t initseq = maths_hash_position_to_uint64_2(galaxy->position);
 
     // Density scaling parameter
     double a = galaxy->radius * GALAXY_SCALE / 2.0f;
@@ -563,7 +567,7 @@ void create_menu_galaxy_cloud(Galaxy *galaxy, Gstar menustars[])
 
             // Create rng seed by combining x,y values
             Point position = {.x = ix, .y = iy};
-            uint64_t seed = pair_hash_order_sensitive(position);
+            uint64_t seed = maths_hash_position_to_uint64(position);
 
             // Seed with a fixed constant
             pcg32_srandom_r(&rng, seed, initseq);
@@ -579,8 +583,8 @@ void create_menu_galaxy_cloud(Galaxy *galaxy, Gstar menustars[])
                 star.position.x = ix;
                 star.position.y = iy;
 
-                double distance = nearest_star_distance(position, galaxy, initseq, MENU_GALAXY_CLOUD_DENSITY);
-                int class = get_star_class(distance);
+                double distance = stars_nearest_center_distance(position, galaxy, initseq, MENU_GALAXY_CLOUD_DENSITY);
+                int class = stars_size_class(distance);
                 float class_opacity_max = class * (255 / 6) + 20; // There are only a few Class 6 galaxies, increase max value by 20
                 class_opacity_max = class_opacity_max > 255 ? 255 : class_opacity_max;
                 float class_opacity_min = class_opacity_max - (255 / 6);
@@ -595,7 +599,7 @@ void create_menu_galaxy_cloud(Galaxy *galaxy, Gstar menustars[])
     }
 }
 
-void draw_menu_galaxy_cloud(const Camera *camera, Gstar menustars[])
+void gfx_draw_menu_galaxy_cloud(const Camera *camera, Gstar menustars[])
 {
     int i = 0;
     float scaling_factor = 0.15;
@@ -615,7 +619,7 @@ void draw_menu_galaxy_cloud(const Camera *camera, Gstar menustars[])
     }
 }
 
-void create_galaxy_cloud(Galaxy *galaxy, unsigned short high_definition)
+void gfx_generate_gstars(Galaxy *galaxy, unsigned short high_definition)
 {
     float radius = galaxy->radius;
     double full_size_radius = radius * GALAXY_SCALE;
@@ -649,7 +653,7 @@ void create_galaxy_cloud(Galaxy *galaxy, unsigned short high_definition)
     pcg32_random_t rng;
 
     // Set galaxy hash as initseq
-    uint64_t initseq = pair_hash_order_sensitive_2(galaxy->position);
+    uint64_t initseq = maths_hash_position_to_uint64_2(galaxy->position);
 
     // Density scaling parameter
     double a = galaxy->radius * GALAXY_SCALE / 2.0f;
@@ -667,7 +671,7 @@ void create_galaxy_cloud(Galaxy *galaxy, unsigned short high_definition)
 
             // Create rng seed by combining x,y values
             Point position = {.x = ix, .y = iy};
-            uint64_t seed = pair_hash_order_sensitive(position);
+            uint64_t seed = maths_hash_position_to_uint64(position);
 
             // Seed with a fixed constant
             pcg32_srandom_r(&rng, seed, initseq);
@@ -683,8 +687,8 @@ void create_galaxy_cloud(Galaxy *galaxy, unsigned short high_definition)
                 star.position.x = ix;
                 star.position.y = iy;
 
-                double distance = nearest_star_distance(position, galaxy, initseq, GALAXY_CLOUD_DENSITY);
-                int class = get_star_class(distance);
+                double distance = stars_nearest_center_distance(position, galaxy, initseq, GALAXY_CLOUD_DENSITY);
+                int class = stars_size_class(distance);
                 float class_opacity_max = class * (255 / 6);
                 class_opacity_max = class_opacity_max > 255 ? 255 : class_opacity_max;
                 float class_opacity_min = class_opacity_max - (255 / 6);
@@ -709,7 +713,7 @@ void create_galaxy_cloud(Galaxy *galaxy, unsigned short high_definition)
         galaxy->initialized = i;
 }
 
-void draw_galaxy_cloud(Galaxy *galaxy, const Camera *camera, int gstars_count, unsigned short high_definition, long double scale)
+void gfx_draw_galaxy_cloud(Galaxy *galaxy, const Camera *camera, int gstars_count, unsigned short high_definition, long double scale)
 {
     const double epsilon = ZOOM_EPSILON / GALAXY_SCALE;
 
@@ -771,7 +775,7 @@ void draw_galaxy_cloud(Galaxy *galaxy, const Camera *camera, int gstars_count, u
 /*
  * Draw a speed arc for the ship.
  */
-void draw_speed_arc(const Ship *ship, const Camera *camera, long double scale)
+void gfx_draw_speed_arc(const Ship *ship, const Camera *camera, long double scale)
 {
     SDL_Color color = colors[COLOR_ORANGE_32];
     int radius_1 = 50;
@@ -864,7 +868,7 @@ void draw_speed_arc(const Ship *ship, const Camera *camera, long double scale)
 /*
  * Move and draw speed lines.
  */
-void draw_speed_lines(float velocity, const Camera *camera, Speed speed)
+void gfx_draw_speed_lines(float velocity, const Camera *camera, Speed speed)
 {
     // Check if velocity magnitude is zero
     if (velocity == 0)
@@ -1011,7 +1015,7 @@ void draw_speed_lines(float velocity, const Camera *camera, Speed speed)
 /*
  * Creates colors for SDL.
  */
-void create_colors(void)
+void gfx_create_default_colors(void)
 {
     colors[COLOR_WHITE_255].r = 255;
     colors[COLOR_WHITE_255].g = 255;
@@ -1064,7 +1068,7 @@ void create_colors(void)
  * xc, xy, radius are in game_scale.
  * This function is efficient only for small circles.
  */
-void SDL_DrawCircle(SDL_Renderer *renderer, const Camera *camera, int xc, int yc, int radius, SDL_Color color)
+void gfx_draw_circle(SDL_Renderer *renderer, const Camera *camera, int xc, int yc, int radius, SDL_Color color)
 {
     int x = 0;
     int y = radius;
@@ -1076,35 +1080,35 @@ void SDL_DrawCircle(SDL_Renderer *renderer, const Camera *camera, int xc, int yc
     while (y >= x)
     {
         // Draw the 8 points symmetrically
-        if (in_camera_relative(camera, xc + x, yc + y))
+        if (gfx_relative_position_in_camera(camera, xc + x, yc + y))
         {
             SDL_RenderDrawPoint(renderer, xc + x, yc + y);
         }
-        if (in_camera_relative(camera, xc + x, yc - y))
+        if (gfx_relative_position_in_camera(camera, xc + x, yc - y))
         {
             SDL_RenderDrawPoint(renderer, xc + x, yc - y);
         }
-        if (in_camera_relative(camera, xc - x, yc + y))
+        if (gfx_relative_position_in_camera(camera, xc - x, yc + y))
         {
             SDL_RenderDrawPoint(renderer, xc - x, yc + y);
         }
-        if (in_camera_relative(camera, xc - x, yc - y))
+        if (gfx_relative_position_in_camera(camera, xc - x, yc - y))
         {
             SDL_RenderDrawPoint(renderer, xc - x, yc - y);
         }
-        if (in_camera_relative(camera, xc + y, yc + x))
+        if (gfx_relative_position_in_camera(camera, xc + y, yc + x))
         {
             SDL_RenderDrawPoint(renderer, xc + y, yc + x);
         }
-        if (in_camera_relative(camera, xc + y, yc - x))
+        if (gfx_relative_position_in_camera(camera, xc + y, yc - x))
         {
             SDL_RenderDrawPoint(renderer, xc + y, yc - x);
         }
-        if (in_camera_relative(camera, xc - y, yc + x))
+        if (gfx_relative_position_in_camera(camera, xc - y, yc + x))
         {
             SDL_RenderDrawPoint(renderer, xc - y, yc + x);
         }
-        if (in_camera_relative(camera, xc - y, yc - x))
+        if (gfx_relative_position_in_camera(camera, xc - y, yc - x))
         {
             SDL_RenderDrawPoint(renderer, xc - y, yc - x);
         }
@@ -1133,7 +1137,7 @@ void SDL_DrawCircle(SDL_Renderer *renderer, const Camera *camera, int xc, int yc
  * @param r The radius of the circle
  * @param color The color to use when drawing the circle
  */
-void SDL_DrawCircleApprox(SDL_Renderer *renderer, const Camera *camera, int x, int y, int r, SDL_Color color)
+void gfx_draw_circle_approximation(SDL_Renderer *renderer, const Camera *camera, int x, int y, int r, SDL_Color color)
 {
     const int CIRCLE_APPROXIMATION = 500;
     int i;
@@ -1156,9 +1160,9 @@ void SDL_DrawCircleApprox(SDL_Renderer *renderer, const Camera *camera, int x, i
         x4 = (x1 + 2 * x2) / 3;
         y4 = (y1 + 2 * y2) / 3;
 
-        if (line_intersects_viewport(camera, x1, y1, x3, y3) ||
-            line_intersects_viewport(camera, x3, y3, x4, y4) ||
-            line_intersects_viewport(camera, x4, y4, x2, y2))
+        if (maths_line_intersects_camera(camera, x1, y1, x3, y3) ||
+            maths_line_intersects_camera(camera, x3, y3, x4, y4) ||
+            maths_line_intersects_camera(camera, x4, y4, x2, y2))
         {
 
             SDL_RenderDrawLine(renderer, x1, y1, x3, y3);
@@ -1171,7 +1175,7 @@ void SDL_DrawCircleApprox(SDL_Renderer *renderer, const Camera *camera, int x, i
 /*
  * Move and draw galaxy cloud.
  */
-void update_gstars(Galaxy *galaxy, Point ship_position, const Camera *camera, double distance, double limit)
+void gfx_update_gstars_position(Galaxy *galaxy, Point ship_position, const Camera *camera, double distance, double limit)
 {
     int i = 0;
     float min_opacity_factor = 0.35;
@@ -1222,7 +1226,7 @@ void update_gstars(Galaxy *galaxy, Point ship_position, const Camera *camera, do
     }
 }
 
-void create_bstars(NavigationState *nav_state, Bstar bstars[], const Camera *camera)
+void gfx_generate_bstars(NavigationState *nav_state, Bstar bstars[], const Camera *camera)
 {
     int i = 0, row, column, is_star;
     int end = false;
@@ -1240,10 +1244,10 @@ void create_bstars(NavigationState *nav_state, Bstar bstars[], const Camera *cam
         {
             // Create rng seed by combining x,y values
             Point position = {.x = row, .y = column};
-            uint64_t seed = pair_hash_order_sensitive(position);
+            uint64_t seed = maths_hash_position_to_uint64(position);
 
             // Set galaxy hash as initseq
-            nav_state->initseq = pair_hash_order_sensitive_2(nav_state->current_galaxy->position);
+            nav_state->initseq = maths_hash_position_to_uint64_2(nav_state->current_galaxy->position);
 
             // Seed with a fixed constant
             pcg32_srandom_r(&rng, seed, nav_state->initseq);
@@ -1285,7 +1289,7 @@ void create_bstars(NavigationState *nav_state, Bstar bstars[], const Camera *cam
 /*
  * Move and draw background stars.
  */
-void update_bstars(int state, int camera_on, const NavigationState *nav_state, Bstar bstars[], const Camera *camera, Speed speed, double distance)
+void gfx_update_bstars_position(int state, int camera_on, const NavigationState *nav_state, Bstar bstars[], const Camera *camera, Speed speed, double distance)
 {
     int i = 0;
     int max_bstars = (int)(camera->w * camera->h * BSTARS_PER_SQUARE / BSTARS_SQUARE);

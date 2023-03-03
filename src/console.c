@@ -59,7 +59,7 @@ void console_measure_fps(unsigned int *fps, unsigned int *last_time, unsigned in
  */
 void console_render(ConsoleEntry entries[])
 {
-    for (int i = 0; i < LOG_COUNT; i++)
+    for (int i = 0; i < CONSOLE_COUNT; i++)
     {
         entries[i].surface = TTF_RenderText_Solid(fonts[FONT_SIZE_14], entries[i].value, colors[COLOR_WHITE_255]);
         entries[i].texture = SDL_CreateTextureFromSurface(renderer, entries[i].surface);

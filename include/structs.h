@@ -213,7 +213,7 @@ typedef struct
     int galaxy_region_size;
     MenuButton menu[MENU_BUTTON_COUNT];
     MenuButton logo;
-    ConsoleEntry console_entries[LOG_COUNT];
+    ConsoleEntry console_entries[CONSOLE_COUNT];
 } GameState;
 
 #endif /* STRUCTS_H */

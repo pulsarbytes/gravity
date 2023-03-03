@@ -12,6 +12,10 @@
 #include "../include/structs.h"
 #include "../include/maths.h"
 
+// Static function prototypes
+static uint64_t maths_hash_double_to_uint64(double x);
+static bool maths_points_equal(Point, Point);
+
 /**
  * Generates a hash value for a given double number `x`.
  *
@@ -19,7 +23,7 @@
  *
  * @return A 64-bit unsigned integer representing the hash value of `x`
  */
-uint64_t double_hash(double x)
+static uint64_t maths_hash_double_to_uint64(double x)
 {
     uint64_t x_bits = *(uint64_t *)&x;
     uint64_t x_hash = x_bits ^ (x_bits >> 33);
@@ -32,41 +36,40 @@ uint64_t double_hash(double x)
 }
 
 /*
- * Hash function that maps two double numbers to a unique 64-bit integer.
+ * Hash function that maps two double numbers to a unique 64-bit integer. Order sensitive.
  */
-uint64_t pair_hash_order_sensitive(Point position)
+uint64_t maths_hash_position_to_uint64(Point position)
 {
-    uint64_t x_hash = double_hash(position.x);
-    uint64_t y_hash = double_hash(position.y);
+    uint64_t x_hash = maths_hash_double_to_uint64(position.x);
+    uint64_t y_hash = maths_hash_double_to_uint64(position.y);
     uint64_t hash = x_hash ^ (y_hash + 0x9e3779b97f4a7c15ull + 1);
 
     return hash;
 }
 
 /*
- * Hash function that maps two double numbers to a unique 64-bit integer.
+ * Hash function that maps two double numbers to a unique 64-bit integer. Order sensitive.
  */
-uint64_t pair_hash_order_sensitive_2(Point position)
+uint64_t maths_hash_position_to_uint64_2(Point position)
 {
-    uint64_t x_hash = double_hash(position.x);
-    uint64_t y_hash = double_hash(position.y);
+    uint64_t x_hash = maths_hash_double_to_uint64(position.x);
+    uint64_t y_hash = maths_hash_double_to_uint64(position.y);
     uint64_t hash = (x_hash + 0x9e3779b97f4a7c15ull) ^ y_hash;
 
     return hash;
 }
 
 /*
- * Hash function that maps a unique 64-bit integer to an int between 0 and modulo.
- * This int will be used as index in hash table.
+ * Hash function that creates an index for an entry in a hash table.
  */
-uint64_t unique_index(Point position, int modulo, int entity_type)
+uint64_t maths_hash_position_to_index(Point position, int modulo, int entity_type)
 {
     uint64_t index;
 
     if (entity_type == ENTITY_STAR)
-        index = pair_hash_order_sensitive(position);
+        index = maths_hash_position_to_uint64(position);
     else if (entity_type == ENTITY_GALAXY)
-        index = pair_hash_order_sensitive_2(position);
+        index = maths_hash_position_to_uint64_2(position);
 
     return index % modulo;
 }
@@ -74,7 +77,7 @@ uint64_t unique_index(Point position, int modulo, int entity_type)
 /*
  * Check whether point p is in rectangular rect.
  */
-int point_in_rect(Point p, Point rect[])
+bool maths_point_in_rectanle(Point p, Point rect[])
 {
     int i, j;
     int sign = 0;
@@ -91,17 +94,17 @@ int point_in_rect(Point p, Point rect[])
         if (i == 0)
             sign = cross_prod > 0 ? 1 : -1;
         else if ((cross_prod > 0) != (sign > 0))
-            return 0; // point is outside the rectangle
+            return false; // point is outside the rectangle
     }
 
-    return 1; // point is inside the rectangle
+    return true; // point is inside the rectangle
 }
 
 /*
  * Transform a double to the nearest section point,
  * rounding up or down whichever is nearest.
  */
-double find_nearest_section_axis(double offset, int size)
+double maths_get_nearest_section_axis(double offset, int size)
 {
     double round_down = floorf(offset / size) * size;
     double round_up = round_down + size;
@@ -114,7 +117,7 @@ double find_nearest_section_axis(double offset, int size)
 /*
  * Find distance between two points.
  */
-double find_distance(double x1, double y1, double x2, double y2)
+double maths_distance_between_points(double x1, double y1, double x2, double y2)
 {
     return sqrt((x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2));
 }
@@ -122,7 +125,7 @@ double find_distance(double x1, double y1, double x2, double y2)
 /*
  * Compares two points.
  */
-bool points_equal(Point a, Point b)
+static bool maths_points_equal(Point a, Point b)
 {
     return a.x == b.x && a.y == b.y;
 }
@@ -138,7 +141,7 @@ bool points_equal(Point a, Point b)
  *
  * @return: Returns true if the line segment intersects with the viewport, and false otherwise
  */
-bool line_intersects_viewport(const Camera *camera, double x1, double y1, double x2, double y2)
+bool maths_line_intersects_camera(const Camera *camera, double x1, double y1, double x2, double y2)
 {
     double left = 0;
     double right = camera->w;
@@ -146,7 +149,7 @@ bool line_intersects_viewport(const Camera *camera, double x1, double y1, double
     double bottom = camera->h;
 
     // Check if both endpoints of the line are inside the viewport.
-    if (in_camera_relative(camera, x1, y1) || in_camera_relative(camera, x2, y2))
+    if (gfx_relative_position_in_camera(camera, x1, y1) || gfx_relative_position_in_camera(camera, x2, y2))
         return true;
 
     // Check if the line intersects the left edge of the viewport.
@@ -195,11 +198,11 @@ bool line_intersects_viewport(const Camera *camera, double x1, double y1, double
 /*
  * Checks whether a point exists in an array.
  */
-bool point_in_array(Point point, Point arr[], int len)
+bool maths_check_point_in_array(Point point, Point arr[], int len)
 {
     for (int i = 0; i < len; ++i)
     {
-        if (points_equal(point, arr[i]))
+        if (maths_points_equal(point, arr[i]))
             return true;
     }
 

@@ -10,7 +10,6 @@
 
 #include "../include/constants.h"
 #include "../include/enums.h"
-#include "../include/structs.h"
 #include "../include/sdl.h"
 
 // External variable definitions
@@ -21,7 +20,7 @@ extern SDL_Renderer *renderer;
 /*
  * Initialize SDL.
  */
-int sdl_initialize(SDL_Window *window)
+bool sdl_initialize(SDL_Window *window)
 {
     // Attempt to initialize SDL
     if (SDL_Init(SDL_INIT_EVERYTHING) != 0)
@@ -78,7 +77,7 @@ int sdl_initialize(SDL_Window *window)
 /*
  * Initialize SDL_ttf library and load fonts into memory.
  */
-int sdl_ttf_load_fonts(SDL_Window *window)
+bool sdl_ttf_load_fonts(SDL_Window *window)
 {
     // Initialize SDL_ttf library
     if (TTF_Init() == -1)

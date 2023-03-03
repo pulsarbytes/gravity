@@ -12,7 +12,7 @@
 /*
  * Poll SDL events.
  */
-void poll_events(GameState *game_state, InputState *input_state, GameEvents *game_events)
+void events_loop(GameState *game_state, InputState *input_state, GameEvents *game_events)
 {
     SDL_Event event;
     static int save_state;
@@ -22,7 +22,7 @@ void poll_events(GameState *game_state, InputState *input_state, GameEvents *gam
         switch (event.type)
         {
         case SDL_QUIT:
-            change_state(game_state, game_events, QUIT);
+            game_change_state(game_state, game_events, QUIT);
             break;
         case SDL_MOUSEBUTTONDOWN:
             int x, y;
@@ -46,7 +46,7 @@ void poll_events(GameState *game_state, InputState *input_state, GameEvents *gam
                     game_events->universe_exit = ON;
                 if (game_state->state == NAVIGATE || game_state->state == UNIVERSE)
                 {
-                    change_state(game_state, game_events, MAP);
+                    game_change_state(game_state, game_events, MAP);
                     game_events->map_enter = ON;
                     input_state->camera_on = ON;
                 }
@@ -54,12 +54,12 @@ void poll_events(GameState *game_state, InputState *input_state, GameEvents *gam
             case SDL_SCANCODE_N:
                 if (game_state->state == MAP)
                 {
-                    change_state(game_state, game_events, NAVIGATE);
+                    game_change_state(game_state, game_events, NAVIGATE);
                     game_events->map_exit = ON;
                 }
                 else if (game_state->state == UNIVERSE)
                 {
-                    change_state(game_state, game_events, NAVIGATE);
+                    game_change_state(game_state, game_events, NAVIGATE);
                     game_events->universe_exit = ON;
                 }
                 break;
@@ -75,7 +75,7 @@ void poll_events(GameState *game_state, InputState *input_state, GameEvents *gam
                     game_events->map_exit = ON;
                 if (game_state->state == NAVIGATE || game_state->state == MAP)
                 {
-                    change_state(game_state, game_events, UNIVERSE);
+                    game_change_state(game_state, game_events, UNIVERSE);
                     game_events->universe_enter = ON;
                     input_state->camera_on = ON;
                 }
@@ -124,9 +124,9 @@ void poll_events(GameState *game_state, InputState *input_state, GameEvents *gam
                 if (game_state->state == MENU)
                 {
                     if (game_state->menu[input_state->selected_button].state == RESUME)
-                        change_state(game_state, game_events, save_state);
+                        game_change_state(game_state, game_events, save_state);
                     else
-                        change_state(game_state, game_events, game_state->menu[input_state->selected_button].state);
+                        game_change_state(game_state, game_events, game_state->menu[input_state->selected_button].state);
                 }
                 break;
             case SDL_SCANCODE_SPACE:
@@ -139,10 +139,10 @@ void poll_events(GameState *game_state, InputState *input_state, GameEvents *gam
                 if (game_state->state != MENU)
                 {
                     save_state = game_state->state;
-                    change_state(game_state, game_events, MENU);
+                    game_change_state(game_state, game_events, MENU);
                 }
                 else if (game_state->state == MENU && game_events->game_started)
-                    change_state(game_state, game_events, save_state);
+                    game_change_state(game_state, game_events, save_state);
                 break;
             case SDL_SCANCODE_LEFTBRACKET:
                 input_state->zoom_in = OFF;

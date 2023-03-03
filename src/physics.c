@@ -14,7 +14,7 @@
 /*
  * Update velocity vector.
  */
-void update_velocity(Vector *velocity, const Ship *ship)
+void phys_update_velocity(Vector *velocity, const Ship *ship)
 {
     velocity->x = ship->position.x;
     velocity->y = ship->position.y;
@@ -38,7 +38,7 @@ void update_velocity(Vector *velocity, const Ship *ship)
  * radius^2 * v^2 / distance = G_CONSTANT * R^2 * radius^2 / distance^2
  * v = sqrt(G_CONSTANT * R^2 / distance);
  */
-void calc_orbital_velocity(float distance, float angle, float radius, float *vx, float *vy)
+void phys_calculate_orbital_velocity(float distance, float angle, float radius, float *vx, float *vy)
 {
     *vx = -COSMIC_CONSTANT * sqrt(G_CONSTANT * radius * radius / distance) * sin(angle * M_PI / 180); // negative for clockwise rotation
     *vy = COSMIC_CONSTANT * sqrt(G_CONSTANT * radius * radius / distance) * cos(angle * M_PI / 180);
@@ -47,12 +47,12 @@ void calc_orbital_velocity(float distance, float angle, float radius, float *vx,
 /*
  * Apply body gravity to ship.
  */
-void apply_gravity_to_ship(GameState *game_state, int thrust, NavigationState *nav_state, CelestialBody *body, Ship *ship, const Camera *camera)
+void phys_apply_gravity_to_ship(GameState *game_state, int thrust, NavigationState *nav_state, CelestialBody *body, Ship *ship, int star_class)
 {
     double delta_x = body->position.x - ship->position.x;
     double delta_y = body->position.y - ship->position.y;
     double distance = sqrt(delta_x * delta_x + delta_y * delta_y);
-    float g_body = 0;
+    float g_body;
     int is_star = body->level == LEVEL_STAR;
     int collision_point = body->radius;
 
@@ -147,15 +147,9 @@ void apply_gravity_to_ship(GameState *game_state, int thrust, NavigationState *n
 
         ship->vx += g_body * delta_x / distance;
         ship->vy += g_body * delta_y / distance;
-    }
 
-    // Update velocity
-    update_velocity(&nav_state->velocity, ship);
-
-    // Enforce speed limit if within star cutoff
-    if (is_star && distance < body->cutoff)
-    {
-        game_state->speed_limit = BASE_SPEED_LIMIT * body->class;
+        // Enforce star speed limit
+        game_state->speed_limit = BASE_SPEED_LIMIT * star_class;
 
         if (nav_state->velocity.magnitude > game_state->speed_limit)
         {
@@ -163,7 +157,7 @@ void apply_gravity_to_ship(GameState *game_state, int thrust, NavigationState *n
             ship->vy = game_state->speed_limit * ship->vy / nav_state->velocity.magnitude;
 
             // Update velocity
-            update_velocity(&nav_state->velocity, ship);
+            phys_update_velocity(&nav_state->velocity, ship);
         }
     }
 }

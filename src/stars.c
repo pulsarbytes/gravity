@@ -19,17 +19,26 @@
 extern SDL_Renderer *renderer;
 extern SDL_Color colors[];
 
+// Static function prototypes
+static void stars_cleanup_planets(CelestialBody *);
+static void stars_add_entry(StarEntry *stars[], Point, Star *);
+static bool stars_entry_exists(StarEntry *stars[], Point);
+static void stars_delete_entry(StarEntry *stars[], Point);
+static int stars_planet_size_class(float width);
+static Star *stars_create_star(const NavigationState *, Point, int preview, long double scale);
+static void stars_populate_body(CelestialBody *, Point, pcg32_random_t rng, long double scale);
+
 /*
  * Clean up planets (recursive).
  */
-static void cleanup_planets(CelestialBody *body)
+static void stars_cleanup_planets(CelestialBody *body)
 {
     int planets_size = sizeof(body->planets) / sizeof(body->planets[0]);
     int i;
 
     for (i = 0; i < planets_size && body->planets[i] != NULL; i++)
     {
-        cleanup_planets(body->planets[i]);
+        stars_cleanup_planets(body->planets[i]);
     }
 
     SDL_DestroyTexture(body->texture);
@@ -39,7 +48,7 @@ static void cleanup_planets(CelestialBody *body)
 /*
  * Delete all stars from hash table.
  */
-void cleanup_stars(StarEntry *stars[])
+void stars_clear_table(StarEntry *stars[])
 {
     // Loop through hash table
     for (int s = 0; s < MAX_STARS; s++)
@@ -49,7 +58,7 @@ void cleanup_stars(StarEntry *stars[])
         while (entry != NULL)
         {
             Point position = {.x = entry->x, .y = entry->y};
-            delete_star(stars, position);
+            stars_delete_entry(stars, position);
             entry = entry->next;
         }
     }
@@ -58,10 +67,10 @@ void cleanup_stars(StarEntry *stars[])
 /*
  * Insert a new star entry in stars hash table.
  */
-void put_star(StarEntry *stars[], Point position, Star *star)
+static void stars_add_entry(StarEntry *stars[], Point position, Star *star)
 {
     // Generate unique index for hash table
-    uint64_t index = unique_index(position, MAX_STARS, ENTITY_STAR);
+    uint64_t index = maths_hash_position_to_index(position, MAX_STARS, ENTITY_STAR);
 
     StarEntry *entry = (StarEntry *)malloc(sizeof(StarEntry));
     entry->x = position.x;
@@ -74,10 +83,10 @@ void put_star(StarEntry *stars[], Point position, Star *star)
 /*
  * Check whether a star entry exists in the stars hash table.
  */
-int star_exists(StarEntry *stars[], Point position)
+static bool stars_entry_exists(StarEntry *stars[], Point position)
 {
     // Generate unique index for hash table
-    uint64_t index = unique_index(position, MAX_STARS, ENTITY_STAR);
+    uint64_t index = maths_hash_position_to_index(position, MAX_STARS, ENTITY_STAR);
 
     StarEntry *entry = stars[index];
 
@@ -98,10 +107,10 @@ int star_exists(StarEntry *stars[], Point position)
 /*
  * Delete a star entry from the stars hash table.
  */
-void delete_star(StarEntry *stars[], Point position)
+static void stars_delete_entry(StarEntry *stars[], Point position)
 {
     // Generate unique index for hash table
-    uint64_t index = unique_index(position, MAX_STARS, ENTITY_STAR);
+    uint64_t index = maths_hash_position_to_index(position, MAX_STARS, ENTITY_STAR);
 
     StarEntry *previous = NULL;
     StarEntry *entry = stars[index];
@@ -112,7 +121,7 @@ void delete_star(StarEntry *stars[], Point position)
         {
             // Clean up planets
             if (entry->star != NULL && entry->star->planets[0] != NULL)
-                cleanup_planets(entry->star);
+                stars_cleanup_planets(entry->star);
 
             // Clean up star
             if (entry->star->texture != NULL)
@@ -140,7 +149,7 @@ void delete_star(StarEntry *stars[], Point position)
 /*
  * Find distance to nearest star.
  */
-double nearest_star_distance(Point position, Galaxy *current_galaxy, uint64_t initseq, int galaxy_density)
+double stars_nearest_center_distance(Point position, Galaxy *current_galaxy, uint64_t initseq, int galaxy_density)
 {
     // We use 6 * GALAXY_SECTION_SIZE as max, since a CLASS_6 star needs 6 + 1 empty sections
     // We search inner circumferences of points first and work towards outward circumferences
@@ -167,26 +176,26 @@ double nearest_star_distance(Point position, Galaxy *current_galaxy, uint64_t in
 
                 Point p = {ix, iy};
 
-                if (point_in_array(p, checked_points, num_checked_points))
+                if (maths_check_point_in_array(p, checked_points, num_checked_points))
                     continue;
 
                 checked_points[num_checked_points++] = p;
 
                 // Create rng seed by combining x,y values
-                uint64_t seed = pair_hash_order_sensitive(p);
+                uint64_t seed = maths_hash_position_to_uint64(p);
 
                 // Seed with a fixed constant
                 pcg32_srandom_r(&rng, seed, initseq);
 
                 // Calculate density based on distance from center
                 /*
-                 * If we do this like in generate_stars, this will result in large stars at the edges,
+                 * If we do this like in stars_generate, this will result in large stars at the edges,
                  * and small stars at the center.
                  * Instead, we use the trick of calculating density only in this small region.
                  * This may find fake near stars that do not really exist and force star sizes to be smaller.
                  */
-                // double distance_from_center = find_distance(ix, iy, 0, 0);
-                double distance_from_center = find_distance(ix, iy, position.x, position.y);
+                // double distance_from_center = maths_distance_between_points(ix, iy, 0, 0);
+                double distance_from_center = maths_distance_between_points(ix, iy, position.x, position.y);
 
                 double density = (galaxy_density / pow((distance_from_center / a + 1), 6));
 
@@ -194,7 +203,7 @@ double nearest_star_distance(Point position, Galaxy *current_galaxy, uint64_t in
 
                 if (has_star)
                 {
-                    double distance = find_distance(ix, iy, position.x, position.y);
+                    double distance = maths_distance_between_points(ix, iy, position.x, position.y);
 
                     return distance;
                 }
@@ -209,7 +218,7 @@ double nearest_star_distance(Point position, Galaxy *current_galaxy, uint64_t in
  * Find star class.
  * <distance> is number of empty sections.
  */
-int get_star_class(float distance)
+int stars_size_class(float distance)
 {
     if (distance < 2 * GALAXY_SECTION_SIZE)
         return STAR_CLASS_1;
@@ -231,7 +240,7 @@ int get_star_class(float distance)
  * Find planet class.
  * <width> is orbit width.
  */
-int get_planet_class(float width)
+static int stars_planet_size_class(float width)
 {
     if (width < GALAXY_SECTION_SIZE / 20) // < 500
         return PLANET_CLASS_1;
@@ -252,7 +261,7 @@ int get_planet_class(float width)
 /*
  * Delete stars outside region.
  */
-void delete_stars_outside_region(StarEntry *stars[], double bx, double by, int region_size)
+void stars_delete_outside_region(StarEntry *stars[], double bx, double by, int region_size)
 {
     for (int s = 0; s < MAX_STARS; s++)
     {
@@ -263,12 +272,12 @@ void delete_stars_outside_region(StarEntry *stars[], double bx, double by, int r
             Point position = {.x = entry->x, .y = entry->y};
 
             // Get distance from center of region
-            double distance = find_distance(position.x, position.y, bx, by);
+            double distance = maths_distance_between_points(position.x, position.y, bx, by);
             double region_radius = sqrt((double)2 * ((region_size + 1) / 2) * GALAXY_SECTION_SIZE * ((region_size + 1) / 2) * GALAXY_SECTION_SIZE);
 
             // If star outside region, delete it
             if (distance >= region_radius)
-                delete_star(stars, position);
+                stars_delete_entry(stars, position);
 
             entry = entry->next;
         }
@@ -278,19 +287,19 @@ void delete_stars_outside_region(StarEntry *stars[], double bx, double by, int r
 /*
  * Create a star.
  */
-Star *create_star(const NavigationState *nav_state, Point position, int preview, long double scale)
+static Star *stars_create_star(const NavigationState *nav_state, Point position, int preview, long double scale)
 {
     // Find distance to nearest star
-    double distance = nearest_star_distance(position, nav_state->current_galaxy, nav_state->initseq, GALAXY_DENSITY);
+    double distance = stars_nearest_center_distance(position, nav_state->current_galaxy, nav_state->initseq, GALAXY_DENSITY);
 
     // Get star class
-    int class = get_star_class(distance);
+    int class = stars_size_class(distance);
 
     // Use a local rng
     pcg32_random_t rng;
 
     // Create rng seed by combining x,y values
-    uint64_t seed = pair_hash_order_sensitive(position);
+    uint64_t seed = maths_hash_position_to_uint64(position);
 
     // Seed with a fixed constant
     pcg32_srandom_r(&rng, seed, nav_state->initseq);
@@ -326,12 +335,12 @@ Star *create_star(const NavigationState *nav_state, Point position, int preview,
     Star *star = (Star *)malloc(sizeof(Star));
 
     // Get unique star index
-    uint64_t index = pair_hash_order_sensitive(position);
+    uint64_t index = maths_hash_position_to_uint64(position);
 
     star->initialized = 0;
     sprintf(star->name, "%s-%lu", "S", index);
     star->image = "../assets/images/sol.png";
-    star->class = get_star_class(distance);
+    star->class = stars_size_class(distance);
     star->radius = radius;
     star->cutoff = GALAXY_SECTION_SIZE * class / 2;
     star->position.x = position.x;
@@ -371,7 +380,7 @@ Star *create_star(const NavigationState *nav_state, Point position, int preview,
  * The region has intervals of size GALAXY_SECTION_SIZE.
  * The function checks for galaxy boundaries and switches to a new galaxy if close enough.
  */
-void generate_stars(GameState *game_state, GameEvents *game_events, NavigationState *nav_state, Bstar bstars[], Ship *ship, const Camera *camera)
+void stars_generate(GameState *game_state, GameEvents *game_events, NavigationState *nav_state, Bstar bstars[], Ship *ship, const Camera *camera)
 {
     Point offset;
 
@@ -387,8 +396,8 @@ void generate_stars(GameState *game_state, GameEvents *game_events, NavigationSt
     }
 
     // Keep track of current nearest section axis coordinates
-    double bx = find_nearest_section_axis(offset.x, GALAXY_SECTION_SIZE);
-    double by = find_nearest_section_axis(offset.y, GALAXY_SECTION_SIZE);
+    double bx = maths_get_nearest_section_axis(offset.x, GALAXY_SECTION_SIZE);
+    double by = maths_get_nearest_section_axis(offset.y, GALAXY_SECTION_SIZE);
 
     // Check if this is the first time calling this function
     if (!game_events->stars_start)
@@ -417,12 +426,12 @@ void generate_stars(GameState *game_state, GameEvents *game_events, NavigationSt
 
         // Convert to cross section offset to query for new galaxies
         Point cross_section_offset;
-        cross_section_offset.x = find_nearest_section_axis(universe_position.x, UNIVERSE_SECTION_SIZE);
-        cross_section_offset.y = find_nearest_section_axis(universe_position.y, UNIVERSE_SECTION_SIZE);
-        generate_galaxies(game_events, nav_state, cross_section_offset);
+        cross_section_offset.x = maths_get_nearest_section_axis(universe_position.x, UNIVERSE_SECTION_SIZE);
+        cross_section_offset.y = maths_get_nearest_section_axis(universe_position.y, UNIVERSE_SECTION_SIZE);
+        galaxies_generate(game_events, nav_state, cross_section_offset);
 
         // Search for nearest galaxy to universe_position, including current galaxy
-        Galaxy *next_galaxy = find_nearest_galaxy(nav_state, universe_position, false);
+        Galaxy *next_galaxy = galaxies_nearest_circumference(nav_state, universe_position, false);
 
         // Found a new galaxy
         if (next_galaxy != NULL &&
@@ -439,7 +448,7 @@ void generate_stars(GameState *game_state, GameEvents *game_events, NavigationSt
 
             // Get coordinates of current position relative to new galaxy
             double angle = atan2(universe_position.y - next_galaxy->position.y, universe_position.x - next_galaxy->position.x);
-            double d = find_distance(universe_position.x, universe_position.y, next_galaxy->position.x, next_galaxy->position.y);
+            double d = maths_distance_between_points(universe_position.x, universe_position.y, next_galaxy->position.x, next_galaxy->position.y);
             double px = d * cos(angle) * GALAXY_SCALE;
             double py = d * sin(angle) * GALAXY_SCALE;
 
@@ -472,7 +481,7 @@ void generate_stars(GameState *game_state, GameEvents *game_events, NavigationSt
                     bstars[i].final_star = 0;
                 }
 
-                create_bstars(nav_state, bstars, camera);
+                gfx_generate_bstars(nav_state, bstars, camera);
             }
             else if (game_state->state == MAP)
             {
@@ -495,7 +504,7 @@ void generate_stars(GameState *game_state, GameEvents *game_events, NavigationSt
             }
 
             // Delete stars from previous galaxy
-            cleanup_stars(nav_state->stars);
+            stars_clear_table(nav_state->stars);
 
             return;
         }
@@ -523,7 +532,7 @@ void generate_stars(GameState *game_state, GameEvents *game_events, NavigationSt
     double a = nav_state->current_galaxy->radius * GALAXY_SCALE / 2.0f;
 
     // Set galaxy hash as initseq
-    nav_state->initseq = pair_hash_order_sensitive_2(nav_state->current_galaxy->position);
+    nav_state->initseq = maths_hash_position_to_uint64_2(nav_state->current_galaxy->position);
 
     for (ix = left_boundary; ix < right_boundary && in_horizontal_bounds; ix += GALAXY_SECTION_SIZE)
     {
@@ -537,7 +546,7 @@ void generate_stars(GameState *game_state, GameEvents *game_events, NavigationSt
 
             // Create rng seed by combining x,y values
             Point position = {.x = ix, .y = iy};
-            uint64_t seed = pair_hash_order_sensitive(position);
+            uint64_t seed = maths_hash_position_to_uint64(position);
 
             // Seed with a fixed constant
             pcg32_srandom_r(&rng, seed, nav_state->initseq);
@@ -550,22 +559,22 @@ void generate_stars(GameState *game_state, GameEvents *game_events, NavigationSt
             if (has_star)
             {
                 // Check whether star exists in hash table
-                if (star_exists(nav_state->stars, position))
+                if (stars_entry_exists(nav_state->stars, position))
                     continue;
                 else
                 {
                     // Create star
-                    Star *star = create_star(nav_state, position, false, game_state->game_scale);
+                    Star *star = stars_create_star(nav_state, position, false, game_state->game_scale);
 
                     // Add star to hash table
-                    put_star(nav_state->stars, position, star);
+                    stars_add_entry(nav_state->stars, position, star);
                 }
             }
         }
     }
 
     // Delete stars that end up outside the region
-    delete_stars_outside_region(nav_state->stars, bx, by, game_state->galaxy_region_size);
+    stars_delete_outside_region(nav_state->stars, bx, by, game_state->galaxy_region_size);
 
     // First star generation complete
     game_events->stars_start = OFF;
@@ -575,7 +584,7 @@ void generate_stars(GameState *game_state, GameEvents *game_events, NavigationSt
  * Probe region for stars and create them procedurally.
  * The region has intervals of size GALAXY_SECTION_SIZE.
  */
-void generate_stars_preview(NavigationState *nav_state, const Camera *camera, Point *cross_point, int zoom_preview, long double scale)
+void stars_generate_preview(NavigationState *nav_state, const Camera *camera, Point *cross_point, int zoom_preview, long double scale)
 {
     // Check how many sections fit in camera
     double section_size_scaled = GALAXY_SECTION_SIZE * scale;
@@ -646,8 +655,8 @@ void generate_stars_preview(NavigationState *nav_state, const Camera *camera, Po
 
     // Keep track of current nearest section axis coordinates
     section_size = num_sections * GALAXY_SECTION_SIZE;
-    double bx = find_nearest_section_axis(nav_state->map_offset.x, section_size);
-    double by = find_nearest_section_axis(nav_state->map_offset.y, section_size);
+    double bx = maths_get_nearest_section_axis(nav_state->map_offset.x, section_size);
+    double by = maths_get_nearest_section_axis(nav_state->map_offset.y, section_size);
 
     // Check whether nearest section axis have changed
     if ((int)bx == (int)cross_point->x && (int)by == (int)cross_point->y)
@@ -707,7 +716,7 @@ void generate_stars_preview(NavigationState *nav_state, const Camera *camera, Po
     double a = nav_state->current_galaxy->radius * GALAXY_SCALE / 2.0f;
 
     // Set galaxy hash as initseq
-    nav_state->initseq = pair_hash_order_sensitive_2(nav_state->current_galaxy->position);
+    nav_state->initseq = maths_hash_position_to_uint64_2(nav_state->current_galaxy->position);
 
     for (ix = left_boundary; ix < right_boundary; ix += section_size)
     {
@@ -719,7 +728,7 @@ void generate_stars_preview(NavigationState *nav_state, const Camera *camera, Po
             // check that point is not within previous boundaries
             if (initialized && !zoom_preview && scale <= 0.001 + epsilon)
             {
-                if (point_in_rect(position, rect))
+                if (maths_point_in_rectanle(position, rect))
                     continue;
             }
 
@@ -730,7 +739,7 @@ void generate_stars_preview(NavigationState *nav_state, const Camera *camera, Po
                 continue;
 
             // Create rng seed by combining x,y values
-            uint64_t seed = pair_hash_order_sensitive(position);
+            uint64_t seed = maths_hash_position_to_uint64(position);
 
             // Seed with a fixed constant
             pcg32_srandom_r(&rng, seed, nav_state->initseq);
@@ -743,15 +752,15 @@ void generate_stars_preview(NavigationState *nav_state, const Camera *camera, Po
             if (has_star)
             {
                 // Check whether star exists in hash table
-                if (star_exists(nav_state->stars, position))
+                if (stars_entry_exists(nav_state->stars, position))
                     continue;
                 else
                 {
                     // Create star
-                    Star *star = create_star(nav_state, position, true, scale);
+                    Star *star = stars_create_star(nav_state, position, true, scale);
 
                     // Add star to hash table
-                    put_star(nav_state->stars, position, star);
+                    stars_add_entry(nav_state->stars, position, star);
                 }
             }
         }
@@ -766,14 +775,14 @@ void generate_stars_preview(NavigationState *nav_state, const Camera *camera, Po
 
     // Delete stars that end up outside the region
     int region_size = sections_in_camera_x;
-    delete_stars_outside_region(nav_state->stars, bx, by, region_size);
+    stars_delete_outside_region(nav_state->stars, bx, by, region_size);
 }
 
 /*
  * Create a system (recursive). Takes a pointer to a celestial body
  * and populates it with children planets.
  */
-void populate_star_system(CelestialBody *body, Point position, pcg32_random_t rng, long double scale)
+static void stars_populate_body(CelestialBody *body, Point position, pcg32_random_t rng, long double scale)
 {
     if (body->level == LEVEL_STAR && body->initialized == 1)
         return;
@@ -866,7 +875,7 @@ void populate_star_system(CelestialBody *body, Point position, pcg32_random_t rn
                 strcpy(planet->name, body->name);                               // Copy star name to planet name
                 sprintf(planet->name + strlen(planet->name), "-%s-%d", "P", i); // Append to planet name
                 planet->image = "../assets/images/earth.png";
-                planet->class = get_planet_class(orbit_width);
+                planet->class = stars_planet_size_class(orbit_width);
                 planet->color.r = colors[COLOR_SKY_BLUE_255].r;
                 planet->color.g = colors[COLOR_SKY_BLUE_255].g;
                 planet->color.b = colors[COLOR_SKY_BLUE_255].b;
@@ -878,7 +887,7 @@ void populate_star_system(CelestialBody *body, Point position, pcg32_random_t rn
                 float angle = fmod(abs(pcg32_random_r(&rng)), 360);
                 float vx, vy;
                 float total_width = width + body->radius - planet->radius; // center to center
-                calc_orbital_velocity(total_width, angle, body->radius, &vx, &vy);
+                phys_calculate_orbital_velocity(total_width, angle, body->radius, &vx, &vy);
 
                 planet->position.x = body->position.x + total_width * cos(angle * M_PI / 180);
                 planet->position.y = body->position.y + total_width * sin(angle * M_PI / 180);
@@ -900,7 +909,7 @@ void populate_star_system(CelestialBody *body, Point position, pcg32_random_t rn
                 body->planets[i + 1] = NULL;
                 i++;
 
-                populate_star_system(planet, position, rng, scale);
+                stars_populate_body(planet, position, rng, scale);
             }
             else
                 break;
@@ -1013,7 +1022,7 @@ void populate_star_system(CelestialBody *body, Point position, pcg32_random_t rn
                 float angle = fmod(abs(pcg32_random_r(&rng)), 360);
                 float vx, vy;
                 float total_width = width + body->radius - moon->radius;
-                calc_orbital_velocity(total_width, angle, body->radius, &vx, &vy);
+                phys_calculate_orbital_velocity(total_width, angle, body->radius, &vx, &vy);
 
                 moon->position.x = body->position.x + total_width * cos(angle * M_PI / 180);
                 moon->position.y = body->position.y + total_width * sin(angle * M_PI / 180);
@@ -1042,10 +1051,11 @@ void populate_star_system(CelestialBody *body, Point position, pcg32_random_t rn
 }
 
 /*
- * Create, update, draw star system and apply gravity to planets and ship (recursive).
+ * Create star system, update positions of bodies in star system and ship due to gravity.
  */
-void update_star_system(GameState *game_state, const InputState *input_state, NavigationState *nav_state, CelestialBody *body, Ship *ship, const Camera *camera)
+void stars_update_orbital_positions(GameState *game_state, const InputState *input_state, NavigationState *nav_state, CelestialBody *body, Ship *ship, int star_class)
 {
+    double distance;
     Point position;
 
     if (game_state->state == NAVIGATE)
@@ -1059,12 +1069,9 @@ void update_star_system(GameState *game_state, const InputState *input_state, Na
         position.y = nav_state->map_offset.y;
     }
 
-    // Update planets & moons
+    // Update planets
     if (body->level != LEVEL_STAR)
     {
-        double distance;
-        float orbit_opacity;
-
         if (game_state->state == NAVIGATE)
         {
             // Update body position
@@ -1090,13 +1097,133 @@ void update_star_system(GameState *game_state, const InputState *input_state, Na
             // Update body position
             body->position.x += body->vx / FPS;
             body->position.y += body->vy / FPS;
+        }
+        else if (game_state->state == MAP)
+        {
+            // Find distance from parent
+            distance = maths_distance_between_points(body->parent->position.x, body->parent->position.y, body->position.x, body->position.y);
+        }
+
+        // Update moons
+        int max_planets = MAX_MOONS;
+
+        for (int i = 0; i < max_planets && body->planets[i] != NULL; i++)
+        {
+            stars_update_orbital_positions(game_state, input_state, nav_state, body->planets[i], ship, star_class);
+        }
+    }
+    else if (body->level == LEVEL_STAR)
+    {
+        // Get star distance from position
+        distance = maths_distance_between_points(body->position.x, body->position.y, position.x, position.y);
+
+        if (game_state->state == MAP)
+        {
+            if (distance < body->cutoff && SOLAR_SYSTEMS_ON)
+            {
+                // Create system
+                if (!body->initialized && SOLAR_SYSTEMS_ON)
+                {
+                    Point star_position = {.x = body->position.x, .y = body->position.y};
+
+                    // Use a local rng
+                    pcg32_random_t rng;
+
+                    // Create rng seed by combining x,y values
+                    uint64_t seed = maths_hash_position_to_uint64(star_position);
+
+                    // Seed with a fixed constant
+                    pcg32_srandom_r(&rng, seed, nav_state->initseq);
+
+                    stars_populate_body(body, star_position, rng, game_state->game_scale);
+                }
+
+                // Update planets
+                int max_planets = MAX_PLANETS;
+
+                for (int i = 0; i < max_planets && body->planets[i] != NULL; i++)
+                {
+                    stars_update_orbital_positions(game_state, input_state, nav_state, body->planets[i], ship, star_class);
+                }
+            }
+        }
+        else if (game_state->state == NAVIGATE)
+        {
+            if (distance < body->cutoff && SOLAR_SYSTEMS_ON)
+            {
+                // Create system
+                if (!body->initialized)
+                {
+                    Point star_position = {.x = body->position.x, .y = body->position.y};
+
+                    // Use a local rng
+                    pcg32_random_t rng;
+
+                    // Create rng seed by combining x,y values
+                    uint64_t seed = maths_hash_position_to_uint64(star_position);
+
+                    // Seed with a fixed constant
+                    pcg32_srandom_r(&rng, seed, nav_state->initseq);
+
+                    stars_populate_body(body, star_position, rng, game_state->game_scale);
+                }
+
+                // Update planets
+                int max_planets = MAX_PLANETS;
+
+                for (int i = 0; i < max_planets && body->planets[i] != NULL; i++)
+                {
+                    stars_update_orbital_positions(game_state, input_state, nav_state, body->planets[i], ship, star_class);
+                }
+            }
+        }
+    }
+
+    // Update ship speed due to gravity
+    if (game_state->state == NAVIGATE && SHIP_GRAVITY_ON)
+        phys_apply_gravity_to_ship(game_state, input_state->thrust, nav_state, body, ship, star_class);
+
+    // Update velocity
+    phys_update_velocity(&nav_state->velocity, ship);
+}
+
+/*
+ * Draw star system.
+ */
+void stars_draw_star_system(GameState *game_state, const InputState *input_state, NavigationState *nav_state, CelestialBody *body, const Camera *camera)
+{
+    double distance;
+    Point position;
+
+    if (game_state->state == NAVIGATE)
+    {
+        position.x = nav_state->navigate_offset.x;
+        position.y = nav_state->navigate_offset.y;
+    }
+    else if (game_state->state == MAP)
+    {
+        position.x = nav_state->map_offset.x;
+        position.y = nav_state->map_offset.y;
+    }
+
+    // Draw planets
+    if (body->level != LEVEL_STAR)
+    {
+        float orbit_opacity;
+
+        if (game_state->state == NAVIGATE)
+        {
+            // Find distance from parent
+            double delta_x = body->parent->position.x - body->position.x;
+            double delta_y = body->parent->position.y - body->position.y;
+            distance = sqrt(delta_x * delta_x + delta_y * delta_y);
 
             orbit_opacity = 45;
         }
         else if (game_state->state == MAP)
         {
             // Find distance from parent
-            distance = find_distance(body->parent->position.x, body->parent->position.y, body->position.x, body->position.y);
+            distance = maths_distance_between_points(body->parent->position.x, body->parent->position.y, body->position.x, body->position.y);
 
             orbit_opacity = 32;
         }
@@ -1113,109 +1240,75 @@ void update_star_system(GameState *game_state, const InputState *input_state, Na
                 colors[COLOR_WHITE_255].b,
                 orbit_opacity};
 
-            SDL_DrawCircle(renderer, camera, _x, _y, radius, orbit_color);
+            gfx_draw_circle(renderer, camera, _x, _y, radius, orbit_color);
         }
 
-        // Update moons
+        // Draw moons
         int max_planets = MAX_MOONS;
 
         for (int i = 0; i < max_planets && body->planets[i] != NULL; i++)
         {
-            update_star_system(game_state, input_state, nav_state, body->planets[i], ship, camera);
+            stars_draw_star_system(game_state, input_state, nav_state, body->planets[i], camera);
         }
     }
     else if (body->level == LEVEL_STAR)
     {
         // Get star distance from position
-        double distance_star = find_distance(body->position.x, body->position.y, position.x, position.y);
+        distance = maths_distance_between_points(body->position.x, body->position.y, position.x, position.y);
 
         if (game_state->state == MAP)
         {
-            if (distance_star < body->cutoff && SOLAR_SYSTEMS_ON)
+            if (distance < body->cutoff && SOLAR_SYSTEMS_ON)
             {
-                // Create system
-                if (!body->initialized && SOLAR_SYSTEMS_ON)
-                {
-                    Point star_position = {.x = body->position.x, .y = body->position.y};
-
-                    // Use a local rng
-                    pcg32_random_t rng;
-
-                    // Create rng seed by combining x,y values
-                    uint64_t seed = pair_hash_order_sensitive(star_position);
-
-                    // Seed with a fixed constant
-                    pcg32_srandom_r(&rng, seed, nav_state->initseq);
-
-                    populate_star_system(body, star_position, rng, game_state->game_scale);
-                }
-
-                // Update planets
+                // Draw planets
                 int max_planets = MAX_PLANETS;
 
                 for (int i = 0; i < max_planets && body->planets[i] != NULL; i++)
                 {
-                    update_star_system(game_state, input_state, nav_state, body->planets[i], ship, camera);
+                    stars_draw_star_system(game_state, input_state, nav_state, body->planets[i], camera);
                 }
 
                 if (input_state->orbits_on)
                 {
                     // Draw cutoff area circles
-                    int _r = body->class * GALAXY_SECTION_SIZE / 2;
-                    int radius = _r * game_state->game_scale;
-                    int _x = (body->position.x - camera->x) * game_state->game_scale;
-                    int _y = (body->position.y - camera->y) * game_state->game_scale;
+                    int r = body->class * GALAXY_SECTION_SIZE / 2;
+                    int radius = r * game_state->game_scale;
+                    int x = (body->position.x - camera->x) * game_state->game_scale;
+                    int y = (body->position.y - camera->y) * game_state->game_scale;
 
-                    SDL_DrawCircle(renderer, camera, _x, _y, radius - 1, colors[COLOR_MAGENTA_40]);
-                    SDL_DrawCircle(renderer, camera, _x, _y, radius - 2, colors[COLOR_MAGENTA_40]);
-                    SDL_DrawCircle(renderer, camera, _x, _y, radius - 3, colors[COLOR_MAGENTA_40]);
+                    gfx_draw_circle(renderer, camera, x, y, radius - 1, colors[COLOR_MAGENTA_40]);
+                    gfx_draw_circle(renderer, camera, x, y, radius - 2, colors[COLOR_MAGENTA_40]);
+                    gfx_draw_circle(renderer, camera, x, y, radius - 3, colors[COLOR_MAGENTA_40]);
                 }
             }
         }
         else if (game_state->state == NAVIGATE)
         {
-            if (distance_star < body->cutoff && SOLAR_SYSTEMS_ON)
+            if (distance < body->cutoff && SOLAR_SYSTEMS_ON)
             {
-                // Create system
-                if (!body->initialized)
-                {
-                    Point star_position = {.x = body->position.x, .y = body->position.y};
-
-                    // Use a local rng
-                    pcg32_random_t rng;
-
-                    // Create rng seed by combining x,y values
-                    uint64_t seed = pair_hash_order_sensitive(star_position);
-
-                    // Seed with a fixed constant
-                    pcg32_srandom_r(&rng, seed, nav_state->initseq);
-
-                    populate_star_system(body, star_position, rng, game_state->game_scale);
-                }
-
-                // Update planets
+                // Draw planets
                 int max_planets = MAX_PLANETS;
 
                 for (int i = 0; i < max_planets && body->planets[i] != NULL; i++)
                 {
-                    update_star_system(game_state, input_state, nav_state, body->planets[i], ship, camera);
+                    stars_draw_star_system(game_state, input_state, nav_state, body->planets[i], camera);
                 }
             }
 
             // Draw cutoff area circle
-            if (input_state->orbits_on && distance_star < 2 * body->cutoff)
+            if (input_state->orbits_on && distance < 2 * body->cutoff)
             {
                 int cutoff = body->cutoff * game_state->game_scale;
-                int _x = (body->position.x - camera->x) * game_state->game_scale;
-                int _y = (body->position.y - camera->y) * game_state->game_scale;
+                int x = (body->position.x - camera->x) * game_state->game_scale;
+                int y = (body->position.y - camera->y) * game_state->game_scale;
 
-                SDL_DrawCircle(renderer, camera, _x, _y, cutoff, colors[COLOR_MAGENTA_70]);
+                gfx_draw_circle(renderer, camera, x, y, cutoff, colors[COLOR_MAGENTA_70]);
             }
         }
     }
 
     // Draw body
-    if (in_camera(camera, body->position.x, body->position.y, body->radius, game_state->game_scale))
+    if (gfx_object_in_camera(camera, body->position.x, body->position.y, body->radius, game_state->game_scale))
     {
         body->rect.x = (int)(body->position.x - body->radius - camera->x) * game_state->game_scale;
         body->rect.y = (int)(body->position.y - body->radius - camera->y) * game_state->game_scale;
@@ -1227,16 +1320,12 @@ void update_star_system(GameState *game_state, const InputState *input_state, Na
     {
         if (body->level == LEVEL_MOON)
         {
-            double distance = find_distance(body->parent->position.x, body->parent->position.y, position.x, position.y);
+            distance = maths_distance_between_points(body->parent->position.x, body->parent->position.y, position.x, position.y);
 
             if (distance < 2 * body->parent->cutoff)
-                project_body(game_state, nav_state, body, camera);
+                gfx_project_body_on_edge(game_state, nav_state, body, camera);
         }
         else
-            project_body(game_state, nav_state, body, camera);
+            gfx_project_body_on_edge(game_state, nav_state, body, camera);
     }
-
-    // Update ship speed due to gravity
-    if (game_state->state == NAVIGATE && SHIP_GRAVITY_ON)
-        apply_gravity_to_ship(game_state, input_state->thrust, nav_state, body, ship, camera);
 }

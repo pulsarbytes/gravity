@@ -66,7 +66,7 @@ enum
     Y_INDEX,
     V_INDEX,
     SCALE_INDEX,
-    LOG_COUNT // number of elements in enumeration
+    CONSOLE_COUNT
 };
 
 enum

@@ -2,36 +2,31 @@
 #define STARS_H
 
 // Function prototypes
-static void cleanup_planets(CelestialBody *);
-void cleanup_stars(StarEntry *stars[]);
-void put_star(StarEntry *stars[], Point, Star *);
-int star_exists(StarEntry *stars[], Point);
-void delete_star(StarEntry *stars[], Point);
-double nearest_star_distance(Point, Galaxy *, uint64_t initseq, int galaxy_density);
-int get_star_class(float distance);
-int get_planet_class(float width);
-void delete_stars_outside_region(StarEntry *stars[], double bx, double by, int region_size);
-Star *create_star(const NavigationState *, Point, int preview, long double scale);
-void generate_stars(GameState *, GameEvents *, NavigationState *, Bstar bstars[], Ship *ship, const Camera *);
-void generate_stars_preview(NavigationState *, const Camera *, Point *, int zoom_preview, long double scale);
-void populate_star_system(CelestialBody *, Point, pcg32_random_t rng, long double scale);
-void update_star_system(GameState *, const InputState *, NavigationState *, CelestialBody *, Ship *ship, const Camera *);
+void stars_clear_table(StarEntry *stars[]);
+double stars_nearest_center_distance(Point, Galaxy *, uint64_t initseq, int galaxy_density);
+int stars_size_class(float distance);
+void stars_delete_outside_region(StarEntry *stars[], double bx, double by, int region_size);
+void stars_generate(GameState *, GameEvents *, NavigationState *, Bstar bstars[], Ship *ship, const Camera *);
+void stars_generate_preview(NavigationState *, const Camera *, Point *, int zoom_preview, long double scale);
+void stars_update_orbital_positions(GameState *, const InputState *, NavigationState *, CelestialBody *, Ship *, int star_class);
+void stars_draw_star_system(GameState *, const InputState *, NavigationState *, CelestialBody *, const Camera *);
 
 // External function prototypes
-uint64_t pair_hash_order_sensitive(Point);
-uint64_t pair_hash_order_sensitive_2(Point);
-uint64_t unique_index(Point, int modulo, int entity_type);
-bool point_in_array(Point, Point arr[], int len);
-double find_nearest_section_axis(double offset, int size);
-void generate_galaxies(GameEvents *, NavigationState *, Point);
-Galaxy *find_nearest_galaxy(const NavigationState *, Point, int exclude);
-double find_distance(double x1, double y1, double x2, double y2);
-void create_bstars(NavigationState *, Bstar bstars[], const Camera *);
-int point_in_rect(Point, Point rect[]);
-void calc_orbital_velocity(float distance, float angle, float radius, float *vx, float *vy);
-void SDL_DrawCircle(SDL_Renderer *renderer, const Camera *, int xc, int yc, int radius, SDL_Color color);
-void project_body(const GameState *, const NavigationState *, CelestialBody *, const Camera *);
-void apply_gravity_to_ship(GameState *, int thrust, NavigationState *, CelestialBody *, Ship *ship, const Camera *);
-int in_camera(const Camera *, double x, double y, float radius, long double scale);
+uint64_t maths_hash_position_to_uint64(Point);
+uint64_t maths_hash_position_to_uint64_2(Point);
+uint64_t maths_hash_position_to_index(Point, int modulo, int entity_type);
+bool maths_check_point_in_array(Point, Point arr[], int len);
+double maths_get_nearest_section_axis(double offset, int size);
+void galaxies_generate(GameEvents *, NavigationState *, Point);
+Galaxy *galaxies_nearest_circumference(const NavigationState *, Point, int exclude);
+double maths_distance_between_points(double x1, double y1, double x2, double y2);
+void gfx_generate_bstars(NavigationState *, Bstar bstars[], const Camera *);
+bool maths_point_in_rectanle(Point, Point rect[]);
+void phys_calculate_orbital_velocity(float distance, float angle, float radius, float *vx, float *vy);
+void gfx_draw_circle(SDL_Renderer *renderer, const Camera *, int xc, int yc, int radius, SDL_Color color);
+void gfx_project_body_on_edge(const GameState *, const NavigationState *, CelestialBody *, const Camera *);
+void phys_apply_gravity_to_ship(GameState *, int thrust, NavigationState *, CelestialBody *, Ship *ship, int star_class);
+void phys_update_velocity(Vector *velocity, const Ship *ship);
+bool gfx_object_in_camera(const Camera *, double x, double y, float radius, long double scale);
 
 #endif
