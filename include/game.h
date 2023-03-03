@@ -2,8 +2,9 @@
 #define GAME_H
 
 // Function prototypes
-void game_change_state(GameState *, GameEvents *, int new_state);
+void game_initialize_module(GameState *, InputState *, GameEvents *, NavigationState *, Ship *);
 void game_reset_game(GameState *, InputState *, GameEvents *, NavigationState *, Ship *);
+void game_change_state(GameState *, GameEvents *, int new_state);
 void game_run_navigate_state(GameState *, InputState *, GameEvents *, NavigationState *, Bstar bstars[], Ship *, Camera *);
 void game_run_map_state(GameState *, InputState *, GameEvents *, NavigationState *, Bstar bstars[], Ship *, Camera *);
 void game_run_universe_state(GameState *, InputState *, GameEvents *, NavigationState *, Ship *, Camera *);
