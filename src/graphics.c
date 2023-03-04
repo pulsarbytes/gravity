@@ -449,10 +449,6 @@ void gfx_draw_speed_arc(const Ship *ship, const Camera *camera, long double scal
  */
 void gfx_draw_speed_lines(float velocity, const Camera *camera, Speed speed)
 {
-    // Check if velocity magnitude is zero
-    if (velocity == 0)
-        return;
-
     SDL_Color color = colors[COLOR_WHITE_255];
     const int num_lines = SPEED_LINES_NUM;
     const int max_length = 100; // Final max length will be 4/6 of this length
