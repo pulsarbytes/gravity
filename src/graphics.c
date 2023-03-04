@@ -545,8 +545,19 @@ void gfx_draw_speed_lines(float velocity, const Camera *camera, Speed speed)
     int final_opacity = (int)round(opacity); // Round the opacity to the nearest integer
 
     // Calculate the normalized velocity vector
-    float velocity_x = speed.vx / velocity;
-    float velocity_y = speed.vy / velocity;
+    float velocity_x;
+    float velocity_y;
+
+    if (velocity <= 0)
+    {
+        velocity_x = 0;
+        velocity_y = 0;
+    }
+    else
+    {
+        velocity_x = speed.vx / velocity;
+        velocity_y = speed.vy / velocity;
+    }
 
     static float line_start_x[SPEED_LINES_NUM][SPEED_LINES_NUM], line_start_y[SPEED_LINES_NUM][SPEED_LINES_NUM];
     static int initialized = false;
@@ -569,6 +580,7 @@ void gfx_draw_speed_lines(float velocity, const Camera *camera, Speed speed)
                 line_start_y[row][col] = camera->h / 2 + line_distance + start_y + row * line_distance;
             }
         }
+
         initialized = true;
     }
 
