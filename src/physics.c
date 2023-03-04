@@ -1,5 +1,5 @@
 /*
- * physics.c - Definitions for physics functions.
+ * physics.c
  */
 
 #include <math.h>
@@ -11,8 +11,17 @@
 #include "../include/structs.h"
 #include "../include/physics.h"
 
-/*
- * Apply body gravity to ship.
+/**
+ * Apply gravity and handle collision with a celestial body to update the state of the ship.
+ *
+ * @param game_state A pointer to the GameState struct that holds the current state of the game.
+ * @param thrustA boolean indicating whether the ship is currently being thrust forward.
+ * @param nav_state A pointer to the NavigationState struct that holds the current state of the ship's navigation.
+ * @param body A pointer to the CelestialBody struct representing the celestial body that the ship is interacting with.
+ * @param ship A pointer to the Ship struct representing the ship whose state is being updated.
+ * @param star_class An integer representing the class of the star the ship is interacting with.
+ *
+ * @return void
  */
 void phys_apply_gravity_to_ship(GameState *game_state, int thrust, NavigationState *nav_state, CelestialBody *body, Ship *ship, int star_class)
 {
@@ -129,9 +138,8 @@ void phys_apply_gravity_to_ship(GameState *game_state, int thrust, NavigationSta
     }
 }
 
-/*
- * Calculate orbital velocity for object orbiting
- * at <distance> and <angle> degrees around object with <radius>.
+/**
+ * Calculates the orbital velocity for an object orbiting at a certain distance and angle around an object with a given radius.
  *
  * Centripetal force:
  * Fc = m * v^2 / distance
@@ -144,6 +152,14 @@ void phys_apply_gravity_to_ship(GameState *game_state, int thrust, NavigationSta
  * Fc = Fg
  * radius^2 * v^2 / distance = G_CONSTANT * R^2 * radius^2 / distance^2
  * v = sqrt(G_CONSTANT * R^2 / distance);
+ *
+ * @param distance The distance between the orbiting object and the object being orbited (in meters).
+ * @param angle The angle (in degrees) at which the orbiting object is orbiting around the object being orbited.
+ * @param radius The radius of the object being orbited (in meters).
+ * @param vx A pointer to the horizontal component of the orbital velocity (in meters per second).
+ * @param vy A pointer to the vertical component of the orbital velocity (in meters per second).
+ *
+ * @return void
  */
 void phys_calculate_orbital_velocity(float distance, float angle, float radius, float *vx, float *vy)
 {
@@ -151,8 +167,13 @@ void phys_calculate_orbital_velocity(float distance, float angle, float radius, 
     *vy = COSMIC_CONSTANT * sqrt(G_CONSTANT * radius * radius / distance) * cos(angle * M_PI / 180);
 }
 
-/*
- * Update velocity vector.
+/**
+ * Updates the given velocity vector based on the given ship's position and velocity.
+ *
+ * @param velocity A pointer to the vector to be updated.
+ * @param ship A pointer to the ship containing the position and velocity information.
+ *
+ * @return void
  */
 void phys_update_velocity(Vector *velocity, const Ship *ship)
 {

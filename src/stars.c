@@ -1,5 +1,5 @@
 /*
- * stars.c - Definitions for stars functions.
+ * stars.c
  */
 
 #include <stdlib.h>
@@ -28,8 +28,14 @@ static bool stars_entry_exists(StarEntry *stars[], Point);
 static int stars_planet_size_class(float width);
 static void stars_populate_body(CelestialBody *, Point, pcg32_random_t rng, long double scale);
 
-/*
- * Insert a new star entry in stars hash table.
+/**
+ * Adds a new star entry to the hash table of stars at the given position.
+ *
+ * @param stars An array of pointers to StarEntry structures, representing the hash table of stars.
+ * @param position A Point structure representing the position of the star.
+ * @param star A pointer to the Star structure to be added to the hash table.
+ *
+ * @return void
  */
 static void stars_add_entry(StarEntry *stars[], Point position, Star *star)
 {
@@ -51,8 +57,12 @@ static void stars_add_entry(StarEntry *stars[], Point position, Star *star)
     stars[index] = entry;
 }
 
-/*
- * Clean up planets (recursive).
+/**
+ * Cleans up the planets of a celestial body and destroys its texture.
+ *
+ * @param body A pointer to the celestial body to clean up.
+ *
+ * @return void
  */
 static void stars_cleanup_planets(CelestialBody *body)
 {
@@ -68,8 +78,12 @@ static void stars_cleanup_planets(CelestialBody *body)
     body->texture = NULL;
 }
 
-/*
- * Delete all stars from hash table.
+/**
+ * Clears the hash table of stars.
+ *
+ * @param stars An array of StarEntry pointers.
+ *
+ * @return void
  */
 void stars_clear_table(StarEntry *stars[])
 {
@@ -87,8 +101,15 @@ void stars_clear_table(StarEntry *stars[])
     }
 }
 
-/*
- * Create a star.
+/**
+ * Creates a new Star object with given parameters.
+ *
+ * @param nav_state A pointer to NavigationState struct.
+ * @param position A point struct representing the position of the star.
+ * @param preview An integer representing whether or not the star is a preview.
+ * @param scale A long double representing the scale factor of the star's position.
+ *
+ * @return Returns a pointer to a new Star object.
  */
 static Star *stars_create_star(const NavigationState *nav_state, Point position, int preview, long double scale)
 {
@@ -184,8 +205,13 @@ static Star *stars_create_star(const NavigationState *nav_state, Point position,
     return star;
 }
 
-/*
- * Delete a star entry from the stars hash table.
+/**
+ * Deletes the entry for a star at the given position from the hash table of stars.
+ *
+ * @param stars An array of StarEntry pointers representing the hash table of stars.
+ * @param position The position of the star to delete.
+ *
+ * @return void
  */
 static void stars_delete_entry(StarEntry *stars[], Point position)
 {
@@ -226,8 +252,15 @@ static void stars_delete_entry(StarEntry *stars[], Point position)
     }
 }
 
-/*
- * Delete stars outside region.
+/**
+ * Delete all stars outside a given region.
+ *
+ * @param stars An array of pointers to StarEntry structures.
+ * @param bx The x coordinate of the center of the region.
+ * @param by The y coordinate of the center of the region.
+ * @param region_size The size of the region (in number of sections).
+ *
+ * @return void
  */
 void stars_delete_outside_region(StarEntry *stars[], double bx, double by, int region_size)
 {
@@ -252,8 +285,16 @@ void stars_delete_outside_region(StarEntry *stars[], double bx, double by, int r
     }
 }
 
-/*
- * Draw star system.
+/**
+ * Draws a celestial body system, including its planets and orbits, onto the game's renderer.
+ *
+ * @param game_state The current game state.
+ * @param input_state The current input state.
+ * @param nav_state The current navigation state.
+ * @param body The celestial body to draw.
+ * @param camera The current camera state.
+ *
+ * @return void
  */
 void stars_draw_star_system(GameState *game_state, const InputState *input_state, NavigationState *nav_state, CelestialBody *body, const Camera *camera)
 {
@@ -395,8 +436,13 @@ void stars_draw_star_system(GameState *game_state, const InputState *input_state
     }
 }
 
-/*
- * Check whether a star entry exists in the stars hash table.
+/**
+ * Checks whether a given position exists in the hash table of StarEntry objects.
+ *
+ * @param stars An array of StarEntry pointers representing the hash table.
+ * @param position A Point struct representing the position to check for.
+ *
+ * @return True if the given position exists in the hash table, false otherwise.
  */
 static bool stars_entry_exists(StarEntry *stars[], Point position)
 {
@@ -419,10 +465,15 @@ static bool stars_entry_exists(StarEntry *stars[], Point position)
     return false;
 }
 
-/*
- * Probe region for stars and create them procedurally.
- * The region has intervals of size GALAXY_SECTION_SIZE.
- * The function checks for galaxy boundaries and switches to a new galaxy if close enough.
+/**
+ * Creates a list of randomly positioned stars within a defined rectangular area.
+ *
+ * @param game_state A pointer to the current GameState struct.
+ * @param game_events A pointer to the current GameEvents struct.
+ * @param nav_state A pointer to the current NavigationState struct.
+ * @param bstars A pointer to an array of Bstar structs for storing the generated background stars.
+ * @param ship A pointer to the current Ship struct.
+ * @param camera A pointer to the current Camera struct.
  */
 void stars_generate(GameState *game_state, GameEvents *game_events, NavigationState *nav_state, Bstar *bstars, Ship *ship, const Camera *camera)
 {
@@ -624,9 +675,16 @@ void stars_generate(GameState *game_state, GameEvents *game_events, NavigationSt
     game_events->stars_start = OFF;
 }
 
-/*
- * Probe region for stars and create them procedurally.
- * The region has intervals of size GALAXY_SECTION_SIZE.
+/**
+ * Generates a preview of the stars within the current section of the galaxy.
+ *
+ * @param nav_state A pointer to the current NavigationState struct.
+ * @param camera A pointer to the current Camera struct.
+ * @param cross_point A pointer to a Point struct representing the current position of the cross point.
+ * @param zoom_preview An int representing the level of zoom for the preview.
+ * @param scale A long double representing the current scale of the galaxy.
+ *
+ * @return void
  */
 void stars_generate_preview(NavigationState *nav_state, const Camera *camera, Point *cross_point, int zoom_preview, long double scale)
 {
@@ -822,8 +880,17 @@ void stars_generate_preview(NavigationState *nav_state, const Camera *camera, Po
     stars_delete_outside_region(nav_state->stars, bx, by, region_size);
 }
 
-/*
- * Find distance to nearest star.
+/**
+ * Calculates the distance from a given position to the nearest star in the current galaxy.
+ * Searches inner circumferences of points first and works towards outward circumferences.
+ *
+ * @param position The position from which to calculate the distance.
+ * @param current_galaxy A pointer to the current Galaxy object.
+ * @param initseq The initialization sequence used for the RNG.
+ * @param galaxy_density The density of stars in the current galaxy.
+ *
+ * @return The distance from the given position to the nearest star in the current galaxy.
+ *         If no star is found within the galaxy, the function returns 7 * GALAXY_SECTION_SIZE.
  */
 double stars_nearest_center_distance(Point position, Galaxy *current_galaxy, uint64_t initseq, int galaxy_density)
 {
@@ -890,9 +957,12 @@ double stars_nearest_center_distance(Point position, Galaxy *current_galaxy, uin
     return 7 * GALAXY_SECTION_SIZE;
 }
 
-/*
- * Find planet class.
- * <width> is orbit width.
+/**
+ * Determines the planet size class based on its width.
+ *
+ * @param width The width of the planet.
+ *
+ * @return An integer representing the planet size class (from 1 to 6).
  */
 static int stars_planet_size_class(float width)
 {
@@ -912,9 +982,15 @@ static int stars_planet_size_class(float width)
         return PLANET_CLASS_1;
 }
 
-/*
- * Create a system (recursive). Takes a pointer to a celestial body
- * and populates it with children planets.
+/**
+ * Populates a CelestialBody with randomly generated planets or moons, based on its level and class.
+ *
+ * @param body A pointer to the CelestialBody to be populated.
+ * @param position A position of the CelestialBody.
+ * @param rng pcg32_random_t instance used to generate random numbers.
+ * @param scale Scaling factor to convert world coordinates to screen coordinates.
+ *
+ * @return void
  */
 static void stars_populate_body(CelestialBody *body, Point position, pcg32_random_t rng, long double scale)
 {
@@ -1196,9 +1272,16 @@ static void stars_populate_body(CelestialBody *body, Point position, pcg32_rando
     }
 }
 
-/*
- * Find star class.
- * <distance> is number of empty sections.
+/**
+ * Determine the size class of a star based on its distance.
+ *
+ * This function takes in a float value `distance` which represents the distance
+ * of a star from the center of the galaxy and returns an integer representing
+ * the star's size class.
+ *
+ * @param distance A float value representing the distance of the star from the center.
+ *
+ * @return An integer representing the star's size class.
  */
 int stars_size_class(float distance)
 {
@@ -1218,8 +1301,18 @@ int stars_size_class(float distance)
         return STAR_CLASS_1;
 }
 
-/*
- * Create star system, update positions of bodies in star system and ship due to gravity.
+/**
+ * Updates the orbital positions of celestial bodies, including planets and stars,
+ * based on the current game state, input state, navigation state, and ship information.
+ *
+ * @param game_state A pointer to the current game state.
+ * @param input_state A pointer to the current input state.
+ * @param nav_state A pointer to the current navigation state.
+ * @param body A pointer to the celestial body being updated.
+ * @param ship A pointer to the player's ship.
+ * @param star_class An integer indicating the class of the current star (only relevant for stars).
+ *
+ * @return void
  */
 void stars_update_orbital_positions(GameState *game_state, const InputState *input_state, NavigationState *nav_state, CelestialBody *body, Ship *ship, int star_class)
 {

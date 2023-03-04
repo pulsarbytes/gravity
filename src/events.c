@@ -1,5 +1,5 @@
 /*
- * events.c - Polls for currently pending events.
+ * events.c
  */
 
 #include <SDL2/SDL.h>
@@ -9,8 +9,14 @@
 #include "../include/structs.h"
 #include "../include/events.h"
 
-/*
- * Poll SDL events.
+/**
+ * The events_loop function handles the events that occur while the game is running.
+ *
+ * @param game_state A pointer to the current game state.
+ * @param input_state A pointer to the current input state.
+ * @param game_events A pointer to the current game events.
+ *
+ * @return void
  */
 void events_loop(GameState *game_state, InputState *input_state, GameEvents *game_events)
 {

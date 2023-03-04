@@ -1,7 +1,7 @@
 /*
  * Gravity - An infinite procedural 2d universe that models gravity and orbital motion.
  *
- * v1.3.3
+ * v1.4.0
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 only,

@@ -1,5 +1,5 @@
 /*
- * utilities.c - Definitions for utilities functions.
+ * utilities.c
  */
 
 #include <stdlib.h>
@@ -11,8 +11,15 @@
 #include "../include/structs.h"
 #include "../include/utilities.h"
 
-/*
- * Clean up resources.
+/**
+ * Frees the resources used by the game state, navigation state, bstars, and ship.
+ *
+ * @param game_state The current game state.
+ * @param nav_state The current navigation state.
+ * @param bstars The bstar array.
+ * @param ship The current ship.
+ *
+ * @return void
  */
 void utils_cleanup_resources(GameState *game_state, NavigationState *nav_state, Bstar *bstars, Ship *ship)
 {

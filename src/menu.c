@@ -1,5 +1,5 @@
 /*
- * menu.c - Definitions for menu functions.
+ * menu.c
  */
 
 #include <stdbool.h>
@@ -22,6 +22,15 @@ static void menu_create_logo(MenuButton *logo);
 static void menu_draw_menu(GameState *, InputState *, int game_started);
 static void menu_populate_menu_array(MenuButton menu[]);
 
+/**
+ * Creates the main menu by populating the menu array, creating the logo, generating and placing menu stars.
+ *
+ * @param game_state The current state of the game.
+ * @param nav_state The current navigation state of the game.
+ * @param menustars The array of menu stars to be generated and placed.
+ *
+ * @return void
+ */
 void menu_create(GameState *game_state, NavigationState nav_state, Gstar *menustars)
 {
     // Populate menu
@@ -35,6 +44,13 @@ void menu_create(GameState *game_state, NavigationState nav_state, Gstar *menust
     gfx_generate_menu_gstars(menu_galaxy, menustars);
 }
 
+/**
+ * Create the game logo.
+ *
+ * @param logo Pointer to the MenuButton struct to store the logo information in.
+ *
+ * @return void
+ */
 static void menu_create_logo(MenuButton *logo)
 {
     strcpy(logo->text, "Gravity");
@@ -59,6 +75,15 @@ static void menu_create_logo(MenuButton *logo)
     SDL_FreeSurface(logo_surface);
 }
 
+/**
+ * Renders the menu buttons onto the screen.
+ *
+ * @param game_state A pointer to the game state struct.
+ * @param input_state A pointer to the input state struct.
+ * @param game_started Flag indicating if the game has started.
+ *
+ * @return void
+ */
 static void menu_draw_menu(GameState *game_state, InputState *input_state, int game_started)
 {
     int num_buttons = 0;
@@ -108,6 +133,14 @@ static void menu_draw_menu(GameState *game_state, InputState *input_state, int g
     }
 }
 
+/**
+ * Populates a given menu button array with button information, including the text to be displayed on each button,
+ * the state to transition to when each button is pressed, and whether or not each button should initially be disabled.
+ *
+ * @param menu An array of MenuButton struct to be populated with button information.
+ *
+ * @return void
+ */
 static void menu_populate_menu_array(MenuButton menu[])
 {
     // Start
@@ -146,6 +179,19 @@ static void menu_populate_menu_array(MenuButton menu[])
     }
 }
 
+/**
+ * Runs the menu state by updating and rendering the background stars, logo, menu, galaxy, and speed lines.
+ *
+ * @param game_state A pointer to the current game state.
+ * @param input_state A pointer to the current input state.
+ * @param game_started An integer value indicating whether the game has already started.
+ * @param nav_state A pointer to the current navigation state.
+ * @param bstars A pointer to an array of background stars.
+ * @param menustars A pointer to an array of menu galaxy stars.
+ * @param camera A pointer to the camera object.
+ *
+ * @return void
+ */
 void menu_run_menu_state(GameState *game_state, InputState *input_state, int game_started, const NavigationState *nav_state, Bstar *bstars, Gstar *menustars, Camera *camera)
 {
     // Draw background stars
@@ -168,6 +214,13 @@ void menu_run_menu_state(GameState *game_state, InputState *input_state, int gam
     gfx_draw_speed_lines(1500, camera, lines_speed);
 }
 
+/**
+ * Update the menu entries by updating the text color and disabling buttons as appropriate.
+ *
+ * @param game_state A pointer to the game state struct.
+ *
+ * @return void
+ */
 void menu_update_menu_entries(GameState *game_state)
 {
     // Update Start button

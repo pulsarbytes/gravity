@@ -1,5 +1,5 @@
 /*
- * galaxies.c - Definitions for galaxies functions.
+ * galaxies.c
  */
 
 #include <stdlib.h>
@@ -26,8 +26,14 @@ static bool galaxies_entry_exists(GalaxyEntry *galaxies[], Point);
 static double galaxies_nearest_center_distance(Point);
 static int galaxies_size_class(float distance);
 
-/*
- * Insert a new galaxy entry in galaxies hash table.
+/**
+ * Adds a new entry to the galaxy hash table at the given position.
+ *
+ * @param galaxies[] The array of galaxy entries.
+ * @param position The position of the new galaxy entry.
+ * @param galaxy The galaxy entry to add.
+ *
+ * @return void
  */
 static void galaxies_add_entry(GalaxyEntry *galaxies[], Point position, Galaxy *galaxy)
 {
@@ -49,8 +55,12 @@ static void galaxies_add_entry(GalaxyEntry *galaxies[], Point position, Galaxy *
     galaxies[index] = entry;
 }
 
-/*
- * Clean up galaxies.
+/**
+ * Clear the entire hash table of galaxies.
+ *
+ * @param galaxies[] The hash table of galaxies to be cleared.
+ *
+ * @return void
  */
 void galaxies_clear_table(GalaxyEntry *galaxies[])
 {
@@ -68,8 +78,12 @@ void galaxies_clear_table(GalaxyEntry *galaxies[])
     }
 }
 
-/*
- * Create a galaxy.
+/**
+ * Generates a new Galaxy struct with random characteristics based on the provided position.
+ *
+ * @param position The position of the new Galaxy.
+ *
+ * @return A pointer to the new Galaxy struct.
  */
 static Galaxy *galaxies_create_galaxy(Point position)
 {
@@ -147,8 +161,13 @@ static Galaxy *galaxies_create_galaxy(Point position)
     return galaxy;
 }
 
-/*
- * Delete a galaxy entry from the galaxies hash table.
+/**
+ * Deletes a GalaxyEntry from the hash table by its position and frees associated memory.
+ *
+ * @param galaxies[] An array of GalaxyEntry pointers representing the hash table.
+ * @param position A Point struct representing the position of the GalaxyEntry to be deleted.
+ *
+ * @return void
  */
 static void galaxies_delete_entry(GalaxyEntry *galaxies[], Point position)
 {
@@ -181,8 +200,17 @@ static void galaxies_delete_entry(GalaxyEntry *galaxies[], Point position)
     }
 }
 
-/*
- * Draw galaxy.
+/**
+ * Draws the given galaxy if it is within range, along with any associated stars.
+ * If the galaxy is out of range, it draws a projection or nothing depending on the scale.
+ *
+ * @param nav_state A pointer to the current navigation state.
+ * @param galaxy A pointer to the galaxy to draw.
+ * @param camera A pointer to the current camera state.
+ * @param state An integer representing the current game state.
+ * @param scale A long double representing the current scale of the universe.
+ *
+ * @return void
  */
 void galaxies_draw_galaxy(NavigationState *nav_state, Galaxy *galaxy, const Camera *camera, int state, long double scale)
 {
@@ -247,8 +275,13 @@ void galaxies_draw_galaxy(NavigationState *nav_state, Galaxy *galaxy, const Came
     }
 }
 
-/*
- * Check whether a galaxy entry exists in the galaxies hash table.
+/**
+ * Check if a galaxy entry exists at the given position in the galaxies hash table.
+ *
+ * @param galaxies[] The hash table of galaxies to search in.
+ * @param position The position to search for in the hash table.
+ *
+ * @return Whether or not a galaxy entry exists at the given position.
  */
 static bool galaxies_entry_exists(GalaxyEntry *galaxies[], Point position)
 {
@@ -271,9 +304,17 @@ static bool galaxies_entry_exists(GalaxyEntry *galaxies[], Point position)
     return false;
 }
 
-/*
- * Probe region for galaxies and create them procedurally.
- * The region has intervals of size UNIVERSE_SECTION_SIZE.
+/**
+ * Generates galaxies within a region of the universe, determined by offset.
+ * If this is the first time calling the function, updates the navigation state
+ * with the nearest section lines. Deletes galaxies that end up outside of the
+ * region. Uses a local rng for random number generation.
+ *
+ * @param game_events A pointer to the game events struct.
+ * @param nav_state A pointer to the navigation state struct.
+ * @param offset A point in space around which to generate galaxies.
+ *
+ * @return void
  */
 void galaxies_generate(GameEvents *game_events, NavigationState *nav_state, Point offset)
 {
@@ -374,8 +415,13 @@ void galaxies_generate(GameEvents *game_events, NavigationState *nav_state, Poin
     game_events->galaxies_start = OFF;
 }
 
-/*
- * Get a galaxy entry from the galaxies hash table.
+/**
+ * Retrieve a Galaxy from a hash table of GalaxyEntry structures.
+ *
+ * @param galaxies[] An array of pointers to GalaxyEntry structures.
+ * @param position The Point structure representing the position of the Galaxy.
+ *
+ * @return If the Galaxy exists in the hash table, return a pointer to the Galaxy. Otherwise, return NULL.
  */
 Galaxy *galaxies_get_entry(GalaxyEntry *galaxies[], Point position)
 {
@@ -395,8 +441,14 @@ Galaxy *galaxies_get_entry(GalaxyEntry *galaxies[], Point position)
     return NULL;
 }
 
-/*
- * Find distance to nearest galaxy.
+/**
+ * Calculates the distance to the nearest galaxy center from a given position.
+ * Uses a search algorithm that checks points in inner circumferences first and works
+ * towards outward circumferences until a galaxy is found.
+ *
+ * @param position The point to calculate the distance from.
+ *
+ * @return The distance to the nearest galaxy center, or 7 * UNIVERSE_SECTION_SIZE if no galaxies are found.
  */
 static double galaxies_nearest_center_distance(Point position)
 {
@@ -448,10 +500,15 @@ static double galaxies_nearest_center_distance(Point position)
     return 7 * UNIVERSE_SECTION_SIZE;
 }
 
-/*
- * Find nearest galaxy to position, excluding or not <galaxy>.
- * The funtion finds the galaxy in the galaxies hash table
- * whose circumference is closest to the position.
+/**
+ * Finds the galaxy closest to the circumference of the circle surrounding the given point.
+ * Excludes the current galaxy if exclude flag is set.
+ *
+ * @param nav_state A pointer to the current NavigationState.
+ * @param position The point to find the closest galaxy circumference to.
+ * @param exclude Flag to exclude the current galaxy.
+ *
+ * @return Pointer to the closest galaxy found or NULL if none found.
  */
 Galaxy *galaxies_nearest_circumference(const NavigationState *nav_state, Point position, int exclude)
 {
@@ -502,9 +559,12 @@ Galaxy *galaxies_nearest_circumference(const NavigationState *nav_state, Point p
     return closest;
 }
 
-/*
- * Find galaxy class.
- * <distance> is number of empty sections.
+/**
+ * Returns the size class of a galaxy based on its distance from the player position.
+ *
+ * @param distance The distance between the galaxy and the player position.
+ *
+ * @return The size class of the galaxy (GALAXY_CLASS_1 to GALAXY_CLASS_6).
  */
 static int galaxies_size_class(float distance)
 {

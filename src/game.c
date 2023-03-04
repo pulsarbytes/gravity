@@ -1,5 +1,5 @@
 /*
- * game.c - Definitions for game functions.
+ * game.c
  */
 
 #include <stdlib.h>
@@ -22,6 +22,15 @@ extern SDL_Color colors[];
 static void game_draw_ship(GameState *, const InputState *, const NavigationState *, Ship *, const Camera *);
 static void game_update_ship_position(GameState *, const InputState *, Ship *, const Camera *);
 
+/**
+ * Changes the state of the game to a new state and updates relevant game events.
+ *
+ * @param game_state A pointer to the current game state.
+ * @param game_events A pointer to the current game events.
+ * @param new_state An integer representing the new state to transition to.
+ *
+ * @return void
+ */
 void game_change_state(GameState *game_state, GameEvents *game_events, int new_state)
 {
     game_state->state = new_state;
@@ -33,8 +42,14 @@ void game_change_state(GameState *game_state, GameEvents *game_events, int new_s
         menu_update_menu_entries(game_state);
 }
 
-/*
- * Create a ship.
+/**
+ * Creates a ship object with the given parameters.
+ *
+ * @param radius The radius of the ship.
+ * @param position The starting position of the ship.
+ * @param scale The scale to apply to the ship's size.
+ *
+ * @return a Ship object with the specified properties
  */
 Ship game_create_ship(int radius, Point position, long double scale)
 {
@@ -76,6 +91,17 @@ Ship game_create_ship(int radius, Point position, long double scale)
     return ship;
 }
 
+/**
+ * Draws the ship on the screen with the given state and camera
+ *
+ * @param game_state A pointer to the current game state.
+ * @param input_state A pointer to the current input state.
+ * @param nav_state A pointer to the current navigation state.
+ * @param ship A pointer to the ship to be drawn.
+ * @param camera A pointer to the current camera state.
+ *
+ * @return void
+ */
 static void game_draw_ship(GameState *game_state, const InputState *input_state, const NavigationState *nav_state, Ship *ship, const Camera *camera)
 {
     if (gfx_object_in_camera(camera, ship->position.x, ship->position.y, ship->radius, game_state->game_scale))
@@ -95,6 +121,20 @@ static void game_draw_ship(GameState *game_state, const InputState *input_state,
         SDL_RenderCopyEx(renderer, ship->texture, &ship->reverse_img_rect, &ship->rect, ship->angle, &ship->rotation_pt, SDL_FLIP_NONE);
 }
 
+/**
+ * Resets the game state to the initial state.
+ *
+ * @param game_state A pointer to the game state.
+ * @param input_state A pointer to the input state.
+ * @param game_events A pointer to the game events.
+ * @param nav_state A pointer to the navigation state.
+ * @param bstars A pointer to the bstars.
+ * @param ship A pointer to the ship.
+ * @param camera A pointer to the camera.
+ * @param reset A boolean value indicating whether the game is being reset or not.
+ *
+ * @return void
+ */
 void game_reset(GameState *game_state, InputState *input_state, GameEvents *game_events, NavigationState *nav_state, Bstar *bstars, Ship *ship, Camera *camera, bool reset)
 {
     if (reset)
@@ -256,6 +296,20 @@ void game_reset(GameState *game_state, InputState *input_state, GameEvents *game
     gfx_generate_bstars(nav_state, bstars, camera);
 }
 
+/**
+ * Updates the game state and graphics for the map mode. This includes handling user input for zooming and
+ * centering the view on the player's ship, as well as generating and rendering stars and galaxies.
+ *
+ * @param game_state A pointer to the current game state.
+ * @param input_state A pointer to the current input state.
+ * @param game_events A pointer to the current game events.
+ * @param nav_state A pointer to the current navigation state.
+ * @param bstars A pointer to the Bstar structure that holds information about the binary stars.
+ * @param ship A pointer to the current ship.
+ * @param camera A pointer to the current camera position.
+ *
+ * @return void
+ */
 void game_run_map_state(GameState *game_state, InputState *input_state, GameEvents *game_events, NavigationState *nav_state, Bstar *bstars, Ship *ship, Camera *camera)
 {
     // Add small tolerance to account for floating-point precision errors
@@ -531,6 +585,20 @@ void game_run_map_state(GameState *game_state, InputState *input_state, GameEven
         game_events->map_enter = OFF;
 }
 
+/**
+ * This function handles the navigation state of the game, including resetting game elements when exiting the
+ * navigation state, zooming in and out, updating the camera position, generating stars, and drawing the galaxy cloud.
+ *
+ * @param game_state A pointer to the current game state.
+ * @param input_state A pointer to the current input state.
+ * @param game_events A pointer to the current game events.
+ * @param nav_state A pointer to the current navigation state.
+ * @param bstars A pointer to the Bstar structure that holds information about the binary stars.
+ * @param ship A pointer to the current ship.
+ * @param camera A pointer to the current camera position.
+ *
+ * @return void
+ */
 void game_run_navigate_state(GameState *game_state, InputState *input_state, GameEvents *game_events, NavigationState *nav_state, Bstar *bstars, Ship *ship, Camera *camera)
 {
     if (game_events->map_exit || game_events->universe_exit)
@@ -775,6 +843,21 @@ void game_run_navigate_state(GameState *game_state, InputState *input_state, Gam
         game_events->universe_exit = OFF;
 }
 
+/**
+ * Updates the state of the game universe based on player input and events. This function generates galaxies and
+ * stars within the game universe, updates the position of the ship and camera, and triggers the generation of
+ * a stars preview. It also handles resetting certain game elements when the player exits or enters the universe,
+ * and adjusts the game scale based on the current galaxy class.
+ *
+ * @param game_state A pointer to the GameState struct containing the current state of the game.
+ * @param input_state A pointer to the InputState struct containing the current user input state.
+ * @param game_events A pointer to the GameEvents struct containing the current events in the game.
+ * @param nav_state A pointer to the NavigationState struct containing the current navigation state of the game.
+ * @param ship A pointer to the Ship struct representing the player's ship.
+ * @param camera A pointer to the Camera struct representing the current camera position.
+ *
+ * @return void
+ */
 void game_run_universe_state(GameState *game_state, InputState *input_state, GameEvents *game_events, NavigationState *nav_state, Ship *ship, Camera *camera)
 {
     static int stars_preview_start = ON;
@@ -1072,8 +1155,15 @@ void game_run_universe_state(GameState *game_state, InputState *input_state, Gam
         game_events->universe_enter = OFF;
 }
 
-/*
- * Update ship position while listening for key controls.
+/**
+ * Updates the position of a ship based on input state and camera position.
+ *
+ * @param game_state A pointer to the current game state.
+ * @param input_state A pointer to the current input state.
+ * @param ship A pointer to the ship to update.
+ * @param camera A pointer to the camera used to render the game.
+ *
+ * @return void
  */
 static void game_update_ship_position(GameState *game_state, const InputState *input_state, Ship *ship, const Camera *camera)
 {

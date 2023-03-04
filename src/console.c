@@ -1,5 +1,5 @@
 /*
- * console.c - Function definitions for console.
+ * console.c
  */
 
 #include <stdio.h>
@@ -18,8 +18,13 @@ extern TTF_Font *fonts[];
 extern SDL_Renderer *renderer;
 extern SDL_Color colors[];
 
-/*
- * Log position.
+/**
+ * Log position to the console based on the current navigation state.
+ *
+ * @param game_state A pointer to the current game state.
+ * @param nav_state The current navigation state containing the position offset.
+ *
+ * @return void
  */
 void console_log_position(GameState *game_state, NavigationState nav_state)
 {
@@ -45,8 +50,15 @@ void console_log_position(GameState *game_state, NavigationState nav_state)
     console_update_entry(game_state->console_entries, Y_INDEX, position.y);
 }
 
-/*
- * Measure and log FPS.
+/**
+ * Log the current frames per second (FPS) to the console.
+ *
+ * @param entries An array of console entries to update.
+ * @param fps A pointer to the current FPS value.
+ * @param last_time A pointer to the last time the FPS was updated.
+ * @param frame_count A pointer to the current frame count.
+ *
+ * @return void
  */
 void console_log_fps(ConsoleEntry entries[], unsigned int *fps, unsigned int *last_time, unsigned int *frame_count)
 {
@@ -66,8 +78,12 @@ void console_log_fps(ConsoleEntry entries[], unsigned int *fps, unsigned int *la
     console_update_entry(entries, FPS_INDEX, *fps);
 }
 
-/*
- * Render console.
+/**
+ * Render the console entries on the screen.
+ *
+ * @param entries An array of console entries to render.
+ *
+ * @return void
  */
 void console_render(ConsoleEntry entries[])
 {
@@ -86,8 +102,14 @@ void console_render(ConsoleEntry entries[])
     }
 }
 
-/*
- * Update entry in console_entries array.
+/**
+ * Update a console entry with a new value.
+ *
+ * @param entries An array of `ConsoleEntry` structs representing the console entries to update.
+ * @param index An integer representing the index of the entry to update.
+ * @param value A double representing the new value to set for the entry.
+ *
+ * @return void
  */
 void console_update_entry(ConsoleEntry entries[], int index, double value)
 {

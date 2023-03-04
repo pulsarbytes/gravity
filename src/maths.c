@@ -1,5 +1,5 @@
 /*
- * maths.c - Definitions for math functions.
+ * maths.c
  */
 
 #include <stdint.h>
@@ -16,8 +16,13 @@
 static uint64_t maths_hash_double_to_uint64(double x);
 static bool maths_points_equal(Point, Point);
 
-/*
- * Checks whether a point exists in an array.
+/**
+ * Check if a point exists in an array of points.
+ *
+ * @param point The point to check.
+ * @param arr The array of points to search.
+ * @param len The length of the array.
+ * @return True if the point exists in the array, false otherwise.
  */
 bool maths_check_point_in_array(Point point, Point arr[], int len)
 {
@@ -30,17 +35,28 @@ bool maths_check_point_in_array(Point point, Point arr[], int len)
     return false;
 }
 
-/*
- * Find distance between two points.
+/**
+ * Calculates the Euclidean distance between two points in a 2D space.
+ *
+ * @param x1 The x-coordinate of the first point.
+ * @param y1 The y-coordinate of the first point.
+ * @param x2 The x-coordinate of the second point.
+ * @param y2 The y-coordinate of the second point.
+ *
+ * @return The distance between the two points.
  */
 double maths_distance_between_points(double x1, double y1, double x2, double y2)
 {
     return sqrt((x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2));
 }
 
-/*
- * Transform a double to the nearest section point,
- * rounding up or down whichever is nearest.
+/**
+ * Returns the nearest section line value to the given offset, based on the section size.
+ *
+ * @param offset The offset value to get the nearest section line for.
+ * @param size The size of the sections to get the nearest line for.
+ *
+ * @return The nearest section line value to the given offset.
  */
 double maths_get_nearest_section_line(double offset, int size)
 {
@@ -55,13 +71,13 @@ double maths_get_nearest_section_line(double offset, int size)
 /**
  * This function checks if the line segment specified by (x1,y1) and (x2,y2) intersects with the viewport defined by `camera`.
  *
- * @param camera Pointer to a camera structure that defines the viewport
- * @param x1 x-coordinate of the first end point of the line segment
- * @param y1 y-coordinate of the first end point of the line segment
- * @param x2 x-coordinate of the second end point of the line segment
- * @param y2 y-coordinate of the second end point of the line segment
+ * @param camera A pointer to a camera structure that defines the viewport.
+ * @param x1 The x-coordinate of the first end point of the line segment.
+ * @param y1 The y-coordinate of the first end point of the line segment.
+ * @param x2 The x-coordinate of the second end point of the line segment.
+ * @param y2 The y-coordinate of the second end point of the line segment.
  *
- * @return: Returns true if the line segment intersects with the viewport, and false otherwise
+ * @return True if the line segment intersects with the viewport, and false otherwise.
  */
 bool maths_line_intersects_camera(const Camera *camera, double x1, double y1, double x2, double y2)
 {
@@ -120,9 +136,9 @@ bool maths_line_intersects_camera(const Camera *camera, double x1, double y1, do
 /**
  * Generates a hash value for a given double number `x`.
  *
- * @param x The double number to be hashed
+ * @param x The double number to be hashed.
  *
- * @return A 64-bit unsigned integer representing the hash value of `x`
+ * @return A 64-bit unsigned integer representing the hash value of `x`.
  */
 static uint64_t maths_hash_double_to_uint64(double x)
 {
@@ -136,8 +152,15 @@ static uint64_t maths_hash_double_to_uint64(double x)
     return x_hash;
 }
 
-/*
- * Hash function that creates an index for an entry in a hash table.
+/**
+ * Computes the hash index of a given 2D position for a given entity type.
+ * The index will be used in a hash table.
+ *
+ * @param position The position of the entity.
+ * @param modulo The modulo value used to wrap the hash index.
+ * @param entity_type The type of the entity (star or galaxy).
+ *
+ * @return The hash index of the given position for the given entity type, modulo the provided value.
  */
 uint64_t maths_hash_position_to_index(Point position, int modulo, int entity_type)
 {
@@ -151,8 +174,12 @@ uint64_t maths_hash_position_to_index(Point position, int modulo, int entity_typ
     return index % modulo;
 }
 
-/*
- * Hash function that maps two double numbers to a unique 64-bit integer. Order sensitive.
+/**
+ * Hashes a Point position into a 64-bit unsigned integer.
+ *
+ * @param position A Point structure containing the x and y coordinates of the position to be hashed.
+ *
+ * @return A 64-bit unsigned integer that represents the hash of the input position.
  */
 uint64_t maths_hash_position_to_uint64(Point position)
 {
@@ -163,8 +190,12 @@ uint64_t maths_hash_position_to_uint64(Point position)
     return hash;
 }
 
-/*
- * Hash function that maps two double numbers to a unique 64-bit integer. Order sensitive.
+/**
+ * Hashes a Point position into a 64-bit unsigned integer.
+ *
+ * @param position A Point structure containing the x and y coordinates of the position to be hashed.
+ *
+ * @return A 64-bit unsigned integer that represents the hash of the input position.
  */
 uint64_t maths_hash_position_to_uint64_2(Point position)
 {
@@ -175,16 +206,25 @@ uint64_t maths_hash_position_to_uint64_2(Point position)
     return hash;
 }
 
-/*
- * Compares two points.
+/**
+ * Determines if two points are equal.
+ *
+ * @param a The first point to compare.
+ * @param b The second point to compare.
+ *
+ * @return True if the points are equal, false otherwise.
  */
 static bool maths_points_equal(Point a, Point b)
 {
     return a.x == b.x && a.y == b.y;
 }
 
-/*
- * Check whether point p is in rectangular rect.
+/**
+ * Checks if a point lies within a given rectangle.
+ *
+ * @param p The point to check.
+ * @param rect An array of four points representing the rectangle's vertices.
+ * @return True if the point is inside the rectangle, false otherwise.
  */
 bool maths_point_in_rectanle(Point p, Point rect[])
 {

@@ -1,5 +1,5 @@
 /*
- * sdl.c - Functions for initializing and closing SDL.
+ * sdl.c
  */
 
 #include <stdbool.h>
@@ -17,8 +17,13 @@ extern TTF_Font *fonts[];
 extern SDL_DisplayMode display_mode;
 extern SDL_Renderer *renderer;
 
-/*
- * Clean up SDL resources.
+/**
+ * Cleans up SDL and TTF resources by closing all open fonts, quitting TTF,
+ * destroying the renderer and window, and quitting SDL.
+ *
+ * @param window A pointer to the SDL_Window to be destroyed.
+ *
+ * @return void
  */
 void sdl_cleanup(SDL_Window *window)
 {
@@ -33,8 +38,11 @@ void sdl_cleanup(SDL_Window *window)
     SDL_Quit();
 }
 
-/*
- * Initialize SDL.
+/**
+ * Initializes SDL with given window and renderer, and sets up the rendering context.
+ *
+ * @param window A pointer to the SDL_Window to be created.
+ * @return True if SDL was successfully initialized, and false otherwise.
  */
 bool sdl_initialize(SDL_Window *window)
 {
@@ -90,8 +98,13 @@ bool sdl_initialize(SDL_Window *window)
     return true;
 }
 
-/*
- * Initialize SDL_ttf library and load fonts into memory.
+/**
+ * Initializes the SDL_ttf library and loads fonts into memory.
+ * Loads Consola font with sizes 14 and 36 into fonts array.
+ *
+ * @param window A pointer to the SDL window to be used for rendering.
+ *
+ * @return Boolean indicating whether initialization and font loading was successful.
  */
 bool sdl_ttf_load_fonts(SDL_Window *window)
 {
