@@ -514,6 +514,9 @@ void gfx_draw_speed_arc(const Ship *ship, const Camera *camera, long double scal
  */
 void gfx_draw_speed_lines(float velocity, const Camera *camera, Speed speed)
 {
+    if (velocity < 10)
+        return;
+
     SDL_Color color = colors[COLOR_WHITE_255];
     const int num_lines = SPEED_LINES_NUM;
     const int max_length = 100; // Final max length will be 4/6 of this length
@@ -741,6 +744,7 @@ void gfx_generate_bstars(NavigationState *nav_state, Bstar *bstars, const Camera
  * Generates a collection of stars within a given galaxy object. The number and position of the stars
  * are determined by the size and density of the galaxy. The stars are stored in the galaxy's 'gstars'
  * array for low definition or 'gstars_hd' array for high definition.
+ * The function implements lazy initialization of gstars in batches.
  *
  * @param galaxy A pointer to a Galaxy object.
  * @param high_definition An unsigned short to determine if high definition mode is enabled (1) or not (0).
@@ -753,29 +757,78 @@ void gfx_generate_gstars(Galaxy *galaxy, unsigned short high_definition)
     double full_size_radius = radius * GALAXY_SCALE;
     full_size_radius -= fmod(full_size_radius, GALAXY_SECTION_SIZE); // zero out any digits below 10,000
     double full_size_diameter = full_size_radius * 2;
+    int sections_in_group;
+    int corrected_radius;
+    int initialized;
+    int i;
 
-    // Check whether MAX_GSTARS_ROW * GALAXY_SECTION_SIZE fit in full_size_diameter
-    // If they don't fit, we must group sections together
-    int grouped_sections = 1;
-    int total_sections = full_size_diameter / (grouped_sections * GALAXY_SECTION_SIZE);
-
-    // Allow <array_factor> times more than array size as galaxy_density is low
-    // Increase array_factor to show more stars
-    int array_factor = 12;
-
-    while (total_sections > MAX_GSTARS_ROW * array_factor)
+    if (high_definition)
     {
-        grouped_sections++;
-        total_sections = full_size_diameter / (grouped_sections * GALAXY_SECTION_SIZE);
+        initialized = galaxy->initialized_hd;
+        i = galaxy->last_star_index_hd;
+    }
+    else
+    {
+        initialized = galaxy->initialized;
+        i = galaxy->last_star_index;
     }
 
-    // Double the grouped_sections for low def
-    if (!high_definition)
-        grouped_sections *= 2;
+    if ((!high_definition && !galaxy->total_groups) || (high_definition && !galaxy->total_groups_hd))
+    {
+        // Check whether MAX_GSTARS_ROW * GALAXY_SECTION_SIZE fit in full_size_diameter
+        // If they don't fit, we must group sections together
+        sections_in_group = 1;
+        int total_groups = full_size_diameter / (sections_in_group * GALAXY_SECTION_SIZE);
 
-    int section_size = grouped_sections * GALAXY_SECTION_SIZE;
+        // Allow <array_factor> times more than array size as galaxy_density is low
+        // Increase array_factor to show more stars
+        int array_factor = 12;
+
+        while (total_groups > MAX_GSTARS_ROW * array_factor)
+        {
+            sections_in_group++;
+            total_groups = full_size_diameter / (sections_in_group * GALAXY_SECTION_SIZE);
+        }
+
+        galaxy->sections_in_group_hd = sections_in_group;
+        galaxy->sections_in_group = sections_in_group * 2;
+
+        // Make sure that full_size_radius can be divided by <section_size>
+        corrected_radius = full_size_radius;
+
+        while (fmod(corrected_radius, sections_in_group * GALAXY_SECTION_SIZE) != 0)
+            corrected_radius += GALAXY_SECTION_SIZE;
+
+        // Total groups to check
+        galaxy->total_groups_hd = ((2 * corrected_radius / (sections_in_group * GALAXY_SECTION_SIZE)) + 1) *
+                                  ((2 * corrected_radius / (sections_in_group * GALAXY_SECTION_SIZE)) + 1);
+
+        // Double the sections_in_group for low def
+        if (!high_definition)
+            sections_in_group *= 2;
+
+        galaxy->total_groups = ((2 * corrected_radius / (sections_in_group * GALAXY_SECTION_SIZE)) + 1) *
+                               ((2 * corrected_radius / (sections_in_group * GALAXY_SECTION_SIZE)) + 1);
+    }
+    else
+    {
+        if (high_definition)
+            sections_in_group = galaxy->sections_in_group_hd;
+        else
+            sections_in_group = galaxy->sections_in_group;
+
+        // Make sure that full_size_radius can be divided by <section_size>
+        corrected_radius = full_size_radius;
+
+        while (fmod(corrected_radius, sections_in_group * GALAXY_SECTION_SIZE) != 0)
+            corrected_radius += GALAXY_SECTION_SIZE;
+    }
+
+    int section_size = sections_in_group * GALAXY_SECTION_SIZE;
     double ix, iy;
-    int i = 0;
+    int current_group = 0;
+    int batch_size = 50;
+    int current_batch = 0;
 
     // Use a local rng
     pcg32_random_t rng;
@@ -786,10 +839,22 @@ void gfx_generate_gstars(Galaxy *galaxy, unsigned short high_definition)
     // Density scaling parameter
     double a = galaxy->radius * GALAXY_SCALE / 2.0f;
 
-    for (ix = -full_size_radius; ix <= full_size_radius; ix += section_size)
+    for (ix = -corrected_radius; ix <= corrected_radius; ix += section_size)
     {
-        for (iy = -full_size_radius; iy <= full_size_radius; iy += section_size)
+        for (iy = -corrected_radius; iy <= corrected_radius; iy += section_size)
         {
+            current_group++;
+
+            if (initialized >= current_group)
+                continue;
+
+            initialized = current_group;
+
+            if (high_definition)
+                galaxy->initialized_hd = initialized;
+            else
+                galaxy->initialized = initialized;
+
             // Calculate the distance from the center of the galaxy
             double distance_from_center = sqrt(ix * ix + iy * iy);
 
@@ -827,18 +892,28 @@ void gfx_generate_gstars(Galaxy *galaxy, unsigned short high_definition)
                 star.final_star = 1;
 
                 if (high_definition)
+                {
+                    galaxy->last_star_index_hd = i;
                     galaxy->gstars_hd[i++] = star;
+                }
                 else
+                {
+                    galaxy->last_star_index = i;
                     galaxy->gstars[i++] = star;
+                }
+
+                current_batch++;
             }
+
+            if (current_batch >= batch_size)
+                return;
         }
     }
 
-    // Set galaxy as initialized
-    if (high_definition)
-        galaxy->initialized_hd = i;
-    else
-        galaxy->initialized = i;
+    // printf("\n Groups checked: %d ::: Stars found:%d", current_group, i);
+    // printf("\n Total groups to check: %d ::: hd: %d", galaxy->total_groups, galaxy->total_groups_hd);
+    // printf("\n initialized: %d ::: initialized_hd: %d", galaxy->initialized, galaxy->initialized_hd);
+    // printf("\n end: %d", current_batch);
 }
 
 /**
@@ -858,8 +933,8 @@ void gfx_generate_menu_gstars(Galaxy *galaxy, Gstar *menustars)
 
     // Check whether MAX_GSTARS_ROW * GALAXY_SECTION_SIZE fit in full_size_diameter
     // If they don't fit, we must group sections together
-    int grouped_sections = 1;
-    double total_sections = full_size_diameter / (grouped_sections * GALAXY_SECTION_SIZE);
+    int sections_in_group = 1;
+    double total_sections = full_size_diameter / (sections_in_group * GALAXY_SECTION_SIZE);
 
     // Allow <array_factor> times more than array size as galaxy_density is low
     // Increase array_factor to show more stars
@@ -867,11 +942,11 @@ void gfx_generate_menu_gstars(Galaxy *galaxy, Gstar *menustars)
 
     while (total_sections > MAX_GSTARS_ROW * array_factor)
     {
-        grouped_sections++;
-        total_sections = full_size_diameter / (grouped_sections * GALAXY_SECTION_SIZE);
+        sections_in_group++;
+        total_sections = full_size_diameter / (sections_in_group * GALAXY_SECTION_SIZE);
     }
 
-    int section_size = grouped_sections * GALAXY_SECTION_SIZE;
+    int section_size = sections_in_group * GALAXY_SECTION_SIZE;
     double ix, iy;
     int i = 0;
 

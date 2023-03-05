@@ -142,6 +142,12 @@ static Galaxy *galaxies_create_galaxy(Point position)
 
     galaxy->initialized = 0;
     galaxy->initialized_hd = 0;
+    galaxy->last_star_index = 0;
+    galaxy->last_star_index_hd = 0;
+    galaxy->sections_in_group = 0;
+    galaxy->sections_in_group_hd = 0;
+    galaxy->total_groups = 0;
+    galaxy->total_groups_hd = 0;
     sprintf(galaxy->name, "%s-%lu", "G", position_hash);
     galaxy->class = galaxies_size_class(distance);
     galaxy->radius = radius;
@@ -234,7 +240,7 @@ void galaxies_draw_galaxy(NavigationState *nav_state, Galaxy *galaxy, const Came
         gfx_draw_circle(renderer, camera, rx, ry, cutoff, colors[COLOR_CYAN_70]);
 
         // Generate gstars_hd
-        if (!galaxy->initialized_hd)
+        if (!galaxy->initialized_hd || galaxy->initialized_hd < galaxy->total_groups_hd)
             gfx_generate_gstars(galaxy, true);
 
         double zoom_universe_stars = ZOOM_UNIVERSE_STARS;
@@ -253,17 +259,17 @@ void galaxies_draw_galaxy(NavigationState *nav_state, Galaxy *galaxy, const Came
         const double epsilon = ZOOM_EPSILON / GALAXY_SCALE;
 
         if (scale < zoom_universe_stars + epsilon)
-            gfx_draw_galaxy_cloud(galaxy, camera, galaxy->initialized_hd, true, scale);
+            gfx_draw_galaxy_cloud(galaxy, camera, galaxy->last_star_index_hd, true, scale);
     }
     else
     {
         // Draw galaxy cloud
         if (gfx_object_in_camera(camera, galaxy->position.x, galaxy->position.y, galaxy->radius, scale * GALAXY_SCALE))
         {
-            if (!galaxy->initialized)
+            if (!galaxy->initialized || galaxy->initialized < galaxy->total_groups)
                 gfx_generate_gstars(galaxy, false);
 
-            gfx_draw_galaxy_cloud(galaxy, camera, galaxy->initialized, false, scale);
+            gfx_draw_galaxy_cloud(galaxy, camera, galaxy->last_star_index, false, scale);
         }
         // Draw galaxy projection
         else if (PROJECTIONS_ON)

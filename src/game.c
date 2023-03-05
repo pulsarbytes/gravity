@@ -510,7 +510,7 @@ void game_run_map_state(GameState *game_state, InputState *input_state, GameEven
     }
 
     // Create galaxy cloud
-    if (!nav_state->current_galaxy->initialized_hd)
+    if (!nav_state->current_galaxy->initialized_hd || nav_state->current_galaxy->initialized_hd < nav_state->current_galaxy->total_groups_hd)
         gfx_generate_gstars(nav_state->current_galaxy, true);
 
     // Move through map
@@ -828,7 +828,7 @@ void game_run_navigate_state(GameState *game_state, InputState *input_state, Gam
     }
 
     // Create galaxy cloud
-    if (!nav_state->current_galaxy->initialized_hd)
+    if (!nav_state->current_galaxy->initialized_hd || nav_state->current_galaxy->initialized_hd < nav_state->current_galaxy->total_groups_hd)
         gfx_generate_gstars(nav_state->current_galaxy, true);
 
     gfx_draw_screen_frame(camera);

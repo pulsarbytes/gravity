@@ -95,8 +95,14 @@ typedef struct
 
 typedef struct
 {
-    int initialized;
+    int initialized; // Initialized groups of sections so far
     int initialized_hd;
+    int last_star_index; // Index of last star added to array
+    int last_star_index_hd;
+    int sections_in_group; // Stored so that we don't calculate on every iteration
+    int sections_in_group_hd;
+    int total_groups; // Total groups of sections grouped by <sections_in_group>
+    int total_groups_hd;
     char name[MAX_OBJECT_NAME];
     int class;
     float radius;
