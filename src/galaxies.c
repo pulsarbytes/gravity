@@ -259,7 +259,13 @@ void galaxies_draw_galaxy(NavigationState *nav_state, Galaxy *galaxy, const Came
         const double epsilon = ZOOM_EPSILON / GALAXY_SCALE;
 
         if (scale < zoom_universe_stars + epsilon)
-            gfx_draw_galaxy_cloud(galaxy, camera, galaxy->last_star_index_hd, true, scale);
+        {
+            // Show hi_def gstars when ready
+            if (galaxy->initialized_hd == galaxy->total_groups_hd)
+                gfx_draw_galaxy_cloud(galaxy, camera, galaxy->last_star_index_hd, true, scale);
+            else
+                gfx_draw_galaxy_cloud(galaxy, camera, galaxy->last_star_index, false, scale);
+        }
     }
     else
     {
