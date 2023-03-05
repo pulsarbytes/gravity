@@ -182,6 +182,7 @@ void game_reset(GameState *game_state, InputState *input_state, GameEvents *game
     game_events->universe_switch = OFF;
     game_events->exited_galaxy = OFF;
     game_events->galaxy_found = OFF;
+    game_events->generate_bstars = OFF;
 
     // Galaxy position
     // Retrieved from saved game or use default values if this is a new game
@@ -293,7 +294,7 @@ void game_reset(GameState *game_state, InputState *input_state, GameEvents *game
     memcpy(nav_state->buffer_galaxy, nav_state->current_galaxy, sizeof(Galaxy));
 
     // Generate background stars
-    gfx_generate_bstars(nav_state, bstars, camera);
+    gfx_generate_bstars(game_events, nav_state, bstars, camera, false);
 }
 
 /**
@@ -474,7 +475,7 @@ void game_run_map_state(GameState *game_state, InputState *input_state, GameEven
         input_state->zoom_out = OFF;
     }
 
-    stars_generate(game_state, game_events, nav_state, bstars, ship, camera);
+    stars_generate(game_state, game_events, nav_state, bstars, ship);
 
     gfx_update_camera(camera, nav_state->map_offset, game_state->game_scale);
 
@@ -690,7 +691,7 @@ void game_run_navigate_state(GameState *game_state, InputState *input_state, Gam
     }
 
     if (input_state->camera_on)
-        stars_generate(game_state, game_events, nav_state, bstars, ship, camera);
+        stars_generate(game_state, game_events, nav_state, bstars, ship);
 
     if (input_state->camera_on)
         gfx_update_camera(camera, nav_state->navigate_offset, game_state->game_scale);
@@ -741,7 +742,12 @@ void game_run_navigate_state(GameState *game_state, InputState *input_state, Gam
 
         // Draw background stars
         if (BSTARS_ON)
-            gfx_update_bstars_position(game_state->state, input_state->camera_on, nav_state, bstars, camera, speed, distance_current);
+        {
+            if (game_events->generate_bstars)
+                gfx_generate_bstars(game_events, nav_state, bstars, camera, true);
+            else
+                gfx_update_bstars_position(game_state->state, input_state->camera_on, nav_state, bstars, camera, speed, distance_current);
+        }
 
         if (SPEED_LINES_ON && input_state->camera_on)
             gfx_draw_speed_lines(nav_state->velocity.magnitude, camera, speed);

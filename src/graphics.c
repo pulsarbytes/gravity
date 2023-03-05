@@ -197,12 +197,12 @@ void gfx_draw_circle_approximation(SDL_Renderer *renderer, const Camera *camera,
  * @param galaxy A pointer to Galaxy struct.
  * @param camera a pointer to Camera struct.
  * @param gstars_count Number of stars in the galaxy cloud.
- * @param high_definition Flag to indicate whether to use high definition stars or not.
+ * @param high_definition A boolean to indicate whether to use high definition stars or not.
  * @param scale Scaling factor for the galaxy cloud.
  *
  * @return void
  */
-void gfx_draw_galaxy_cloud(Galaxy *galaxy, const Camera *camera, int gstars_count, unsigned short high_definition, long double scale)
+void gfx_draw_galaxy_cloud(Galaxy *galaxy, const Camera *camera, int gstars_count, bool high_definition, long double scale)
 {
     const double epsilon = ZOOM_EPSILON / GALAXY_SCALE;
 
@@ -667,41 +667,63 @@ void gfx_draw_speed_lines(float velocity, const Camera *camera, Speed speed)
 }
 
 /**
- * Generates a set of randomly placed and sized stars on a given camera view
+ * Generates a set of randomly placed and sized stars on a given camera view.
+ * The function implements lazy initialization of bstars in batches.
  *
  * @param nav_state A pointer to NavigationState object.
  * @param bstars Array of Bstar objects to populate with generated stars.
  * @param camera A pointer to Camera object representing current view.
+ * @param lazy_load A boolean indicating whether or not bstars will be lazy-loaded.
  *
  * @return void
  */
-void gfx_generate_bstars(NavigationState *nav_state, Bstar *bstars, const Camera *camera)
+void gfx_generate_bstars(GameEvents *game_events, NavigationState *nav_state, Bstar *bstars, const Camera *camera, bool lazy_load)
 {
-    int i = 0, row, column, is_star;
+    int row, column, is_star;
     int end = false;
     int max_bstars = (int)(camera->w * camera->h * BSTARS_PER_SQUARE / BSTARS_SQUARE);
+    int batch_size = 50;
+    int current_batch = 0;
+    static int last_star_index = 0;
+    int current_cell = 0;
+    static int initialized_cells = 0;
+    int i = last_star_index;
 
     // Use a local rng
     pcg32_random_t rng;
 
-    // Seed with a fixed constant
+    // Seed with a fixed constant (for size and opacity)
     srand(1200);
 
-    for (int j = 0; j < max_bstars; j++)
+    // Set galaxy hash as initseq
+    nav_state->initseq = maths_hash_position_to_uint64_2(nav_state->current_galaxy->position);
+
+    // Reset final_star
+    if (initialized_cells == 0)
     {
-        bstars[j].final_star = 0;
+        for (int j = 0; j < max_bstars; j++)
+        {
+            bstars[j].final_star = 0;
+        }
     }
 
     for (row = 0; row < camera->h && !end; row++)
     {
         for (column = 0; column < camera->w && !end; column++)
         {
+            if (lazy_load)
+            {
+                current_cell++;
+
+                if (initialized_cells >= current_cell)
+                    continue;
+
+                initialized_cells = current_cell;
+            }
+
             // Create rng seed by combining x,y values
             Point position = {.x = row, .y = column};
             uint64_t seed = maths_hash_position_to_uint64(position);
-
-            // Set galaxy hash as initseq
-            nav_state->initseq = maths_hash_position_to_uint64_2(nav_state->current_galaxy->position);
 
             // Seed with a fixed constant
             pcg32_srandom_r(&rng, seed, nav_state->initseq);
@@ -731,13 +753,32 @@ void gfx_generate_bstars(NavigationState *nav_state, Bstar *bstars, const Camera
                 star.opacity = ((rand() % (BSTARS_MAX_OPACITY + 1 - BSTARS_MIN_OPACITY)) + BSTARS_MIN_OPACITY);
 
                 star.final_star = 1;
+
+                if (lazy_load)
+                {
+                    last_star_index = i;
+                    current_batch++;
+                }
+
                 bstars[i++] = star;
             }
 
             if (i >= max_bstars)
                 end = true;
+
+            if (lazy_load && current_batch >= batch_size)
+                return;
         }
     }
+
+    game_events->generate_bstars = OFF;
+    last_star_index = 0;
+    initialized_cells = 0;
+
+    // printf("\n Galaxy: %s, initseq: %lu", nav_state->current_galaxy->name, nav_state->initseq);
+    // printf("\n Cells checked: %d ::: Stars found: %d", current_cell, i);
+    // printf("\n initialized cells: %d", initialized_cells);
+    // printf("\n end");
 }
 
 /**
@@ -747,11 +788,11 @@ void gfx_generate_bstars(NavigationState *nav_state, Bstar *bstars, const Camera
  * The function implements lazy initialization of gstars in batches.
  *
  * @param galaxy A pointer to a Galaxy object.
- * @param high_definition An unsigned short to determine if high definition mode is enabled (1) or not (0).
+ * @param high_definition A boolean to determine if high definition mode is enabled (1) or not (0).
  *
  * @return This function does not return anything.
  */
-void gfx_generate_gstars(Galaxy *galaxy, unsigned short high_definition)
+void gfx_generate_gstars(Galaxy *galaxy, bool high_definition)
 {
     float radius = galaxy->radius;
     double full_size_radius = radius * GALAXY_SCALE;

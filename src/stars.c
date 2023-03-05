@@ -473,9 +473,8 @@ static bool stars_entry_exists(StarEntry *stars[], Point position)
  * @param nav_state A pointer to the current NavigationState struct.
  * @param bstars A pointer to an array of Bstar structs for storing the generated background stars.
  * @param ship A pointer to the current Ship struct.
- * @param camera A pointer to the current Camera struct.
  */
-void stars_generate(GameState *game_state, GameEvents *game_events, NavigationState *nav_state, Bstar *bstars, Ship *ship, const Camera *camera)
+void stars_generate(GameState *game_state, GameEvents *game_events, NavigationState *nav_state, Bstar *bstars, Ship *ship)
 {
     Point offset;
 
@@ -569,14 +568,7 @@ void stars_generate(GameState *game_state, GameEvents *game_events, NavigationSt
                 memcpy(nav_state->buffer_galaxy, nav_state->current_galaxy, sizeof(Galaxy));
 
                 // Create new background stars
-                int max_bstars = (int)(camera->w * camera->h * BSTARS_PER_SQUARE / BSTARS_SQUARE);
-
-                for (int i = 0; i < max_bstars; i++)
-                {
-                    bstars[i].final_star = 0;
-                }
-
-                gfx_generate_bstars(nav_state, bstars, camera);
+                game_events->generate_bstars = ON;
             }
             else if (game_state->state == MAP)
             {

@@ -5,7 +5,7 @@
 void stars_clear_table(StarEntry *stars[]);
 void stars_delete_outside_region(StarEntry *stars[], double bx, double by, int region_size);
 void stars_draw_star_system(GameState *, const InputState *, NavigationState *, CelestialBody *, const Camera *);
-void stars_generate(GameState *, GameEvents *, NavigationState *, Bstar *bstars, Ship *ship, const Camera *);
+void stars_generate(GameState *, GameEvents *, NavigationState *, Bstar *bstars, Ship *ship);
 void stars_generate_preview(NavigationState *, const Camera *, Point *, int zoom_preview, long double scale);
 double stars_nearest_center_distance(Point, Galaxy *, uint64_t initseq, int galaxy_density);
 int stars_size_class(float distance);
@@ -15,7 +15,6 @@ void stars_update_orbital_positions(GameState *, const InputState *, NavigationS
 void galaxies_generate(GameEvents *, NavigationState *, Point);
 Galaxy *galaxies_nearest_circumference(const NavigationState *, Point, int exclude);
 void gfx_draw_circle(SDL_Renderer *renderer, const Camera *, int xc, int yc, int radius, SDL_Color color);
-void gfx_generate_bstars(NavigationState *, Bstar *bstars, const Camera *);
 bool gfx_object_in_camera(const Camera *, double x, double y, float radius, long double scale);
 void gfx_project_body_on_edge(const GameState *, const NavigationState *, CelestialBody *, const Camera *);
 bool maths_check_point_in_array(Point, Point arr[], int len);

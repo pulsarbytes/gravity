@@ -190,6 +190,7 @@ typedef struct
     int universe_switch;
     int exited_galaxy;
     int galaxy_found;
+    int generate_bstars;
 } GameEvents;
 
 typedef struct
