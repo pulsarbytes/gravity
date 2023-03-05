@@ -616,7 +616,7 @@ void game_run_navigate_state(GameState *game_state, InputState *input_state, Gam
             nav_state->galaxy_offset.current_y = nav_state->galaxy_offset.buffer_y;
         }
 
-        // Trigger generataion of new stars
+        // Trigger generation of new stars
         game_events->stars_start = ON;
 
         // Reset ship position
@@ -1061,6 +1061,17 @@ void game_run_universe_state(GameState *game_state, InputState *input_state, Gam
 
     rate_y /= (double)GALAXY_SCALE / 1000;
     nav_state->universe_offset.y += rate_y;
+
+    // Wrap around position (rectangle defines boundaries)
+    if (nav_state->universe_offset.x > UNIVERSE_X_LIMIT)
+        nav_state->universe_offset.x -= UNIVERSE_X_LIMIT * 2;
+    else if (nav_state->universe_offset.x < -UNIVERSE_X_LIMIT)
+        nav_state->universe_offset.x += UNIVERSE_X_LIMIT * 2;
+
+    if (nav_state->universe_offset.y > UNIVERSE_Y_LIMIT)
+        nav_state->universe_offset.y -= UNIVERSE_Y_LIMIT * 2;
+    else if (nav_state->universe_offset.y < -UNIVERSE_Y_LIMIT)
+        nav_state->universe_offset.y += UNIVERSE_Y_LIMIT * 2;
 
     // Zoom
     double zoom_universe_step = ZOOM_UNIVERSE_STEP;

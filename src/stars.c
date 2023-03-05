@@ -518,6 +518,17 @@ void stars_generate(GameState *game_state, GameEvents *game_events, NavigationSt
         universe_position.x = nav_state->current_galaxy->position.x + offset.x / GALAXY_SCALE;
         universe_position.y = nav_state->current_galaxy->position.y + offset.y / GALAXY_SCALE;
 
+        // Wrap around universe position (rectangle defines boundaries)
+        if (universe_position.x > UNIVERSE_X_LIMIT)
+            universe_position.x -= UNIVERSE_X_LIMIT * 2;
+        else if (universe_position.x < -UNIVERSE_X_LIMIT)
+            universe_position.x += UNIVERSE_X_LIMIT * 2;
+
+        if (universe_position.y > UNIVERSE_Y_LIMIT)
+            universe_position.y -= UNIVERSE_Y_LIMIT * 2;
+        else if (universe_position.y < -UNIVERSE_Y_LIMIT)
+            universe_position.y += UNIVERSE_Y_LIMIT * 2;
+
         // Convert to cross section offset to query for new galaxies
         Point cross_section_offset;
         cross_section_offset.x = maths_get_nearest_section_line(universe_position.x, UNIVERSE_SECTION_SIZE);
