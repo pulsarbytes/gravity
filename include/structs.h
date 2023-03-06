@@ -178,6 +178,7 @@ typedef struct
 typedef struct
 {
     int stars_start;
+    int stars_preview_start;
     int galaxies_start;
     int game_started;
     int map_enter;

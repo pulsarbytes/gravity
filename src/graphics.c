@@ -219,7 +219,7 @@ void gfx_draw_galaxy_cloud(Galaxy *galaxy, const Camera *camera, int gstars_coun
         switch (galaxy->class)
         {
         case 1:
-            if (scale <= 0.000001 + epsilon)
+            if (scale <= (ZOOM_UNIVERSE_MIN / GALAXY_SCALE) + epsilon)
                 opacity = 0.35 * star_opacity;
             else if (scale <= 0.000002 + epsilon)
                 opacity = 0.5 * star_opacity;
@@ -227,13 +227,13 @@ void gfx_draw_galaxy_cloud(Galaxy *galaxy, const Camera *camera, int gstars_coun
                 opacity = star_opacity;
             break;
         case 2:
-            if (scale <= 0.000001 + epsilon)
+            if (scale <= (ZOOM_UNIVERSE_MIN / GALAXY_SCALE) + epsilon)
                 opacity = 0.5 * star_opacity;
             else
                 opacity = star_opacity;
             break;
         case 3:
-            if (scale <= 0.000001 + epsilon)
+            if (scale <= (ZOOM_UNIVERSE_MIN / GALAXY_SCALE) + epsilon)
                 opacity = 0.8 * star_opacity;
             else
                 opacity = star_opacity;
@@ -682,7 +682,6 @@ void gfx_generate_bstars(GameEvents *game_events, NavigationState *nav_state, Bs
     int row, column, is_star;
     int end = false;
     int max_bstars = (int)(camera->w * camera->h * BSTARS_PER_SQUARE / BSTARS_SQUARE);
-    int batch_size = 50;
     int current_batch = 0;
     static int last_star_index = 0;
     int current_cell = 0;
@@ -766,7 +765,7 @@ void gfx_generate_bstars(GameEvents *game_events, NavigationState *nav_state, Bs
             if (i >= max_bstars)
                 end = true;
 
-            if (lazy_load && current_batch >= batch_size)
+            if (lazy_load && current_batch >= BSTARS_BATCH_SIZE)
                 return;
         }
     }
@@ -868,7 +867,6 @@ void gfx_generate_gstars(Galaxy *galaxy, bool high_definition)
     int section_size = sections_in_group * GALAXY_SECTION_SIZE;
     double ix, iy;
     int current_group = 0;
-    int batch_size = 50;
     int current_batch = 0;
 
     // Use a local rng
@@ -946,7 +944,7 @@ void gfx_generate_gstars(Galaxy *galaxy, bool high_definition)
                 current_batch++;
             }
 
-            if (current_batch >= batch_size)
+            if (current_batch >= BSTARS_BATCH_SIZE)
                 return;
         }
     }

@@ -171,6 +171,7 @@ void game_reset(GameState *game_state, InputState *input_state, GameEvents *game
         game_events->game_started = OFF;
 
     game_events->stars_start = ON;
+    game_events->stars_preview_start = ON;
     game_events->galaxies_start = ON;
     game_events->map_enter = OFF;
     game_events->map_exit = OFF;
@@ -866,7 +867,6 @@ void game_run_navigate_state(GameState *game_state, InputState *input_state, Gam
  */
 void game_run_universe_state(GameState *game_state, InputState *input_state, GameEvents *game_events, NavigationState *nav_state, Ship *ship, Camera *camera)
 {
-    static int stars_preview_start = ON;
     static int zoom_preview = OFF;
     static Point cross_point = {0.0, 0.0};
 
@@ -949,7 +949,7 @@ void game_run_universe_state(GameState *game_state, InputState *input_state, Gam
         gfx_update_camera(camera, nav_state->universe_offset, game_state->game_scale * GALAXY_SCALE);
 
         // Trigger generation of stars preview
-        stars_preview_start = ON;
+        game_events->stars_preview_start = ON;
 
         if (game_events->universe_center)
             game_events->universe_center = OFF;
@@ -977,14 +977,14 @@ void game_run_universe_state(GameState *game_state, InputState *input_state, Gam
 
     if (game_state->game_scale >= zoom_universe_stars - epsilon)
     {
-        if (stars_preview_start)
+        if (game_events->stars_preview_start)
         {
             // Update map_offset
             nav_state->map_offset.x = (nav_state->universe_offset.x - nav_state->current_galaxy->position.x) * GALAXY_SCALE;
             nav_state->map_offset.y = (nav_state->universe_offset.y - nav_state->current_galaxy->position.y) * GALAXY_SCALE;
 
             stars_generate_preview(nav_state, camera, &cross_point, zoom_preview, game_state->game_scale);
-            stars_preview_start = OFF;
+            game_events->stars_preview_start = OFF;
             zoom_preview = OFF;
         }
 
@@ -1044,7 +1044,7 @@ void game_run_universe_state(GameState *game_state, InputState *input_state, Gam
         speed_universe_step = 700;
 
     if (input_state->right || input_state->left || input_state->down || input_state->up)
-        stars_preview_start = ON;
+        game_events->stars_preview_start = ON;
 
     if (input_state->right)
         rate_x = UNIVERSE_SPEED_MIN + (UNIVERSE_SPEED_MAX - UNIVERSE_SPEED_MIN) * (camera->w / 1000) / (game_state->game_scale * speed_universe_step);
@@ -1109,7 +1109,7 @@ void game_run_universe_state(GameState *game_state, InputState *input_state, Gam
 
         zoom_preview = ON;
         input_state->zoom_in = OFF;
-        stars_preview_start = ON;
+        game_events->stars_preview_start = ON;
         cross_point.x += GALAXY_SCALE; // fake increment so that it triggers star preview generation
         cross_point.y += GALAXY_SCALE;
     }
@@ -1133,7 +1133,7 @@ void game_run_universe_state(GameState *game_state, InputState *input_state, Gam
 
         zoom_preview = ON;
         input_state->zoom_out = OFF;
-        stars_preview_start = ON;
+        game_events->stars_preview_start = ON;
         cross_point.x += GALAXY_SCALE; // fake increment so that it triggers star preview generation
         cross_point.y += GALAXY_SCALE;
     }

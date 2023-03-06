@@ -22,6 +22,7 @@
 #define BSTARS_MIN_OPACITY 45                     // Default: 45
 #define BSTARS_SQUARE 10000                       // Groups X pixels. Default: 10000
 #define BSTARS_PER_SQUARE 4                       // X stars per square. Default: 4
+#define BSTARS_BATCH_SIZE 50                      // Default: 50
 #define MAX_GSTARS_ROW 100                        // Default: 100
 #define MAX_GSTARS MAX_GSTARS_ROW *MAX_GSTARS_ROW // Default: MAX_GSTARS_ROW *MAX_GSTARS_ROW
 #define GSTARS_SCALE 10                           // Designates gstars scaling compared to universe mode. Default: 10
@@ -49,6 +50,7 @@
 #define MAP_SPEED_MIN 10          // Zoom out. Default: 10
 #define UNIVERSE_SPEED_MAX 15     // Zoom in. Default: 15
 #define UNIVERSE_SPEED_MIN 4      // Zoom out. Default: 4
+#define MOUSE_SCROLL_DISTANCE 20  // Distance from the edge of the screen where scrolling starts. Default: 20
 
 // Menu
 #define MENU_GALAXY_CLOUD_DENSITY 300  // Default: 300 (max 500)

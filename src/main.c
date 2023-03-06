@@ -42,7 +42,7 @@ void console_log_fps(ConsoleEntry entries[], unsigned int *fps, unsigned int *la
 void console_log_position(GameState *, NavigationState);
 void console_update_entry(ConsoleEntry entries[], int index, double value);
 void console_render(ConsoleEntry entries[]);
-void events_loop(GameState *, InputState *, GameEvents *);
+void events_loop(GameState *, InputState *, GameEvents *, NavigationState *, const Camera *);
 Ship game_create_ship(int radius, Point, long double scale);
 void game_reset(GameState *, InputState *, GameEvents *, NavigationState *, Bstar *bstars, Ship *, Camera *, bool reset);
 void game_run_map_state(GameState *, InputState *, GameEvents *, NavigationState *, Bstar *bstars, Ship *, Camera *);
@@ -53,6 +53,7 @@ void menu_create(GameState *, NavigationState, Gstar *menustars);
 void menu_run_menu_state(GameState *, InputState *, int game_started, const NavigationState *, Bstar *bstars, Gstar *menustars, Camera *);
 void sdl_cleanup(SDL_Window *);
 bool sdl_initialize(SDL_Window *);
+
 bool sdl_ttf_load_fonts(SDL_Window *);
 void utils_cleanup_resources(GameState *, NavigationState *, Bstar *bstars, Ship *);
 
@@ -126,7 +127,7 @@ int main(int argc, char *argv[])
         start_time = SDL_GetTicks();
 
         // Process events
-        events_loop(&game_state, &input_state, &game_events);
+        events_loop(&game_state, &input_state, &game_events, &nav_state, &camera);
 
         // Set background color
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
