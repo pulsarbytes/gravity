@@ -414,7 +414,7 @@ void stars_draw_star_system(GameState *game_state, const InputState *input_state
     }
 
     // Draw body
-    if (gfx_object_in_camera(camera, body->position.x, body->position.y, body->radius, game_state->game_scale))
+    if (gfx_is_object_in_camera(camera, body->position.x, body->position.y, body->radius, game_state->game_scale))
     {
         body->rect.x = (int)(body->position.x - body->radius - camera->x) * game_state->game_scale;
         body->rect.y = (int)(body->position.y - body->radius - camera->y) * game_state->game_scale;
@@ -833,7 +833,7 @@ void stars_generate_preview(NavigationState *nav_state, const Camera *camera, Po
             // check that point is not within previous boundaries
             if (initialized && !zoom_preview && scale <= 0.001 + epsilon)
             {
-                if (maths_point_in_rectanle(position, rect))
+                if (maths_is_point_in_rectangle(position, rect))
                     continue;
             }
 

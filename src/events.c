@@ -47,16 +47,16 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
                 }
                 else if (game_state->state == MENU)
                 {
-                    int mouse_x = event.button.x;
-                    int mouse_y = event.button.y;
+                    input_state->mouse_x = event.button.x;
+                    input_state->mouse_y = event.button.y;
 
                     for (int i = 0; i < MENU_BUTTON_COUNT; i++)
                     {
                         if (!game_state->menu[i].disabled &&
-                            mouse_x >= game_state->menu[i].rect.x &&
-                            mouse_x <= game_state->menu[i].rect.x + game_state->menu[i].rect.w &&
-                            mouse_y >= game_state->menu[i].rect.y &&
-                            mouse_y <= game_state->menu[i].rect.y + game_state->menu[i].rect.h)
+                            input_state->mouse_x >= game_state->menu[i].rect.x &&
+                            input_state->mouse_x <= game_state->menu[i].rect.x + game_state->menu[i].rect.w &&
+                            input_state->mouse_y >= game_state->menu[i].rect.y &&
+                            input_state->mouse_y <= game_state->menu[i].rect.y + game_state->menu[i].rect.h)
                         {
                             input_state->selected_button = i;
 
@@ -73,33 +73,20 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
         case SDL_MOUSEMOTION:
             if (game_state->state == MENU)
             {
-                int mouse_x = event.motion.x;
-                int mouse_y = event.motion.y;
-
-                for (int i = 0; i < MENU_BUTTON_COUNT; i++)
-                {
-                    if (!game_state->menu[i].disabled &&
-                        mouse_x >= game_state->menu[i].rect.x &&
-                        mouse_x <= game_state->menu[i].rect.x + game_state->menu[i].rect.w &&
-                        mouse_y >= game_state->menu[i].rect.y &&
-                        mouse_y <= game_state->menu[i].rect.y + game_state->menu[i].rect.h)
-                    {
-                        input_state->selected_button = i;
-                        break;
-                    }
-                }
+                input_state->mouse_x = event.motion.x;
+                input_state->mouse_y = event.motion.y;
             }
             else if (game_state->state == MAP || game_state->state == UNIVERSE)
             {
-                int mouse_x = event.motion.x;
-                int mouse_y = event.motion.y;
+                input_state->mouse_x = event.motion.x;
+                input_state->mouse_y = event.motion.y;
 
                 // If left mouse button is held down, update the position
                 if (event.motion.state & SDL_BUTTON_LMASK)
                 {
                     // Calculate the difference between the current mouse position and the initial mouse position
-                    int delta_x = mouse_x - mouseDownPos.x;
-                    int delta_y = mouse_y - mouseDownPos.y;
+                    int delta_x = input_state->mouse_x - mouseDownPos.x;
+                    int delta_y = input_state->mouse_y - mouseDownPos.y;
 
                     if (game_state->state == UNIVERSE)
                     {
@@ -127,13 +114,13 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
                     }
 
                     // Update the initial mouse position to the current mouse position for the next iteration
-                    mouseDownPos.x = mouse_x;
-                    mouseDownPos.y = mouse_y;
+                    mouseDownPos.x = input_state->mouse_x;
+                    mouseDownPos.y = input_state->mouse_y;
                 }
                 else
                 {
                     // Scroll left
-                    if (mouse_x < MOUSE_SCROLL_DISTANCE)
+                    if (input_state->mouse_x < MOUSE_SCROLL_DISTANCE)
                     {
                         input_state->right = OFF;
                         input_state->left = ON;
@@ -142,7 +129,7 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
                         input_state->left = OFF;
 
                     // Scroll right
-                    if (mouse_x > camera->w - MOUSE_SCROLL_DISTANCE)
+                    if (input_state->mouse_x > camera->w - MOUSE_SCROLL_DISTANCE)
                     {
                         input_state->left = OFF;
                         input_state->right = ON;
@@ -151,7 +138,7 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
                         input_state->right = OFF;
 
                     // Scroll up
-                    if (mouse_y < MOUSE_SCROLL_DISTANCE)
+                    if (input_state->mouse_y < MOUSE_SCROLL_DISTANCE)
                     {
                         input_state->down = OFF;
                         input_state->up = ON;
@@ -160,7 +147,7 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
                         input_state->up = OFF;
 
                     // Scroll down
-                    if (mouse_y > camera->h - MOUSE_SCROLL_DISTANCE)
+                    if (input_state->mouse_y > camera->h - MOUSE_SCROLL_DISTANCE)
                     {
                         input_state->up = OFF;
                         input_state->down = ON;
@@ -325,6 +312,9 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
                 // Menu up
                 if (game_state->state == MENU)
                 {
+                    input_state->mouse_x = 0;
+                    input_state->mouse_y = 0;
+
                     do
                     {
                         input_state->selected_button = (input_state->selected_button + MENU_BUTTON_COUNT - 1) % MENU_BUTTON_COUNT;
@@ -343,6 +333,9 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
                 // Menu down
                 if (game_state->state == MENU)
                 {
+                    input_state->mouse_x = 0;
+                    input_state->mouse_y = 0;
+
                     do
                     {
                         input_state->selected_button = (input_state->selected_button + 1) % MENU_BUTTON_COUNT;

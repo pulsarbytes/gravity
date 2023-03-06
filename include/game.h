@@ -12,7 +12,7 @@ void game_run_universe_state(GameState *, InputState *, GameEvents *, Navigation
 // External function prototypes
 void console_update_entry(ConsoleEntry entries[], int index, double value);
 void galaxies_clear_table(GalaxyEntry *galaxies[]);
-void galaxies_draw_galaxy(NavigationState *, Galaxy *, const Camera *, int state, long double scale);
+void galaxies_draw_galaxy(const InputState *, NavigationState *, Galaxy *, const Camera *, int state, long double scale);
 void galaxies_generate(GameEvents *, NavigationState *, Point);
 Galaxy *galaxies_get_entry(GalaxyEntry *galaxies[], Point);
 Galaxy *galaxies_nearest_circumference(const NavigationState *, Point, int exclude);
@@ -23,7 +23,7 @@ void gfx_draw_speed_arc(const Ship *, const Camera *, long double scale);
 void gfx_draw_speed_lines(float velocity, const Camera *, Speed);
 void gfx_generate_bstars(GameEvents *, NavigationState *, Bstar *bstars, const Camera *, bool lazy_load);
 void gfx_generate_gstars(Galaxy *, bool high_definition);
-bool gfx_object_in_camera(const Camera *, double x, double y, float radius, long double scale);
+bool gfx_is_object_in_camera(const Camera *, double x, double y, float radius, long double scale);
 void gfx_project_galaxy_on_edge(int state, const NavigationState *, Galaxy *, const Camera *, long double scale);
 void gfx_project_ship_on_edge(int state, const InputState *, const NavigationState *, Ship *, const Camera *, long double scale);
 void gfx_update_bstars_position(int state, int camera_on, const NavigationState *, Bstar *bstars, const Camera *, Speed speed, double distance);

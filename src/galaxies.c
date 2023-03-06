@@ -218,25 +218,23 @@ static void galaxies_delete_entry(GalaxyEntry *galaxies[], Point position)
  *
  * @return void
  */
-void galaxies_draw_galaxy(NavigationState *nav_state, Galaxy *galaxy, const Camera *camera, int state, long double scale)
+void galaxies_draw_galaxy(const InputState *input_state, NavigationState *nav_state, Galaxy *galaxy, const Camera *camera, int state, long double scale)
 {
     // Get galaxy distance from position
     double distance = maths_distance_between_points(galaxy->position.x, galaxy->position.y, nav_state->universe_offset.x, nav_state->universe_offset.y);
 
-    // Draw cutoff circle
-    if (distance < galaxy->cutoff)
+    // Get position of mouse
+    Point mouse_position = {.x = input_state->mouse_x, .y = input_state->mouse_y};
+
+    // Get relative position of galaxy in game_scale
+    int cutoff = galaxy->cutoff * scale * GALAXY_SCALE;
+    int rx = (galaxy->position.x - camera->x) * scale * GALAXY_SCALE;
+    int ry = (galaxy->position.y - camera->y) * scale * GALAXY_SCALE;
+    Point galaxy_position = {.x = rx, .y = ry};
+
+    if (distance < galaxy->cutoff || maths_is_point_in_circle(mouse_position, galaxy_position, cutoff))
     {
-        // Reset stars and update current_galaxy
-        if (strcmp(nav_state->current_galaxy->name, galaxy->name) != 0)
-        {
-            stars_clear_table(nav_state->stars);
-            memcpy(nav_state->current_galaxy, galaxy, sizeof(Galaxy));
-        }
-
-        int cutoff = galaxy->cutoff * scale * GALAXY_SCALE;
-        int rx = (galaxy->position.x - camera->x) * scale * GALAXY_SCALE;
-        int ry = (galaxy->position.y - camera->y) * scale * GALAXY_SCALE;
-
+        // Draw cutoff circle
         gfx_draw_circle(renderer, camera, rx, ry, cutoff, colors[COLOR_CYAN_70]);
 
         // Generate gstars_hd
@@ -267,10 +265,20 @@ void galaxies_draw_galaxy(NavigationState *nav_state, Galaxy *galaxy, const Came
                 gfx_draw_galaxy_cloud(galaxy, camera, galaxy->last_star_index, false, scale);
         }
     }
+
+    if (distance < galaxy->cutoff)
+    {
+        // Reset stars and update current_galaxy
+        if (strcmp(nav_state->current_galaxy->name, galaxy->name) != 0)
+        {
+            stars_clear_table(nav_state->stars);
+            memcpy(nav_state->current_galaxy, galaxy, sizeof(Galaxy));
+        }
+    }
     else
     {
         // Draw galaxy cloud
-        if (gfx_object_in_camera(camera, galaxy->position.x, galaxy->position.y, galaxy->radius, scale * GALAXY_SCALE))
+        if (gfx_is_object_in_camera(camera, galaxy->position.x, galaxy->position.y, galaxy->radius, scale * GALAXY_SCALE))
         {
             if (!galaxy->initialized || galaxy->initialized < galaxy->total_groups)
                 gfx_generate_gstars(galaxy, false);

@@ -90,6 +90,15 @@ static void menu_draw_menu(GameState *game_state, InputState *input_state, int g
 
     for (int i = 0; i < MENU_BUTTON_COUNT; i++)
     {
+        if (!game_state->menu[i].disabled &&
+            input_state->mouse_x >= game_state->menu[i].rect.x &&
+            input_state->mouse_x <= game_state->menu[i].rect.x + game_state->menu[i].rect.w &&
+            input_state->mouse_y >= game_state->menu[i].rect.y &&
+            input_state->mouse_y <= game_state->menu[i].rect.y + game_state->menu[i].rect.h)
+        {
+            input_state->selected_button = i;
+        }
+
         if (i == input_state->selected_button && game_state->menu[i].disabled)
         {
             do

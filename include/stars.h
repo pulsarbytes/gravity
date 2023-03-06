@@ -15,7 +15,7 @@ void stars_update_orbital_positions(GameState *, const InputState *, NavigationS
 void galaxies_generate(GameEvents *, NavigationState *, Point);
 Galaxy *galaxies_nearest_circumference(const NavigationState *, Point, int exclude);
 void gfx_draw_circle(SDL_Renderer *renderer, const Camera *, int xc, int yc, int radius, SDL_Color color);
-bool gfx_object_in_camera(const Camera *, double x, double y, float radius, long double scale);
+bool gfx_is_object_in_camera(const Camera *, double x, double y, float radius, long double scale);
 void gfx_project_body_on_edge(const GameState *, const NavigationState *, CelestialBody *, const Camera *);
 bool maths_check_point_in_array(Point, Point arr[], int len);
 double maths_distance_between_points(double x1, double y1, double x2, double y2);
@@ -23,7 +23,7 @@ double maths_get_nearest_section_line(double offset, int size);
 uint64_t maths_hash_position_to_index(Point, int modulo, int entity_type);
 uint64_t maths_hash_position_to_uint64(Point);
 uint64_t maths_hash_position_to_uint64_2(Point);
-bool maths_point_in_rectanle(Point, Point rect[]);
+bool maths_is_point_in_rectangle(Point, Point rect[]);
 void phys_apply_gravity_to_ship(GameState *, int thrust, NavigationState *, CelestialBody *, Ship *ship, int star_class);
 void phys_calculate_orbital_velocity(float distance, float angle, float radius, float *vx, float *vy);
 void phys_update_velocity(Vector *velocity, const Ship *ship);

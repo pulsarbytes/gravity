@@ -160,6 +160,8 @@ typedef struct
 
 typedef struct
 {
+    int mouse_x;
+    int mouse_y;
     int left;
     int right;
     int up;

@@ -87,7 +87,7 @@ bool maths_line_intersects_camera(const Camera *camera, double x1, double y1, do
     double bottom = camera->h;
 
     // Check if both endpoints of the line are inside the camera.
-    if (gfx_relative_position_in_camera(camera, x1, y1) || gfx_relative_position_in_camera(camera, x2, y2))
+    if (gfx_is_relative_position_in_camera(camera, x1, y1) || gfx_is_relative_position_in_camera(camera, x2, y2))
         return true;
 
     // Check if the line intersects the left edge of the camera.
@@ -220,13 +220,37 @@ static bool maths_points_equal(Point a, Point b)
 }
 
 /**
+ * Checks if a point lies within a circle.
+ *
+ * @param point The point to check.
+ * @param center The point representing the circle center.
+ * @param radius The radius of the circle.
+ * @return True if the point is inside the circle, false otherwise.
+ */
+bool maths_is_point_in_circle(Point point, Point center, int radius)
+{
+    // Calculate the distance between the point and the circle center using the Pythagorean theorem
+    int dx = point.x - center.x;
+    int dy = point.y - center.y;
+    int distance_squared = dx * dx + dy * dy;
+
+    // Compare the distance to the circle radius squared
+    int radius_squared = radius * radius;
+
+    if (distance_squared <= radius_squared)
+        return true;
+    else
+        return false;
+}
+
+/**
  * Checks if a point lies within a given rectangle.
  *
  * @param p The point to check.
  * @param rect An array of four points representing the rectangle's vertices.
  * @return True if the point is inside the rectangle, false otherwise.
  */
-bool maths_point_in_rectanle(Point p, Point rect[])
+bool maths_is_point_in_rectangle(Point p, Point rect[])
 {
     int i, j;
     int sign = 0;

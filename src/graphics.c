@@ -99,35 +99,35 @@ void gfx_draw_circle(SDL_Renderer *renderer, const Camera *camera, int xc, int y
     while (y >= x)
     {
         // Draw the 8 points symmetrically
-        if (gfx_relative_position_in_camera(camera, xc + x, yc + y))
+        if (gfx_is_relative_position_in_camera(camera, xc + x, yc + y))
         {
             SDL_RenderDrawPoint(renderer, xc + x, yc + y);
         }
-        if (gfx_relative_position_in_camera(camera, xc + x, yc - y))
+        if (gfx_is_relative_position_in_camera(camera, xc + x, yc - y))
         {
             SDL_RenderDrawPoint(renderer, xc + x, yc - y);
         }
-        if (gfx_relative_position_in_camera(camera, xc - x, yc + y))
+        if (gfx_is_relative_position_in_camera(camera, xc - x, yc + y))
         {
             SDL_RenderDrawPoint(renderer, xc - x, yc + y);
         }
-        if (gfx_relative_position_in_camera(camera, xc - x, yc - y))
+        if (gfx_is_relative_position_in_camera(camera, xc - x, yc - y))
         {
             SDL_RenderDrawPoint(renderer, xc - x, yc - y);
         }
-        if (gfx_relative_position_in_camera(camera, xc + y, yc + x))
+        if (gfx_is_relative_position_in_camera(camera, xc + y, yc + x))
         {
             SDL_RenderDrawPoint(renderer, xc + y, yc + x);
         }
-        if (gfx_relative_position_in_camera(camera, xc + y, yc - x))
+        if (gfx_is_relative_position_in_camera(camera, xc + y, yc - x))
         {
             SDL_RenderDrawPoint(renderer, xc + y, yc - x);
         }
-        if (gfx_relative_position_in_camera(camera, xc - y, yc + x))
+        if (gfx_is_relative_position_in_camera(camera, xc - y, yc + x))
         {
             SDL_RenderDrawPoint(renderer, xc - y, yc + x);
         }
-        if (gfx_relative_position_in_camera(camera, xc - y, yc - x))
+        if (gfx_is_relative_position_in_camera(camera, xc - y, yc - x))
         {
             SDL_RenderDrawPoint(renderer, xc - y, yc - x);
         }
@@ -1054,10 +1054,24 @@ void gfx_generate_menu_gstars(Galaxy *galaxy, Gstar *menustars)
  *
  * @return True if the object is within the camera bounds, false otherwise.
  */
-bool gfx_object_in_camera(const Camera *camera, double x, double y, float radius, long double scale)
+bool gfx_is_object_in_camera(const Camera *camera, double x, double y, float radius, long double scale)
 {
     return x + radius >= camera->x && x - radius - camera->x < camera->w / scale &&
            y + radius >= camera->y && y - radius - camera->y < camera->h / scale;
+}
+
+/**
+ * Determines if a relative position (x,y) is within the bounds of the camera.
+ *
+ * @param camera A pointer to the Camera object.
+ * @param x The x-coordinate of the position relative to the camera.
+ * @param y The y-coordinate of the position relative to the camera.
+ *
+ * @return True if the position is within the camera bounds, false otherwise.
+ */
+bool gfx_is_relative_position_in_camera(const Camera *camera, int x, int y)
+{
+    return x >= 0 && x < camera->w && y >= 0 && y < camera->h;
 }
 
 /**
@@ -1164,20 +1178,6 @@ void gfx_project_ship_on_edge(int state, const InputState *input_state, const Na
     // Draw projection reverse
     if (state == NAVIGATE && input_state->reverse)
         SDL_RenderCopyEx(renderer, ship->projection->texture, &ship->projection->reverse_img_rect, &ship->projection->rect, ship->projection->angle, &ship->projection->rotation_pt, SDL_FLIP_NONE);
-}
-
-/**
- * Determines if a relative position (x,y) is within the bounds of the camera.
- *
- * @param camera A pointer to the Camera object.
- * @param x The x-coordinate of the position relative to the camera.
- * @param y The y-coordinate of the position relative to the camera.
- *
- * @return True if the position is within the camera bounds, false otherwise.
- */
-bool gfx_relative_position_in_camera(const Camera *camera, int x, int y)
-{
-    return x >= 0 && x < camera->w && y >= 0 && y < camera->h;
 }
 
 /**

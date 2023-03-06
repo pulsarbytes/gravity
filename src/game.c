@@ -104,7 +104,7 @@ Ship game_create_ship(int radius, Point position, long double scale)
  */
 static void game_draw_ship(GameState *game_state, const InputState *input_state, const NavigationState *nav_state, Ship *ship, const Camera *camera)
 {
-    if (gfx_object_in_camera(camera, ship->position.x, ship->position.y, ship->radius, game_state->game_scale))
+    if (gfx_is_object_in_camera(camera, ship->position.x, ship->position.y, ship->radius, game_state->game_scale))
     {
         SDL_RenderCopyEx(renderer, ship->texture, &ship->main_img_rect, &ship->rect, ship->angle, &ship->rotation_pt, SDL_FLIP_NONE);
     }
@@ -150,6 +150,8 @@ void game_reset(GameState *game_state, InputState *input_state, GameEvents *game
     game_state->galaxy_region_size = GALAXY_REGION_SIZE;
 
     // InputState
+    input_state->mouse_x = 0;
+    input_state->mouse_y = 0;
     input_state->left = OFF;
     input_state->right = OFF;
     input_state->up = OFF;
@@ -1021,7 +1023,7 @@ void game_run_universe_state(GameState *game_state, InputState *input_state, Gam
 
                 while (entry != NULL)
                 {
-                    galaxies_draw_galaxy(nav_state, entry->galaxy, camera, game_state->state, game_state->game_scale);
+                    galaxies_draw_galaxy(input_state, nav_state, entry->galaxy, camera, game_state->state, game_state->game_scale);
                     entry = entry->next;
                 }
             }

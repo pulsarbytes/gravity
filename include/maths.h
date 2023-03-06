@@ -9,9 +9,10 @@ bool maths_line_intersects_camera(const Camera *, double x1, double y1, double x
 uint64_t maths_hash_position_to_index(Point, int modulo, int entity_type);
 uint64_t maths_hash_position_to_uint64(Point);
 uint64_t maths_hash_position_to_uint64_2(Point);
-bool maths_point_in_rectanle(Point, Point rect[]);
+bool maths_is_point_in_circle(Point, Point, int radius);
+bool maths_is_point_in_rectangle(Point, Point rect[]);
 
 // External function prototypes
-bool gfx_relative_position_in_camera(const Camera *, int x, int y);
+bool gfx_is_relative_position_in_camera(const Camera *, int x, int y);
 
 #endif
