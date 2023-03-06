@@ -40,12 +40,56 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
             // If left mouse button is pressed, record the initial mouse position
             if (event.button.button == SDL_BUTTON_LEFT)
             {
-                mouseDownPos.x = event.button.x;
-                mouseDownPos.y = event.button.y;
+                if (game_state->state == UNIVERSE || game_state->state == MAP)
+                {
+                    mouseDownPos.x = event.button.x;
+                    mouseDownPos.y = event.button.y;
+                }
+                else if (game_state->state == MENU)
+                {
+                    int mouse_x = event.button.x;
+                    int mouse_y = event.button.y;
+
+                    for (int i = 0; i < MENU_BUTTON_COUNT; i++)
+                    {
+                        if (!game_state->menu[i].disabled &&
+                            mouse_x >= game_state->menu[i].rect.x &&
+                            mouse_x <= game_state->menu[i].rect.x + game_state->menu[i].rect.w &&
+                            mouse_y >= game_state->menu[i].rect.y &&
+                            mouse_y <= game_state->menu[i].rect.y + game_state->menu[i].rect.h)
+                        {
+                            input_state->selected_button = i;
+
+                            if (game_state->menu[i].state == RESUME)
+                                game_change_state(game_state, game_events, save_state);
+                            else
+                                game_change_state(game_state, game_events, game_state->menu[i].state);
+                            break;
+                        }
+                    }
+                }
             }
             break;
         case SDL_MOUSEMOTION:
-            if (game_state->state == MAP || game_state->state == UNIVERSE)
+            if (game_state->state == MENU)
+            {
+                int mouse_x = event.motion.x;
+                int mouse_y = event.motion.y;
+
+                for (int i = 0; i < MENU_BUTTON_COUNT; i++)
+                {
+                    if (!game_state->menu[i].disabled &&
+                        mouse_x >= game_state->menu[i].rect.x &&
+                        mouse_x <= game_state->menu[i].rect.x + game_state->menu[i].rect.w &&
+                        mouse_y >= game_state->menu[i].rect.y &&
+                        mouse_y <= game_state->menu[i].rect.y + game_state->menu[i].rect.h)
+                    {
+                        input_state->selected_button = i;
+                        break;
+                    }
+                }
+            }
+            else if (game_state->state == MAP || game_state->state == UNIVERSE)
             {
                 int mouse_x = event.motion.x;
                 int mouse_y = event.motion.y;
@@ -278,7 +322,7 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
                 input_state->right = ON;
                 break;
             case SDL_SCANCODE_UP:
-                // Scroll up / Thrust
+                // Menu up
                 if (game_state->state == MENU)
                 {
                     do
@@ -286,6 +330,7 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
                         input_state->selected_button = (input_state->selected_button + MENU_BUTTON_COUNT - 1) % MENU_BUTTON_COUNT;
                     } while (game_state->menu[input_state->selected_button].disabled);
                 }
+                // Scroll up / Thrust
                 else
                 {
                     input_state->reverse = OFF;
@@ -295,7 +340,7 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
                 }
                 break;
             case SDL_SCANCODE_DOWN:
-                // Scroll down / Reverse
+                // Menu down
                 if (game_state->state == MENU)
                 {
                     do
@@ -303,6 +348,7 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
                         input_state->selected_button = (input_state->selected_button + 1) % MENU_BUTTON_COUNT;
                     } while (game_state->menu[input_state->selected_button].disabled);
                 }
+                // Scroll down / Reverse
                 else
                 {
                     input_state->thrust = OFF;
