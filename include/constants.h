@@ -38,7 +38,6 @@
 #define SHIP_GRAVITY_ON 1
 #define PROJECTIONS_ON 1
 #define PROJECT_BODIES_ON 1
-#define SOLAR_SYSTEMS_ON 1
 #define SHOW_ORBITS 1
 #define PROJECTION_RADIUS 5       // Default: 5
 #define SHIP_PROJECTION_RADIUS 12 // Default: 12

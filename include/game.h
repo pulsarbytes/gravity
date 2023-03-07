@@ -39,6 +39,6 @@ void stars_delete_outside_region(StarEntry *stars[], double bx, double by, int r
 void stars_draw_star_system(GameState *, const InputState *, NavigationState *, CelestialBody *, const Camera *);
 void stars_generate(GameState *, GameEvents *, NavigationState *, Bstar *bstars, Ship *);
 void stars_generate_preview(NavigationState *, const Camera *, Point *, int zoom_preview, long double scale);
-void stars_update_orbital_positions(GameState *, const InputState *, NavigationState *, CelestialBody *, Ship *, int star_class);
+void stars_update_orbital_positions(GameState *, const InputState *, NavigationState *, CelestialBody *, Ship *, const Camera *, int star_class);
 
 #endif

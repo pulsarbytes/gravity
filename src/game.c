@@ -546,7 +546,7 @@ void game_run_map_state(GameState *game_state, InputState *input_state, GameEven
 
                 while (entry != NULL)
                 {
-                    stars_update_orbital_positions(game_state, input_state, nav_state, entry->star, ship, entry->star->class);
+                    stars_update_orbital_positions(game_state, input_state, nav_state, entry->star, ship, camera, entry->star->class);
                     stars_draw_star_system(game_state, input_state, nav_state, entry->star, camera);
                     entry = entry->next;
                 }
@@ -771,7 +771,7 @@ void game_run_navigate_state(GameState *game_state, InputState *input_state, Gam
 
                 while (entry != NULL)
                 {
-                    stars_update_orbital_positions(game_state, input_state, nav_state, entry->star, ship, entry->star->class);
+                    stars_update_orbital_positions(game_state, input_state, nav_state, entry->star, ship, camera, entry->star->class);
                     stars_draw_star_system(game_state, input_state, nav_state, entry->star, camera);
                     entry = entry->next;
                 }

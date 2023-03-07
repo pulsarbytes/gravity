@@ -364,7 +364,16 @@ void stars_draw_star_system(GameState *game_state, const InputState *input_state
 
         if (game_state->state == MAP)
         {
-            if (distance < body->cutoff && SOLAR_SYSTEMS_ON)
+            // Get position of mouse
+            Point mouse_position = {.x = input_state->mouse_x, .y = input_state->mouse_y};
+
+            // Get relative position of star in game_scale
+            int radius = (body->class * GALAXY_SECTION_SIZE / 2) * game_state->game_scale;
+            int x = (body->position.x - camera->x) * game_state->game_scale;
+            int y = (body->position.y - camera->y) * game_state->game_scale;
+            Point star_position = {.x = x, .y = y};
+
+            if (distance < body->cutoff || maths_is_point_in_circle(mouse_position, star_position, radius))
             {
                 // Draw planets
                 int max_planets = MAX_PLANETS;
@@ -377,11 +386,6 @@ void stars_draw_star_system(GameState *game_state, const InputState *input_state
                 if (input_state->orbits_on)
                 {
                     // Draw cutoff area circles
-                    int r = body->class * GALAXY_SECTION_SIZE / 2;
-                    int radius = r * game_state->game_scale;
-                    int x = (body->position.x - camera->x) * game_state->game_scale;
-                    int y = (body->position.y - camera->y) * game_state->game_scale;
-
                     gfx_draw_circle(renderer, camera, x, y, radius - 1, colors[COLOR_MAGENTA_40]);
                     gfx_draw_circle(renderer, camera, x, y, radius - 2, colors[COLOR_MAGENTA_40]);
                     gfx_draw_circle(renderer, camera, x, y, radius - 3, colors[COLOR_MAGENTA_40]);
@@ -390,7 +394,7 @@ void stars_draw_star_system(GameState *game_state, const InputState *input_state
         }
         else if (game_state->state == NAVIGATE)
         {
-            if (distance < body->cutoff && SOLAR_SYSTEMS_ON)
+            if (distance < body->cutoff)
             {
                 // Draw planets
                 int max_planets = MAX_PLANETS;
@@ -1317,7 +1321,7 @@ int stars_size_class(float distance)
  *
  * @return void
  */
-void stars_update_orbital_positions(GameState *game_state, const InputState *input_state, NavigationState *nav_state, CelestialBody *body, Ship *ship, int star_class)
+void stars_update_orbital_positions(GameState *game_state, const InputState *input_state, NavigationState *nav_state, CelestialBody *body, Ship *ship, const Camera *camera, int star_class)
 {
     double distance;
     Point position;
@@ -1373,7 +1377,7 @@ void stars_update_orbital_positions(GameState *game_state, const InputState *inp
 
         for (int i = 0; i < max_planets && body->planets[i] != NULL; i++)
         {
-            stars_update_orbital_positions(game_state, input_state, nav_state, body->planets[i], ship, star_class);
+            stars_update_orbital_positions(game_state, input_state, nav_state, body->planets[i], ship, camera, star_class);
         }
     }
     else if (body->level == LEVEL_STAR)
@@ -1383,37 +1387,16 @@ void stars_update_orbital_positions(GameState *game_state, const InputState *inp
 
         if (game_state->state == MAP)
         {
-            if (distance < body->cutoff && SOLAR_SYSTEMS_ON)
-            {
-                // Create system
-                if (!body->initialized && SOLAR_SYSTEMS_ON)
-                {
-                    Point star_position = {.x = body->position.x, .y = body->position.y};
+            // Get position of mouse
+            Point mouse_position = {.x = input_state->mouse_x, .y = input_state->mouse_y};
 
-                    // Use a local rng
-                    pcg32_random_t rng;
+            // Get relative position of star in game_scale
+            int radius = (body->class * GALAXY_SECTION_SIZE / 2) * game_state->game_scale;
+            int x = (body->position.x - camera->x) * game_state->game_scale;
+            int y = (body->position.y - camera->y) * game_state->game_scale;
+            Point relative_star_position = {.x = x, .y = y};
 
-                    // Create rng seed by combining x,y values
-                    uint64_t seed = maths_hash_position_to_uint64(star_position);
-
-                    // Seed with a fixed constant
-                    pcg32_srandom_r(&rng, seed, nav_state->initseq);
-
-                    stars_populate_body(body, star_position, rng, game_state->game_scale);
-                }
-
-                // Update planets
-                int max_planets = MAX_PLANETS;
-
-                for (int i = 0; i < max_planets && body->planets[i] != NULL; i++)
-                {
-                    stars_update_orbital_positions(game_state, input_state, nav_state, body->planets[i], ship, star_class);
-                }
-            }
-        }
-        else if (game_state->state == NAVIGATE)
-        {
-            if (distance < body->cutoff && SOLAR_SYSTEMS_ON)
+            if (distance < body->cutoff || maths_is_point_in_circle(mouse_position, relative_star_position, radius))
             {
                 // Create system
                 if (!body->initialized)
@@ -1437,7 +1420,37 @@ void stars_update_orbital_positions(GameState *game_state, const InputState *inp
 
                 for (int i = 0; i < max_planets && body->planets[i] != NULL; i++)
                 {
-                    stars_update_orbital_positions(game_state, input_state, nav_state, body->planets[i], ship, star_class);
+                    stars_update_orbital_positions(game_state, input_state, nav_state, body->planets[i], ship, camera, star_class);
+                }
+            }
+        }
+        else if (game_state->state == NAVIGATE)
+        {
+            if (distance < body->cutoff)
+            {
+                // Create system
+                if (!body->initialized)
+                {
+                    Point star_position = {.x = body->position.x, .y = body->position.y};
+
+                    // Use a local rng
+                    pcg32_random_t rng;
+
+                    // Create rng seed by combining x,y values
+                    uint64_t seed = maths_hash_position_to_uint64(star_position);
+
+                    // Seed with a fixed constant
+                    pcg32_srandom_r(&rng, seed, nav_state->initseq);
+
+                    stars_populate_body(body, star_position, rng, game_state->game_scale);
+                }
+
+                // Update planets
+                int max_planets = MAX_PLANETS;
+
+                for (int i = 0; i < max_planets && body->planets[i] != NULL; i++)
+                {
+                    stars_update_orbital_positions(game_state, input_state, nav_state, body->planets[i], ship, camera, star_class);
                 }
             }
         }
