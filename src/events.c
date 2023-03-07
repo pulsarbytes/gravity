@@ -9,9 +9,6 @@
 #include "../include/structs.h"
 #include "../include/events.h"
 
-// Store the initial mouse position for dragging
-SDL_Point mouseDownPos = {0, 0};
-
 /**
  * The events_loop function handles the events that occur while the game is running.
  *
@@ -42,21 +39,28 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
             {
                 if (game_state->state == UNIVERSE || game_state->state == MAP)
                 {
-                    mouseDownPos.x = event.button.x;
-                    mouseDownPos.y = event.button.y;
+                    input_state->mouse_down_position.x = event.button.x;
+                    input_state->mouse_down_position.y = event.button.y;
+
+                    if (game_state->state == UNIVERSE)
+                    {
+                        // if input_state->galaxy_hover
+                        // Convert current galaxy center to camera position
+                        // Center galaxy
+                    }
                 }
                 else if (game_state->state == MENU)
                 {
-                    input_state->mouse_x = event.button.x;
-                    input_state->mouse_y = event.button.y;
+                    input_state->mouse_position.x = event.button.x;
+                    input_state->mouse_position.y = event.button.y;
 
                     for (int i = 0; i < MENU_BUTTON_COUNT; i++)
                     {
                         if (!game_state->menu[i].disabled &&
-                            input_state->mouse_x >= game_state->menu[i].rect.x &&
-                            input_state->mouse_x <= game_state->menu[i].rect.x + game_state->menu[i].rect.w &&
-                            input_state->mouse_y >= game_state->menu[i].rect.y &&
-                            input_state->mouse_y <= game_state->menu[i].rect.y + game_state->menu[i].rect.h)
+                            input_state->mouse_position.x >= game_state->menu[i].rect.x &&
+                            input_state->mouse_position.x <= game_state->menu[i].rect.x + game_state->menu[i].rect.w &&
+                            input_state->mouse_position.y >= game_state->menu[i].rect.y &&
+                            input_state->mouse_position.y <= game_state->menu[i].rect.y + game_state->menu[i].rect.h)
                         {
                             input_state->selected_button = i;
 
@@ -73,20 +77,27 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
         case SDL_MOUSEMOTION:
             if (game_state->state == MENU)
             {
-                input_state->mouse_x = event.motion.x;
-                input_state->mouse_y = event.motion.y;
+                input_state->mouse_position.x = event.motion.x;
+                input_state->mouse_position.y = event.motion.y;
             }
             else if (game_state->state == MAP || game_state->state == UNIVERSE)
             {
-                input_state->mouse_x = event.motion.x;
-                input_state->mouse_y = event.motion.y;
+                input_state->mouse_position.x = event.motion.x;
+                input_state->mouse_position.y = event.motion.y;
+
+                if (game_state->state == UNIVERSE)
+                {
+                    // if input_state->galaxy_hover
+                    // show current galaxy info
+                    // printf("\n %d", input_state->galaxy_hover);
+                }
 
                 // If left mouse button is held down, update the position
                 if (event.motion.state & SDL_BUTTON_LMASK)
                 {
                     // Calculate the difference between the current mouse position and the initial mouse position
-                    int delta_x = input_state->mouse_x - mouseDownPos.x;
-                    int delta_y = input_state->mouse_y - mouseDownPos.y;
+                    int delta_x = input_state->mouse_position.x - input_state->mouse_down_position.x;
+                    int delta_y = input_state->mouse_position.y - input_state->mouse_down_position.y;
 
                     if (game_state->state == UNIVERSE)
                     {
@@ -114,13 +125,13 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
                     }
 
                     // Update the initial mouse position to the current mouse position for the next iteration
-                    mouseDownPos.x = input_state->mouse_x;
-                    mouseDownPos.y = input_state->mouse_y;
+                    input_state->mouse_down_position.x = input_state->mouse_position.x;
+                    input_state->mouse_down_position.y = input_state->mouse_position.y;
                 }
                 else
                 {
                     // Scroll left
-                    if (input_state->mouse_x < MOUSE_SCROLL_DISTANCE)
+                    if (input_state->mouse_position.x < MOUSE_SCROLL_DISTANCE)
                     {
                         input_state->right = OFF;
                         input_state->left = ON;
@@ -129,7 +140,7 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
                         input_state->left = OFF;
 
                     // Scroll right
-                    if (input_state->mouse_x > camera->w - MOUSE_SCROLL_DISTANCE)
+                    if (input_state->mouse_position.x > camera->w - MOUSE_SCROLL_DISTANCE)
                     {
                         input_state->left = OFF;
                         input_state->right = ON;
@@ -138,7 +149,7 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
                         input_state->right = OFF;
 
                     // Scroll up
-                    if (input_state->mouse_y < MOUSE_SCROLL_DISTANCE)
+                    if (input_state->mouse_position.y < MOUSE_SCROLL_DISTANCE)
                     {
                         input_state->down = OFF;
                         input_state->up = ON;
@@ -147,7 +158,7 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
                         input_state->up = OFF;
 
                     // Scroll down
-                    if (input_state->mouse_y > camera->h - MOUSE_SCROLL_DISTANCE)
+                    if (input_state->mouse_position.y > camera->h - MOUSE_SCROLL_DISTANCE)
                     {
                         input_state->up = OFF;
                         input_state->down = ON;
@@ -312,8 +323,8 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
                 // Menu up
                 if (game_state->state == MENU)
                 {
-                    input_state->mouse_x = 0;
-                    input_state->mouse_y = 0;
+                    input_state->mouse_position.x = 0;
+                    input_state->mouse_position.y = 0;
 
                     do
                     {
@@ -333,8 +344,8 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
                 // Menu down
                 if (game_state->state == MENU)
                 {
-                    input_state->mouse_x = 0;
-                    input_state->mouse_y = 0;
+                    input_state->mouse_position.x = 0;
+                    input_state->mouse_position.y = 0;
 
                     do
                     {

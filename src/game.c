@@ -150,8 +150,10 @@ void game_reset(GameState *game_state, InputState *input_state, GameEvents *game
     game_state->galaxy_region_size = GALAXY_REGION_SIZE;
 
     // InputState
-    input_state->mouse_x = 0;
-    input_state->mouse_y = 0;
+    input_state->mouse_position.x = 0;
+    input_state->mouse_position.y = 0;
+    input_state->mouse_down_position.x = 0;
+    input_state->mouse_down_position.y = 0;
     input_state->left = OFF;
     input_state->right = OFF;
     input_state->up = OFF;
@@ -165,6 +167,7 @@ void game_reset(GameState *game_state, InputState *input_state, GameEvents *game
     input_state->console = ON;
     input_state->orbits_on = SHOW_ORBITS;
     input_state->selected_button = 0;
+    input_state->galaxy_hover = OFF;
 
     // GameEvents
     if (reset)
@@ -1029,6 +1032,9 @@ void game_run_universe_state(GameState *game_state, InputState *input_state, Gam
             }
         }
     }
+
+    // Check if mouse is over current galaxy
+    gfx_toggle_galaxy_hover(input_state, nav_state, camera, game_state->game_scale);
 
     // Move through map
     double rate_x = 0, rate_y = 0;

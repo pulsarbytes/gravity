@@ -160,8 +160,8 @@ typedef struct
 
 typedef struct
 {
-    int mouse_x;
-    int mouse_y;
+    Point mouse_position;
+    Point mouse_down_position;
     int left;
     int right;
     int up;
@@ -175,6 +175,7 @@ typedef struct
     int console;
     int orbits_on;
     int selected_button;
+    int galaxy_hover;
 } InputState;
 
 typedef struct

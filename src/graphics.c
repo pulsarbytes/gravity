@@ -1044,6 +1044,32 @@ void gfx_generate_menu_gstars(Galaxy *galaxy, Gstar *menustars)
 }
 
 /**
+ * Checks if the mouse is over the current galaxy and toggles the variable input_state.galaxy_hover.
+ *
+ * @param input_state A pointer to the current InputState.
+ * @param nav_state A pointer to the current NavigationState.
+ * @param camera A pointer to the current Camera object.
+ * @param scale The scaling factor applied to the camera view.
+ *
+ * @return void
+ */
+void gfx_toggle_galaxy_hover(InputState *input_state, const NavigationState *nav_state, const Camera *camera, long double scale)
+{
+    // Get relative position of current galaxy in game_scale
+    int current_cutoff = nav_state->current_galaxy->cutoff * scale * GALAXY_SCALE;
+    int current_x = (nav_state->current_galaxy->position.x - camera->x) * scale * GALAXY_SCALE;
+    int current_y = (nav_state->current_galaxy->position.y - camera->y) * scale * GALAXY_SCALE;
+
+    // Get current galaxy distance from mouse position
+    double distance = maths_distance_between_points(current_x, current_y, input_state->mouse_position.x, input_state->mouse_position.y);
+
+    if (distance > current_cutoff)
+        input_state->galaxy_hover = OFF;
+    else
+        input_state->galaxy_hover = ON;
+}
+
+/**
  * Checks if an object with a given position and radius is within the bounds of the camera.
  *
  * @param camera The camera to check against.

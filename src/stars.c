@@ -364,17 +364,33 @@ void stars_draw_star_system(GameState *game_state, const InputState *input_state
 
         if (game_state->state == MAP)
         {
-            // Get position of mouse
-            Point mouse_position = {.x = input_state->mouse_x, .y = input_state->mouse_y};
-
             // Get relative position of star in game_scale
             int radius = (body->class * GALAXY_SECTION_SIZE / 2) * game_state->game_scale;
             int x = (body->position.x - camera->x) * game_state->game_scale;
             int y = (body->position.y - camera->y) * game_state->game_scale;
             Point star_position = {.x = x, .y = y};
 
-            if (distance < body->cutoff || maths_is_point_in_circle(mouse_position, star_position, radius))
+            if (distance < body->cutoff ||
+                (maths_is_point_in_circle(input_state->mouse_position, star_position, radius) &&
+                 gfx_is_object_in_camera(camera, body->position.x, body->position.y, body->radius, game_state->game_scale)))
             {
+                // Create system
+                if (!body->initialized)
+                {
+                    Point star_position = {.x = body->position.x, .y = body->position.y};
+
+                    // Use a local rng
+                    pcg32_random_t rng;
+
+                    // Create rng seed by combining x,y values
+                    uint64_t seed = maths_hash_position_to_uint64(star_position);
+
+                    // Seed with a fixed constant
+                    pcg32_srandom_r(&rng, seed, nav_state->initseq);
+
+                    stars_populate_body(body, star_position, rng, game_state->game_scale);
+                }
+
                 // Draw planets
                 int max_planets = MAX_PLANETS;
 
@@ -1387,34 +1403,14 @@ void stars_update_orbital_positions(GameState *game_state, const InputState *inp
 
         if (game_state->state == MAP)
         {
-            // Get position of mouse
-            Point mouse_position = {.x = input_state->mouse_x, .y = input_state->mouse_y};
-
             // Get relative position of star in game_scale
             int radius = (body->class * GALAXY_SECTION_SIZE / 2) * game_state->game_scale;
             int x = (body->position.x - camera->x) * game_state->game_scale;
             int y = (body->position.y - camera->y) * game_state->game_scale;
             Point relative_star_position = {.x = x, .y = y};
 
-            if (distance < body->cutoff || maths_is_point_in_circle(mouse_position, relative_star_position, radius))
+            if (distance < body->cutoff || maths_is_point_in_circle(input_state->mouse_position, relative_star_position, radius))
             {
-                // Create system
-                if (!body->initialized)
-                {
-                    Point star_position = {.x = body->position.x, .y = body->position.y};
-
-                    // Use a local rng
-                    pcg32_random_t rng;
-
-                    // Create rng seed by combining x,y values
-                    uint64_t seed = maths_hash_position_to_uint64(star_position);
-
-                    // Seed with a fixed constant
-                    pcg32_srandom_r(&rng, seed, nav_state->initseq);
-
-                    stars_populate_body(body, star_position, rng, game_state->game_scale);
-                }
-
                 // Update planets
                 int max_planets = MAX_PLANETS;
 
