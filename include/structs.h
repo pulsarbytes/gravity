@@ -9,14 +9,14 @@ typedef struct
     SDL_Rect rect;
     SDL_Texture *text_texture;
     SDL_Rect texture_rect;
-    unsigned short disabled;
+    bool disabled;
 } MenuButton;
 
 // Struct for an info box entry
 typedef struct
 {
     char text[128];
-    int font_size;
+    unsigned short font_size;
     SDL_Rect rect;
     SDL_Texture *text_texture;
     SDL_Rect texture_rect;
@@ -65,7 +65,7 @@ typedef struct CelestialBody
     int initialized;
     char name[MAX_OBJECT_NAME];
     char *image;
-    int class;
+    unsigned short class;
     float radius;
     float cutoff;
     Point position;
@@ -79,7 +79,7 @@ typedef struct CelestialBody
     SDL_Color color;
     struct CelestialBody *planets[MAX_PLANETS_MOONS];
     struct CelestialBody *parent;
-    int level;
+    unsigned short level;
 } CelestialBody;
 
 typedef CelestialBody Planet;
@@ -99,7 +99,7 @@ typedef struct
 {
     Point position;
     unsigned short opacity;
-    unsigned short final_star;
+    bool final_star;
 } Gstar;
 
 typedef struct
@@ -113,10 +113,10 @@ typedef struct
     int total_groups; // Total groups of sections grouped by <sections_in_group>
     int total_groups_hd;
     char name[MAX_OBJECT_NAME];
-    int class;
+    unsigned short class;
     float radius;
     float cutoff;
-    int is_selected; // Whether the galaxy is selected in Universe
+    bool is_selected; // Whether the galaxy is selected in Universe
     Point position;
     SDL_Rect projection;
     SDL_Color color;
@@ -157,7 +157,7 @@ typedef struct
     Point position;
     SDL_Rect rect;
     unsigned short opacity;
-    unsigned short final_star;
+    bool final_star;
 } Bstar;
 
 typedef struct
@@ -172,40 +172,40 @@ typedef struct
 {
     Point mouse_position;
     Point mouse_down_position;
-    int mouse_drag;
-    int left;
-    int right;
-    int up;
-    int down;
-    int thrust;
-    int reverse;
-    int camera_on;
-    int stop;
-    int zoom_in;
-    int zoom_out;
-    int console;
+    bool is_mouse_dragging;
+    bool left_on;
+    bool right_on;
+    bool up_on;
+    bool down_on;
+    bool thrust_on;
+    bool reverse_on;
+    bool camera_on;
+    bool stop_on;
+    bool zoom_in;
+    bool zoom_out;
+    bool console_on;
     int orbits_on;
-    int selected_button;
-    int galaxy_hover;
+    int selected_button_index;
+    int is_hovering_galaxy;
 } InputState;
 
 typedef struct
 {
-    int stars_start;
-    int stars_preview_start;
-    int galaxies_start;
-    int game_started;
-    int map_enter;
-    int map_exit;
-    int map_center;
-    int map_switch;
-    int universe_enter;
-    int universe_exit;
-    int universe_center;
-    int universe_switch;
-    int exited_galaxy;
-    int galaxy_found;
-    int generate_bstars;
+    bool start_stars_generation;
+    bool start_stars_preview;
+    bool start_galaxies_generation;
+    bool is_game_started;
+    bool is_entering_map;
+    bool is_exiting_map;
+    bool is_centering_map;
+    bool switch_to_universe;
+    bool is_entering_universe;
+    bool is_exiting_universe;
+    bool is_centering_universe;
+    bool switch_to_map;
+    bool has_exited_galaxy;
+    bool found_galaxy;
+    bool generate_bstars;
 } GameEvents;
 
 typedef struct

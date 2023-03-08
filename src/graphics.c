@@ -279,7 +279,7 @@ void gfx_draw_menu_galaxy_cloud(const Camera *camera, Gstar *menustars)
     int i = 0;
     float scaling_factor = 0.15;
 
-    while (i < MAX_GSTARS && menustars[i].final_star == 1)
+    while (i < MAX_GSTARS && menustars[i].final_star == true)
     {
         int x, y;
 
@@ -707,7 +707,7 @@ void gfx_generate_bstars(GameEvents *game_events, NavigationState *nav_state, Bs
     {
         for (int j = 0; j < max_bstars; j++)
         {
-            bstars[j].final_star = 0;
+            bstars[j].final_star = false;
         }
     }
 
@@ -756,7 +756,7 @@ void gfx_generate_bstars(GameEvents *game_events, NavigationState *nav_state, Bs
                 // Get a color between BSTARS_MIN_OPACITY - BSTARS_MAX_OPACITY
                 star.opacity = ((rand() % (BSTARS_MAX_OPACITY + 1 - BSTARS_MIN_OPACITY)) + BSTARS_MIN_OPACITY);
 
-                star.final_star = 1;
+                star.final_star = true;
 
                 if (lazy_load)
                 {
@@ -775,7 +775,7 @@ void gfx_generate_bstars(GameEvents *game_events, NavigationState *nav_state, Bs
         }
     }
 
-    game_events->generate_bstars = OFF;
+    game_events->generate_bstars = false;
     last_star_index = 0;
     initialized_cells = 0;
 
@@ -934,7 +934,7 @@ void gfx_generate_gstars(Galaxy *galaxy, bool high_definition)
                 star.position.y = iy;
 
                 double distance = stars_nearest_center_distance(position, galaxy, initseq, GALAXY_CLOUD_DENSITY);
-                int class = stars_size_class(distance);
+                unsigned short class = stars_size_class(distance);
                 float class_opacity_max = class * (255 / 6);
                 class_opacity_max = class_opacity_max > 255 ? 255 : class_opacity_max;
                 float class_opacity_min = class_opacity_max - (255 / 6);
@@ -942,7 +942,7 @@ void gfx_generate_gstars(Galaxy *galaxy, bool high_definition)
                 star.opacity = opacity;
                 star.opacity = star.opacity < 0 ? 0 : star.opacity;
 
-                star.final_star = 1;
+                star.final_star = true;
 
                 if (high_definition)
                 {
@@ -1044,7 +1044,7 @@ void gfx_generate_menu_gstars(Galaxy *galaxy, Gstar *menustars)
                 star.position.y = iy;
 
                 double distance = stars_nearest_center_distance(position, galaxy, initseq, MENU_GALAXY_CLOUD_DENSITY);
-                int class = stars_size_class(distance);
+                unsigned short class = stars_size_class(distance);
                 float class_opacity_max = class * (255 / 6) + 20; // There are only a few Class 6 galaxies, increase max value by 20
                 class_opacity_max = class_opacity_max > 255 ? 255 : class_opacity_max;
                 float class_opacity_min = class_opacity_max - (255 / 6);
@@ -1052,7 +1052,7 @@ void gfx_generate_menu_gstars(Galaxy *galaxy, Gstar *menustars)
                 star.opacity = opacity * (1 - pow(distance_from_center / (galaxy->radius * GALAXY_SCALE), 3));
                 star.opacity = star.opacity < 0 ? 0 : star.opacity;
 
-                star.final_star = 1;
+                star.final_star = true;
                 menustars[i++] = star;
             }
         }
@@ -1060,7 +1060,7 @@ void gfx_generate_menu_gstars(Galaxy *galaxy, Gstar *menustars)
 }
 
 /**
- * Checks if the mouse is over the current galaxy and toggles the variable input_state.galaxy_hover.
+ * Checks if the mouse is over the current galaxy and toggles the variable input_state.is_hovering_galaxy.
  *
  * @param input_state A pointer to the current InputState.
  * @param nav_state A pointer to the current NavigationState.
@@ -1080,9 +1080,9 @@ void gfx_toggle_galaxy_hover(InputState *input_state, const NavigationState *nav
     double distance = maths_distance_between_points(current_x, current_y, input_state->mouse_position.x, input_state->mouse_position.y);
 
     if (distance > current_cutoff)
-        input_state->galaxy_hover = OFF;
+        input_state->is_hovering_galaxy = false;
     else
-        input_state->galaxy_hover = ON;
+        input_state->is_hovering_galaxy = true;
 }
 
 /**
@@ -1214,11 +1214,11 @@ void gfx_project_ship_on_edge(int state, const InputState *input_state, const Na
     SDL_RenderCopyEx(renderer, ship->projection->texture, &ship->projection->main_img_rect, &ship->projection->rect, ship->projection->angle, &ship->projection->rotation_pt, SDL_FLIP_NONE);
 
     // Draw projection thrust
-    if (state == NAVIGATE && input_state->thrust)
+    if (state == NAVIGATE && input_state->thrust_on)
         SDL_RenderCopyEx(renderer, ship->projection->texture, &ship->projection->thrust_img_rect, &ship->projection->rect, ship->projection->angle, &ship->projection->rotation_pt, SDL_FLIP_NONE);
 
     // Draw projection reverse
-    if (state == NAVIGATE && input_state->reverse)
+    if (state == NAVIGATE && input_state->reverse_on)
         SDL_RenderCopyEx(renderer, ship->projection->texture, &ship->projection->reverse_img_rect, &ship->projection->rect, ship->projection->angle, &ship->projection->rotation_pt, SDL_FLIP_NONE);
 }
 
@@ -1235,13 +1235,13 @@ void gfx_project_ship_on_edge(int state, const InputState *input_state, const Na
  *
  * @return void
  */
-void gfx_update_bstars_position(int state, int camera_on, const NavigationState *nav_state, Bstar *bstars, const Camera *camera, Speed speed, double distance)
+void gfx_update_bstars_position(int state, bool camera_on, const NavigationState *nav_state, Bstar *bstars, const Camera *camera, Speed speed, double distance)
 {
     int i = 0;
     int max_bstars = (int)(camera->w * camera->h * BSTARS_PER_SQUARE / BSTARS_SQUARE);
     float max_distance = 2 * nav_state->current_galaxy->radius * GALAXY_SCALE;
 
-    while (i < max_bstars && bstars[i].final_star == 1)
+    while (i < max_bstars && bstars[i].final_star == true)
     {
         if (camera_on || state == MENU)
         {
@@ -1357,7 +1357,7 @@ void gfx_update_gstars_position(Galaxy *galaxy, Point ship_position, const Camer
     // Galaxy has double size when we are at center
     float scaling_factor = (float)galaxy->class / (2 + 2 * (1 - distance / galaxy_radius));
 
-    while (i < MAX_GSTARS && galaxy->gstars_hd[i].final_star == 1)
+    while (i < MAX_GSTARS && galaxy->gstars_hd[i].final_star == true)
     {
         int x = (galaxy->gstars_hd[i].position.x / (GALAXY_SCALE * GSTARS_SCALE)) / scaling_factor + camera->w / 2 - delta_x * (camera->w / 2);
         int y = (galaxy->gstars_hd[i].position.y / (GALAXY_SCALE * GSTARS_SCALE)) / scaling_factor + camera->h / 2 - delta_y * (camera->h / 2);

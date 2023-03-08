@@ -50,7 +50,7 @@ void game_run_navigate_state(GameState *, InputState *, GameEvents *, Navigation
 void game_run_universe_state(GameState *, InputState *, GameEvents *, NavigationState *, Ship *, Camera *);
 void gfx_create_default_colors(void);
 void menu_create(GameState *, NavigationState, Gstar *menustars);
-void menu_run_menu_state(GameState *, InputState *, int game_started, const NavigationState *, Bstar *bstars, Gstar *menustars, Camera *);
+void menu_run_menu_state(GameState *, InputState *, bool is_game_started, const NavigationState *, Bstar *bstars, Gstar *menustars, Camera *);
 void sdl_cleanup(SDL_Window *);
 bool sdl_initialize(SDL_Window *);
 
@@ -138,7 +138,7 @@ int main(int argc, char *argv[])
         switch (game_state.state)
         {
         case MENU:
-            menu_run_menu_state(&game_state, &input_state, game_events.game_started, &nav_state, bstars, menustars, &camera);
+            menu_run_menu_state(&game_state, &input_state, game_events.is_game_started, &nav_state, bstars, menustars, &camera);
             break;
         case NAVIGATE:
             game_run_navigate_state(&game_state, &input_state, &game_events, &nav_state, bstars, &ship, &camera);
@@ -153,7 +153,7 @@ int main(int argc, char *argv[])
             game_reset(&game_state, &input_state, &game_events, &nav_state, bstars, &ship, &camera, true);
             break;
         default:
-            menu_run_menu_state(&game_state, &input_state, game_events.game_started, &nav_state, bstars, menustars, &camera);
+            menu_run_menu_state(&game_state, &input_state, game_events.is_game_started, &nav_state, bstars, menustars, &camera);
             break;
         }
 
@@ -167,7 +167,7 @@ int main(int argc, char *argv[])
         console_log_fps(game_state.console_entries, &fps, &last_time, &frame_count);
 
         // Render console
-        if (input_state.console && CONSOLE_ON &&
+        if (input_state.console_on && CONSOLE_ON &&
             (game_state.state == NAVIGATE || game_state.state == MAP || game_state.state == UNIVERSE))
         {
             console_render(game_state.console_entries);

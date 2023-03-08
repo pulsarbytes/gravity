@@ -3,6 +3,7 @@
  */
 
 #include <math.h>
+#include <stdbool.h>
 
 #include <SDL2/SDL.h>
 
@@ -15,7 +16,7 @@
  * Apply gravity and handle collision with a celestial body to update the state of the ship.
  *
  * @param game_state A pointer to the GameState struct that holds the current state of the game.
- * @param thrustA boolean indicating whether the ship is currently being thrust forward.
+ * @param thrust_on boolean indicating whether the ship is currently being thrust forward.
  * @param nav_state A pointer to the NavigationState struct that holds the current state of the ship's navigation.
  * @param body A pointer to the CelestialBody struct representing the celestial body that the ship is interacting with.
  * @param ship A pointer to the Ship struct representing the ship whose state is being updated.
@@ -23,7 +24,7 @@
  *
  * @return void
  */
-void phys_apply_gravity_to_ship(GameState *game_state, int thrust, NavigationState *nav_state, CelestialBody *body, Ship *ship, int star_class)
+void phys_apply_gravity_to_ship(GameState *game_state, bool thrust_on, NavigationState *nav_state, CelestialBody *body, Ship *ship, unsigned short star_class)
 {
     double delta_x = body->position.x - ship->position.x;
     double delta_y = body->position.y - ship->position.y;
@@ -109,7 +110,7 @@ void phys_apply_gravity_to_ship(GameState *game_state, int thrust, NavigationSta
         }
 
         // Apply thrust
-        if (thrust)
+        if (thrust_on)
         {
             ship->vx -= G_LAUNCH * delta_x / distance;
             ship->vy -= G_LAUNCH * delta_y / distance;

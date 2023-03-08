@@ -2,6 +2,8 @@
  * events.c
  */
 
+#include <stdbool.h>
+
 #include <SDL2/SDL.h>
 
 #include "../include/constants.h"
@@ -34,19 +36,21 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
             game_change_state(game_state, game_events, QUIT);
             break;
         case SDL_MOUSEBUTTONDOWN:
-            input_state->mouse_drag = OFF;
-            nav_state->current_galaxy->is_selected = OFF;
+            input_state->is_mouse_dragging = false;
+            nav_state->current_galaxy->is_selected = false;
 
-            // If left mouse button is pressed, record the initial mouse position
+            // Left click down
             if (event.button.button == SDL_BUTTON_LEFT)
             {
                 if (game_state->state == UNIVERSE || game_state->state == MAP)
                 {
+                    // Record the mouse click position
                     input_state->mouse_down_position.x = event.button.x;
                     input_state->mouse_down_position.y = event.button.y;
                 }
                 else if (game_state->state == MENU)
                 {
+                    // Select menu button
                     input_state->mouse_position.x = event.button.x;
                     input_state->mouse_position.y = event.button.y;
 
@@ -58,7 +62,7 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
                             input_state->mouse_position.y >= game_state->menu[i].rect.y &&
                             input_state->mouse_position.y <= game_state->menu[i].rect.y + game_state->menu[i].rect.h)
                         {
-                            input_state->selected_button = i;
+                            input_state->selected_button_index = i;
 
                             if (game_state->menu[i].state == RESUME)
                                 game_change_state(game_state, game_events, save_state);
@@ -71,15 +75,17 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
             }
             break;
         case SDL_MOUSEBUTTONUP:
-            if (!input_state->mouse_drag && input_state->mouse_down_position.x == event.button.x && input_state->mouse_down_position.y == event.button.y)
+            if (!input_state->is_mouse_dragging && input_state->mouse_down_position.x == event.button.x && input_state->mouse_down_position.y == event.button.y)
             {
-                nav_state->current_galaxy->is_selected = OFF;
+                nav_state->current_galaxy->is_selected = false;
 
+                // Left click up
                 if (event.button.button == SDL_BUTTON_LEFT)
                 {
+                    // Center galaxy
                     if (game_state->state == UNIVERSE)
                     {
-                        if (input_state->galaxy_hover)
+                        if (input_state->is_hovering_galaxy)
                         {
                             // Convert current galaxy center to relative position (game_scale)
                             double x = (nav_state->current_galaxy->position.x - camera->x) * game_state->game_scale * GALAXY_SCALE;
@@ -118,7 +124,7 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
                                 nav_state->universe_offset.y -= delta_y / (game_state->game_scale * GALAXY_SCALE);
 
                                 // Set galaxy as selected
-                                nav_state->current_galaxy->is_selected = ON;
+                                nav_state->current_galaxy->is_selected = true;
 
                                 game_state->game_scale = zoom_universe / GALAXY_SCALE;
                             }
@@ -141,7 +147,7 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
                 // If left mouse button is held down, update the position
                 if (event.motion.state & SDL_BUTTON_LMASK)
                 {
-                    input_state->mouse_drag = ON;
+                    input_state->is_mouse_dragging = true;
 
                     // Calculate the difference between the current mouse position and the initial mouse position
                     int delta_x = input_state->mouse_position.x - input_state->mouse_down_position.x;
@@ -150,7 +156,7 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
                     if (game_state->state == UNIVERSE)
                     {
                         // Trigger star generation
-                        game_events->stars_preview_start = ON;
+                        game_events->start_stars_preview = true;
 
                         // Calculate drag speed
                         double speed_universe_step = 10000;
@@ -174,42 +180,42 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
                     // Scroll left
                     if (input_state->mouse_position.x < MOUSE_SCROLL_DISTANCE)
                     {
-                        input_state->right = OFF;
-                        input_state->left = ON;
-                        nav_state->current_galaxy->is_selected = OFF;
+                        input_state->right_on = false;
+                        input_state->left_on = true;
+                        nav_state->current_galaxy->is_selected = false;
                     }
                     else
-                        input_state->left = OFF;
+                        input_state->left_on = false;
 
                     // Scroll right
                     if (input_state->mouse_position.x > camera->w - MOUSE_SCROLL_DISTANCE)
                     {
-                        input_state->left = OFF;
-                        input_state->right = ON;
-                        nav_state->current_galaxy->is_selected = OFF;
+                        input_state->left_on = false;
+                        input_state->right_on = true;
+                        nav_state->current_galaxy->is_selected = false;
                     }
                     else
-                        input_state->right = OFF;
+                        input_state->right_on = false;
 
                     // Scroll up
                     if (input_state->mouse_position.y < MOUSE_SCROLL_DISTANCE)
                     {
-                        input_state->down = OFF;
-                        input_state->up = ON;
-                        nav_state->current_galaxy->is_selected = OFF;
+                        input_state->down_on = false;
+                        input_state->up_on = true;
+                        nav_state->current_galaxy->is_selected = false;
                     }
                     else
-                        input_state->up = OFF;
+                        input_state->up_on = false;
 
                     // Scroll down
                     if (input_state->mouse_position.y > camera->h - MOUSE_SCROLL_DISTANCE)
                     {
-                        input_state->up = OFF;
-                        input_state->down = ON;
-                        nav_state->current_galaxy->is_selected = OFF;
+                        input_state->up_on = false;
+                        input_state->down_on = true;
+                        nav_state->current_galaxy->is_selected = false;
                     }
                     else
-                        input_state->down = OFF;
+                        input_state->down_on = false;
                 }
             }
             break;
@@ -233,8 +239,8 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
             if (event.wheel.y > 0)
             {
                 // Zoom in
-                input_state->zoom_in = ON;
-                input_state->zoom_out = OFF;
+                input_state->zoom_in = true;
+                input_state->zoom_out = false;
 
                 if (game_state->state == UNIVERSE)
                 {
@@ -256,8 +262,8 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
             else if (event.wheel.y < 0)
             {
                 // Zoom out
-                input_state->zoom_in = OFF;
-                input_state->zoom_out = ON;
+                input_state->zoom_in = false;
+                input_state->zoom_out = true;
 
                 if (game_state->state == UNIVERSE)
                 {
@@ -304,21 +310,21 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
                 if (game_state->state == NAVIGATE)
                     input_state->camera_on = !input_state->camera_on;
                 else if (game_state->state == MAP || game_state->state == UNIVERSE)
-                    input_state->camera_on = ON;
+                    input_state->camera_on = true;
                 break;
             case SDL_SCANCODE_K:
                 // Toggle console
-                input_state->console = !input_state->console;
+                input_state->console_on = !input_state->console_on;
                 break;
             case SDL_SCANCODE_M:
                 // Enter Map
                 if (game_state->state == UNIVERSE)
-                    game_events->universe_exit = ON;
+                    game_events->is_exiting_universe = true;
                 if (game_state->state == NAVIGATE || game_state->state == UNIVERSE)
                 {
                     game_change_state(game_state, game_events, MAP);
-                    game_events->map_enter = ON;
-                    input_state->camera_on = ON;
+                    game_events->is_entering_map = true;
+                    input_state->camera_on = true;
                 }
                 break;
             case SDL_SCANCODE_N:
@@ -326,12 +332,12 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
                 if (game_state->state == MAP)
                 {
                     game_change_state(game_state, game_events, NAVIGATE);
-                    game_events->map_exit = ON;
+                    game_events->is_exiting_map = true;
                 }
                 else if (game_state->state == UNIVERSE)
                 {
                     game_change_state(game_state, game_events, NAVIGATE);
-                    game_events->universe_exit = ON;
+                    game_events->is_exiting_universe = true;
                 }
                 break;
             case SDL_SCANCODE_O:
@@ -341,28 +347,28 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
             case SDL_SCANCODE_S:
                 // Stop ship
                 if (game_state->state == NAVIGATE)
-                    input_state->stop = ON;
+                    input_state->stop_on = true;
                 break;
             case SDL_SCANCODE_U:
                 // Enter Universe
                 if (game_state->state == MAP)
-                    game_events->map_exit = ON;
+                    game_events->is_exiting_map = true;
                 if (game_state->state == NAVIGATE || game_state->state == MAP)
                 {
                     game_change_state(game_state, game_events, UNIVERSE);
-                    game_events->universe_enter = ON;
-                    input_state->camera_on = ON;
+                    game_events->is_entering_universe = true;
+                    input_state->camera_on = true;
                 }
                 break;
             case SDL_SCANCODE_LEFT:
                 // Scroll left / Rotate left
-                input_state->right = OFF;
-                input_state->left = ON;
+                input_state->right_on = false;
+                input_state->left_on = true;
                 break;
             case SDL_SCANCODE_RIGHT:
                 // Scroll right / Rotate right
-                input_state->left = OFF;
-                input_state->right = ON;
+                input_state->left_on = false;
+                input_state->right_on = true;
                 break;
             case SDL_SCANCODE_UP:
                 // Menu up
@@ -373,16 +379,16 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
 
                     do
                     {
-                        input_state->selected_button = (input_state->selected_button + MENU_BUTTON_COUNT - 1) % MENU_BUTTON_COUNT;
-                    } while (game_state->menu[input_state->selected_button].disabled);
+                        input_state->selected_button_index = (input_state->selected_button_index + MENU_BUTTON_COUNT - 1) % MENU_BUTTON_COUNT;
+                    } while (game_state->menu[input_state->selected_button_index].disabled);
                 }
                 // Scroll up / Thrust
                 else
                 {
-                    input_state->reverse = OFF;
-                    input_state->down = OFF;
-                    input_state->thrust = ON;
-                    input_state->up = ON;
+                    input_state->reverse_on = false;
+                    input_state->down_on = false;
+                    input_state->thrust_on = true;
+                    input_state->up_on = true;
                 }
                 break;
             case SDL_SCANCODE_DOWN:
@@ -394,34 +400,34 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
 
                     do
                     {
-                        input_state->selected_button = (input_state->selected_button + 1) % MENU_BUTTON_COUNT;
-                    } while (game_state->menu[input_state->selected_button].disabled);
+                        input_state->selected_button_index = (input_state->selected_button_index + 1) % MENU_BUTTON_COUNT;
+                    } while (game_state->menu[input_state->selected_button_index].disabled);
                 }
                 // Scroll down / Reverse
                 else
                 {
-                    input_state->thrust = OFF;
-                    input_state->up = OFF;
-                    input_state->reverse = ON;
-                    input_state->down = ON;
+                    input_state->thrust_on = false;
+                    input_state->up_on = false;
+                    input_state->reverse_on = true;
+                    input_state->down_on = true;
                 }
                 break;
             case SDL_SCANCODE_RETURN:
                 // Select menu button
                 if (game_state->state == MENU)
                 {
-                    if (game_state->menu[input_state->selected_button].state == RESUME)
+                    if (game_state->menu[input_state->selected_button_index].state == RESUME)
                         game_change_state(game_state, game_events, save_state);
                     else
-                        game_change_state(game_state, game_events, game_state->menu[input_state->selected_button].state);
+                        game_change_state(game_state, game_events, game_state->menu[input_state->selected_button_index].state);
                 }
                 break;
             case SDL_SCANCODE_SPACE:
                 // Center Map / Center Universe
                 if (game_state->state == MAP)
-                    game_events->map_center = ON;
+                    game_events->is_centering_map = true;
                 else if (game_state->state == UNIVERSE)
-                    game_events->universe_center = ON;
+                    game_events->is_centering_universe = true;
                 break;
             case SDL_SCANCODE_ESCAPE:
                 // Toggle Menu
@@ -430,18 +436,18 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
                     save_state = game_state->state;
                     game_change_state(game_state, game_events, MENU);
                 }
-                else if (game_state->state == MENU && game_events->game_started)
+                else if (game_state->state == MENU && game_events->is_game_started)
                     game_change_state(game_state, game_events, save_state);
                 break;
             case SDL_SCANCODE_LEFTBRACKET:
                 // Zoom out
-                input_state->zoom_in = OFF;
-                input_state->zoom_out = ON;
+                input_state->zoom_in = false;
+                input_state->zoom_out = true;
                 break;
             case SDL_SCANCODE_RIGHTBRACKET:
                 // Zoom in
-                input_state->zoom_in = ON;
-                input_state->zoom_out = OFF;
+                input_state->zoom_in = true;
+                input_state->zoom_out = false;
                 break;
             default:
                 break;
@@ -451,27 +457,27 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
             switch (event.key.keysym.scancode)
             {
             case SDL_SCANCODE_S:
-                input_state->stop = OFF;
+                input_state->stop_on = false;
                 break;
             case SDL_SCANCODE_LEFT:
-                input_state->left = OFF;
+                input_state->left_on = false;
                 break;
             case SDL_SCANCODE_RIGHT:
-                input_state->right = OFF;
+                input_state->right_on = false;
                 break;
             case SDL_SCANCODE_UP:
-                input_state->thrust = OFF;
-                input_state->up = OFF;
+                input_state->thrust_on = false;
+                input_state->up_on = false;
                 break;
             case SDL_SCANCODE_DOWN:
-                input_state->reverse = OFF;
-                input_state->down = OFF;
+                input_state->reverse_on = false;
+                input_state->down_on = false;
                 break;
             case SDL_SCANCODE_LEFTBRACKET:
-                input_state->zoom_out = OFF;
+                input_state->zoom_out = false;
                 break;
             case SDL_SCANCODE_RIGHTBRACKET:
-                input_state->zoom_in = OFF;
+                input_state->zoom_in = false;
                 break;
             default:
                 break;

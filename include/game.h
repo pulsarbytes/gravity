@@ -28,7 +28,7 @@ bool gfx_is_object_in_camera(const Camera *, double x, double y, float radius, l
 void gfx_project_galaxy_on_edge(int state, const NavigationState *, Galaxy *, const Camera *, long double scale);
 void gfx_project_ship_on_edge(int state, const InputState *, const NavigationState *, Ship *, const Camera *, long double scale);
 void gfx_toggle_galaxy_hover(InputState *, const NavigationState *, const Camera *, long double scale);
-void gfx_update_bstars_position(int state, int camera_on, const NavigationState *, Bstar *bstars, const Camera *, Speed speed, double distance);
+void gfx_update_bstars_position(int state, bool camera_on, const NavigationState *, Bstar *bstars, const Camera *, Speed speed, double distance);
 void gfx_update_camera(Camera *, Point, long double scale);
 void gfx_update_gstars_position(Galaxy *, Point, const Camera *, double distance, double limit);
 void gfx_zoom_star_system(CelestialBody *, long double scale);
@@ -41,6 +41,6 @@ void stars_delete_outside_region(StarEntry *stars[], double bx, double by, int r
 void stars_draw_star_system(GameState *, const InputState *, NavigationState *, CelestialBody *, const Camera *);
 void stars_generate(GameState *, GameEvents *, NavigationState *, Bstar *bstars, Ship *);
 void stars_generate_preview(NavigationState *, const Camera *, Point *, int zoom_preview, long double scale);
-void stars_update_orbital_positions(GameState *, const InputState *, NavigationState *, CelestialBody *, Ship *, const Camera *, int star_class);
+void stars_update_orbital_positions(GameState *, const InputState *, NavigationState *, CelestialBody *, Ship *, const Camera *, unsigned short star_class);
 
 #endif

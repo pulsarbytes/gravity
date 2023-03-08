@@ -26,7 +26,7 @@ static Galaxy *galaxies_create_galaxy(Point);
 static void galaxies_delete_entry(GalaxyEntry *galaxies[], Point);
 static bool galaxies_entry_exists(GalaxyEntry *galaxies[], Point);
 static double galaxies_nearest_center_distance(Point);
-static int galaxies_size_class(float distance);
+static unsigned short galaxies_size_class(float distance);
 
 /**
  * Adds a new entry to the galaxy hash table at the given position.
@@ -92,7 +92,7 @@ static Galaxy *galaxies_create_galaxy(Point position)
     // Find distance to nearest galaxy center
     double distance = galaxies_nearest_center_distance(position);
 
-    int class = galaxies_size_class(distance);
+    unsigned short class = galaxies_size_class(distance);
 
     // Use a local rng
     pcg32_random_t rng;
@@ -154,7 +154,7 @@ static Galaxy *galaxies_create_galaxy(Point position)
     galaxy->class = galaxies_size_class(distance);
     galaxy->radius = radius;
     galaxy->cutoff = UNIVERSE_SECTION_SIZE * class / 2;
-    galaxy->is_selected = OFF;
+    galaxy->is_selected = false;
     galaxy->position.x = position.x;
     galaxy->position.y = position.y;
     galaxy->color.r = colors[COLOR_WHITE_255].r;
@@ -163,8 +163,8 @@ static Galaxy *galaxies_create_galaxy(Point position)
 
     for (int i = 0; i < MAX_GSTARS; i++)
     {
-        galaxy->gstars[i].final_star = 0;
-        galaxy->gstars_hd[i].final_star = 0;
+        galaxy->gstars[i].final_star = false;
+        galaxy->gstars_hd[i].final_star = false;
     }
 
     return galaxy;
@@ -461,7 +461,7 @@ void galaxies_generate(GameEvents *game_events, NavigationState *nav_state, Poin
     double by = maths_get_nearest_section_line(offset.y, UNIVERSE_SECTION_SIZE);
 
     // Check if this is the first time calling this function
-    if (!game_events->galaxies_start)
+    if (!game_events->start_galaxies_generation)
     {
         // Check whether nearest section lines have changed
         if (bx == nav_state->universe_cross_line.x && by == nav_state->universe_cross_line.y)
@@ -533,7 +533,7 @@ void galaxies_generate(GameEvents *game_events, NavigationState *nav_state, Poin
             Point position = {.x = nav_state->galaxies[s]->x, .y = nav_state->galaxies[s]->y};
 
             // Skip current galaxy, otherwise we lose track of where we are
-            if (!game_events->galaxies_start)
+            if (!game_events->start_galaxies_generation)
             {
                 if (position.x == nav_state->current_galaxy->position.x && position.y == nav_state->current_galaxy->position.y)
                     continue;
@@ -550,7 +550,7 @@ void galaxies_generate(GameEvents *game_events, NavigationState *nav_state, Poin
     }
 
     // First galaxy generation complete
-    game_events->galaxies_start = OFF;
+    game_events->start_galaxies_generation = false;
 }
 
 /**
@@ -704,7 +704,7 @@ Galaxy *galaxies_nearest_circumference(const NavigationState *nav_state, Point p
  *
  * @return The size class of the galaxy (GALAXY_CLASS_1 to GALAXY_CLASS_6).
  */
-static int galaxies_size_class(float distance)
+static unsigned short galaxies_size_class(float distance)
 {
     if (distance < 3 * UNIVERSE_SECTION_SIZE)
         return GALAXY_CLASS_1;

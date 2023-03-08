@@ -32,7 +32,6 @@
 #define BSTARS_ON 1      // Default: 1
 #define SPEED_LINES_ON 1 // Default: 1
 #define GSTARS_ON 1      // Default: 1
-#define CAMERA_ON 1
 #define CONSOLE_ON 1
 #define COLLISIONS_ON 1
 #define SHIP_GRAVITY_ON 1

@@ -54,12 +54,6 @@ enum
 
 enum
 {
-    OFF,
-    ON
-};
-
-enum
-{
     CONSOLE_FPS,
     CONSOLE_X,
     CONSOLE_Y,

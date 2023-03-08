@@ -20,7 +20,7 @@ void gfx_project_body_on_edge(const GameState *, const NavigationState *, Celest
 void gfx_project_galaxy_on_edge(int state, const NavigationState *, Galaxy *, const Camera *, long double scale);
 void gfx_project_ship_on_edge(int state, const InputState *, const NavigationState *, Ship *, const Camera *, long double scale);
 void gfx_toggle_galaxy_hover(InputState *, const NavigationState *, const Camera *, long double scale);
-void gfx_update_bstars_position(int state, int camera_on, const NavigationState *, Bstar *bstars, const Camera *, Speed, double distance);
+void gfx_update_bstars_position(int state, bool camera_on, const NavigationState *, Bstar *bstars, const Camera *, Speed, double distance);
 void gfx_update_camera(Camera *, Point, long double scale);
 void gfx_update_gstars_position(Galaxy *, Point, const Camera *, double distance, double limit);
 void gfx_zoom_star_system(CelestialBody *, long double scale);
@@ -32,6 +32,6 @@ uint64_t maths_hash_position_to_uint64(Point);
 uint64_t maths_hash_position_to_uint64_2(Point);
 bool maths_line_intersects_camera(const Camera *, double x1, double y1, double x2, double y2);
 double stars_nearest_center_distance(Point, Galaxy *, uint64_t initseq, int galaxy_density);
-int stars_size_class(float distance);
+unsigned short stars_size_class(float distance);
 
 #endif

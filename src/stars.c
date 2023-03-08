@@ -117,7 +117,7 @@ static Star *stars_create_star(const NavigationState *nav_state, Point position,
     double distance = stars_nearest_center_distance(position, nav_state->current_galaxy, nav_state->initseq, GALAXY_DENSITY);
 
     // Get star class
-    int class = stars_size_class(distance);
+    unsigned short class = stars_size_class(distance);
 
     // Use a local rng
     pcg32_random_t rng;
@@ -514,7 +514,7 @@ void stars_generate(GameState *game_state, GameEvents *game_events, NavigationSt
     double by = maths_get_nearest_section_line(offset.y, GALAXY_SECTION_SIZE);
 
     // Check if this is the first time calling this function
-    if (!game_events->stars_start)
+    if (!game_events->start_stars_generation)
     {
         // Check whether nearest section lines have changed
         if (bx == nav_state->cross_line.x && by == nav_state->cross_line.y)
@@ -531,7 +531,7 @@ void stars_generate(GameState *game_state, GameEvents *game_events, NavigationSt
     // If exited galaxy, check for closest galaxy, including current galaxy
     if (sqrt(offset.x * offset.x + offset.y * offset.y) > nav_state->current_galaxy->cutoff * GALAXY_SCALE)
     {
-        game_events->exited_galaxy = ON;
+        game_events->has_exited_galaxy = true;
 
         // Convert offset to universe position
         Point universe_position;
@@ -563,7 +563,7 @@ void stars_generate(GameState *game_state, GameEvents *game_events, NavigationSt
             (next_galaxy->position.x != nav_state->current_galaxy->position.x ||
              next_galaxy->position.y != nav_state->current_galaxy->position.y))
         {
-            game_events->galaxy_found = ON;
+            game_events->found_galaxy = true;
 
             // Update previous_galaxy
             memcpy(nav_state->previous_galaxy, nav_state->current_galaxy, sizeof(Galaxy));
@@ -599,7 +599,7 @@ void stars_generate(GameState *game_state, GameEvents *game_events, NavigationSt
                 memcpy(nav_state->buffer_galaxy, nav_state->current_galaxy, sizeof(Galaxy));
 
                 // Create new background stars
-                game_events->generate_bstars = ON;
+                game_events->generate_bstars = true;
             }
             else if (game_state->state == MAP)
             {
@@ -628,7 +628,7 @@ void stars_generate(GameState *game_state, GameEvents *game_events, NavigationSt
         }
     }
     else
-        game_events->exited_galaxy = OFF;
+        game_events->has_exited_galaxy = false;
 
     // Define a region of galaxy_region_size * galaxy_region_size
     // bx,by are at the center of this area
@@ -695,7 +695,7 @@ void stars_generate(GameState *game_state, GameEvents *game_events, NavigationSt
     stars_delete_outside_region(nav_state->stars, bx, by, game_state->galaxy_region_size);
 
     // First star generation complete
-    game_events->stars_start = OFF;
+    game_events->start_stars_generation = false;
 }
 
 /**
@@ -814,7 +814,7 @@ void stars_generate_preview(NavigationState *nav_state, const Camera *camera, Po
     // Store previous boundaries
     static Point boundaries_minus;
     static Point boundaries_plus;
-    static int initialized = OFF;
+    static int initialized = false;
 
     // Define rect of previous boundaries
     Point rect[4];
@@ -896,7 +896,7 @@ void stars_generate_preview(NavigationState *nav_state, const Camera *camera, Po
     boundaries_minus.y = top_boundary;
     boundaries_plus.x = right_boundary;
     boundaries_plus.y = bottom_boundary;
-    initialized = ON;
+    initialized = true;
 
     // Delete stars that end up outside the region
     int region_size = sections_in_camera_x;
@@ -1306,7 +1306,7 @@ static void stars_populate_body(CelestialBody *body, Point position, pcg32_rando
  *
  * @return An integer representing the star's size class.
  */
-int stars_size_class(float distance)
+unsigned short stars_size_class(float distance)
 {
     if (distance < 2 * GALAXY_SECTION_SIZE)
         return STAR_CLASS_1;
@@ -1337,7 +1337,7 @@ int stars_size_class(float distance)
  *
  * @return void
  */
-void stars_update_orbital_positions(GameState *game_state, const InputState *input_state, NavigationState *nav_state, CelestialBody *body, Ship *ship, const Camera *camera, int star_class)
+void stars_update_orbital_positions(GameState *game_state, const InputState *input_state, NavigationState *nav_state, CelestialBody *body, Ship *ship, const Camera *camera, unsigned short star_class)
 {
     double distance;
     Point position;
@@ -1454,7 +1454,7 @@ void stars_update_orbital_positions(GameState *game_state, const InputState *inp
 
     // Update ship speed due to gravity
     if (game_state->state == NAVIGATE && SHIP_GRAVITY_ON)
-        phys_apply_gravity_to_ship(game_state, input_state->thrust, nav_state, body, ship, star_class);
+        phys_apply_gravity_to_ship(game_state, input_state->thrust_on, nav_state, body, ship, star_class);
 
     // Update velocity
     phys_update_velocity(&nav_state->velocity, ship);

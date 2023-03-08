@@ -19,7 +19,7 @@ extern SDL_Color colors[];
 
 // Static function prototypes
 static void menu_create_logo(MenuButton *logo);
-static void menu_draw_menu(GameState *, InputState *, int game_started);
+static void menu_draw_menu(GameState *, InputState *, bool is_game_started);
 static void menu_populate_menu_array(MenuButton menu[]);
 
 /**
@@ -80,11 +80,11 @@ static void menu_create_logo(MenuButton *logo)
  *
  * @param game_state A pointer to the game state struct.
  * @param input_state A pointer to the input state struct.
- * @param game_started Flag indicating if the game has started.
+ * @param is_game_started Flag indicating if the game has started.
  *
  * @return void
  */
-static void menu_draw_menu(GameState *game_state, InputState *input_state, int game_started)
+static void menu_draw_menu(GameState *game_state, InputState *input_state, bool is_game_started)
 {
     int num_buttons = 0;
 
@@ -96,27 +96,27 @@ static void menu_draw_menu(GameState *game_state, InputState *input_state, int g
             input_state->mouse_position.y >= game_state->menu[i].rect.y &&
             input_state->mouse_position.y <= game_state->menu[i].rect.y + game_state->menu[i].rect.h)
         {
-            input_state->selected_button = i;
+            input_state->selected_button_index = i;
         }
 
-        if (i == input_state->selected_button && game_state->menu[i].disabled)
+        if (i == input_state->selected_button_index && game_state->menu[i].disabled)
         {
             do
             {
-                input_state->selected_button = (input_state->selected_button + 1) % MENU_BUTTON_COUNT;
-            } while (game_state->menu[input_state->selected_button].disabled);
+                input_state->selected_button_index = (input_state->selected_button_index + 1) % MENU_BUTTON_COUNT;
+            } while (game_state->menu[input_state->selected_button_index].disabled);
         }
 
-        if (game_started && i == MENU_BUTTON_START)
+        if (is_game_started && i == MENU_BUTTON_START)
             continue;
 
-        if (!game_started && i == MENU_BUTTON_RESUME)
+        if (!is_game_started && i == MENU_BUTTON_RESUME)
             continue;
 
-        if (!game_started && i == MENU_BUTTON_NEW)
+        if (!is_game_started && i == MENU_BUTTON_NEW)
             continue;
 
-        if (i == input_state->selected_button)
+        if (i == input_state->selected_button_index)
         {
             SDL_SetRenderDrawColor(renderer, 255, 255, 255, 40);
         }
@@ -193,7 +193,7 @@ static void menu_populate_menu_array(MenuButton menu[])
  *
  * @param game_state A pointer to the current game state.
  * @param input_state A pointer to the current input state.
- * @param game_started An integer value indicating whether the game has already started.
+ * @param is_game_started A boolean indicating whether the game has already started.
  * @param nav_state A pointer to the current navigation state.
  * @param bstars A pointer to an array of background stars.
  * @param menustars A pointer to an array of menu galaxy stars.
@@ -201,7 +201,7 @@ static void menu_populate_menu_array(MenuButton menu[])
  *
  * @return void
  */
-void menu_run_menu_state(GameState *game_state, InputState *input_state, int game_started, const NavigationState *nav_state, Bstar *bstars, Gstar *menustars, Camera *camera)
+void menu_run_menu_state(GameState *game_state, InputState *input_state, bool is_game_started, const NavigationState *nav_state, Bstar *bstars, Gstar *menustars, Camera *camera)
 {
     // Draw background stars
     Speed speed = {.vx = 1000, .vy = 0};
@@ -213,7 +213,7 @@ void menu_run_menu_state(GameState *game_state, InputState *input_state, int gam
     SDL_RenderCopy(renderer, game_state->logo.text_texture, NULL, &game_state->logo.texture_rect);
 
     // Draw menu
-    menu_draw_menu(game_state, input_state, game_started);
+    menu_draw_menu(game_state, input_state, is_game_started);
 
     // Draw galaxy
     gfx_draw_menu_galaxy_cloud(camera, menustars);
