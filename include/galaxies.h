@@ -4,6 +4,7 @@
 // Function prototypes
 void galaxies_clear_table(GalaxyEntry *galaxies[]);
 void galaxies_draw_galaxy(const InputState *, NavigationState *, Galaxy *, const Camera *, int state, long double scale);
+void galaxies_draw_info_box(const Galaxy *, const Camera *);
 void galaxies_generate(GameEvents *, NavigationState *, Point);
 Galaxy *galaxies_get_entry(GalaxyEntry *galaxies[], Point);
 Galaxy *galaxies_nearest_circumference(const NavigationState *, Point, int exclude);
@@ -22,5 +23,6 @@ uint64_t maths_hash_position_to_index(Point, int modulo, int entity_type);
 uint64_t maths_hash_position_to_uint64(Point);
 uint64_t maths_hash_position_to_uint64_2(Point);
 void stars_clear_table(StarEntry *stars[]);
+void utils_add_thousand_separators(int num, char *result, size_t result_size);
 
 #endif

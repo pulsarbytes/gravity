@@ -7,6 +7,7 @@
 #include <stdbool.h>
 
 #include <SDL2/SDL.h>
+#include <SDL2/SDL_ttf.h>
 #include "../lib/pcg-c-basic-0.9/pcg_basic.h"
 
 #include "../include/constants.h"
@@ -15,6 +16,7 @@
 #include "../include/galaxies.h"
 
 // External variable definitions
+extern TTF_Font *fonts[];
 extern SDL_Renderer *renderer;
 extern SDL_Color colors[];
 
@@ -239,7 +241,10 @@ void galaxies_draw_galaxy(const InputState *input_state, NavigationState *nav_st
         // Draw cutoff circle
         gfx_draw_circle(renderer, camera, x, y, cutoff, colors[COLOR_CYAN_70]);
 
-        // Generate gstars_hd
+        // Generate gstars
+        if (!galaxy->initialized || galaxy->initialized < galaxy->total_groups)
+            gfx_generate_gstars(galaxy, false);
+
         if (!galaxy->initialized_hd || galaxy->initialized_hd < galaxy->total_groups_hd)
             gfx_generate_gstars(galaxy, true);
 
@@ -285,6 +290,123 @@ void galaxies_draw_galaxy(const InputState *input_state, NavigationState *nav_st
             if (scale / (ZOOM_UNIVERSE_MIN / GALAXY_SCALE) < 50)
                 gfx_project_galaxy_on_edge(state, nav_state, galaxy, camera, scale * GALAXY_SCALE);
         }
+    }
+}
+
+/**
+ * Draws a box on the screen that displays information about a galaxy.
+ *
+ * @param galaxy A pointer to the galaxy for which to display info.
+ * @param camera A pointer to the current Camera object.
+ *
+ * @return void
+ */
+void galaxies_draw_info_box(const Galaxy *galaxy, const Camera *camera)
+{
+    // Draw background box
+    SDL_SetRenderDrawColor(renderer, 20, 20, 20, 140);
+    int width = 360;
+    int height = 250;
+    int padding = 20;
+
+    SDL_Rect info_box_rect;
+    info_box_rect.x = camera->w - (width + padding);
+    info_box_rect.y = padding;
+    info_box_rect.w = width;
+    info_box_rect.h = height;
+
+    SDL_RenderFillRect(renderer, &info_box_rect);
+
+    // Create info array
+    InfoBoxEntry entries[GALAXY_INFO_COUNT];
+
+    char galaxy_name[128];
+    strcpy(galaxy_name, galaxy->name);
+    sprintf(entries[GALAXY_INFO_NAME].text, "%s", galaxy_name);
+    entries[GALAXY_INFO_NAME].font_size = FONT_SIZE_22;
+
+    char position_x_text[32];
+    utils_add_thousand_separators((int)galaxy->position.x, position_x_text, sizeof(position_x_text));
+    sprintf(entries[GALAXY_INFO_X].text, "Position X: %*s%s", 2, "", position_x_text);
+    entries[GALAXY_INFO_X].font_size = FONT_SIZE_15;
+
+    char position_y_text[32];
+    utils_add_thousand_separators((int)galaxy->position.y, position_y_text, sizeof(position_y_text));
+    sprintf(entries[GALAXY_INFO_Y].text, "Position Y: %*s%s", 2, "", position_y_text);
+    entries[GALAXY_INFO_Y].font_size = FONT_SIZE_15;
+
+    char class_text[32];
+    sprintf(class_text, "%d", galaxy->class);
+    sprintf(entries[GALAXY_INFO_CLASS].text, "Class: %*s%s", 7, "", class_text);
+    entries[GALAXY_INFO_CLASS].font_size = FONT_SIZE_15;
+
+    char radius_text[32];
+    utils_add_thousand_separators((int)galaxy->radius, radius_text, sizeof(radius_text));
+    sprintf(entries[GALAXY_INFO_RADIUS].text, "Radius: %*s%s", 6, "", radius_text);
+    entries[GALAXY_INFO_RADIUS].font_size = FONT_SIZE_15;
+
+    // Get stars in gstars and approximate to full scale
+    int num_stars = galaxy->last_star_index * (galaxy->sections_in_group * galaxy->sections_in_group);
+    char stars_text[32];
+    utils_add_thousand_separators(num_stars, stars_text, sizeof(stars_text));
+    sprintf(entries[GALAXY_INFO_STARS].text, "Stars: %*s%s", 7, "", stars_text);
+    entries[GALAXY_INFO_STARS].font_size = FONT_SIZE_15;
+
+    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 0);
+
+    for (int i = 0; i < GALAXY_INFO_COUNT; i++)
+    {
+        // Create a texture from the entry text
+        SDL_Surface *text_surface = TTF_RenderText_Solid(fonts[entries[i].font_size], entries[i].text, colors[COLOR_WHITE_180]);
+        SDL_Texture *text_texture = SDL_CreateTextureFromSurface(renderer, text_surface);
+        entries[i].text_texture = text_texture;
+        entries[i].texture_rect.w = text_surface->w;
+        entries[i].texture_rect.h = text_surface->h;
+
+        SDL_FreeSurface(text_surface);
+    }
+
+    // Set the position for the name entry
+    int name_height = 80;
+    int entry_height = 30;
+    int inner_padding = 40;
+    entries[GALAXY_INFO_NAME].rect.w = width;
+    entries[GALAXY_INFO_NAME].rect.h = name_height;
+    entries[GALAXY_INFO_NAME].rect.x = camera->w - (width + padding);
+    entries[GALAXY_INFO_NAME].rect.y = padding;
+
+    SDL_RenderFillRect(renderer, &entries[GALAXY_INFO_NAME].rect);
+
+    // Set the position of the text within the name entry
+    entries[GALAXY_INFO_NAME].texture_rect.x = entries[GALAXY_INFO_NAME].rect.x + inner_padding;
+    entries[GALAXY_INFO_NAME].texture_rect.y = entries[GALAXY_INFO_NAME].rect.y + (entries[GALAXY_INFO_NAME].rect.h - entries[GALAXY_INFO_NAME].texture_rect.h) / 2;
+
+    // Render the text texture onto the name entry
+    SDL_RenderCopy(renderer, entries[GALAXY_INFO_NAME].text_texture, NULL, &entries[GALAXY_INFO_NAME].texture_rect);
+
+    // Set the position for the rest of the entries
+    for (int i = 1; i < GALAXY_INFO_COUNT; i++)
+    {
+        entries[i].rect.w = width;
+        entries[i].rect.h = entry_height;
+        entries[i].rect.x = camera->w - (width + padding);
+        entries[i].rect.y = padding + name_height + (i - 1) * entry_height;
+
+        SDL_RenderFillRect(renderer, &entries[i].rect);
+
+        // Set the position of the text within the entry
+        entries[i].texture_rect.x = entries[i].rect.x + inner_padding;
+        entries[i].texture_rect.y = entries[i].rect.y + (entries[i].rect.h - entries[i].texture_rect.h) / 2;
+
+        // Render the text texture onto the entry
+        SDL_RenderCopy(renderer, entries[i].text_texture, NULL, &entries[i].texture_rect);
+    }
+
+    // Destroy the textures
+    for (int i = 0; i < GALAXY_INFO_COUNT; i++)
+    {
+        SDL_DestroyTexture(entries[i].text_texture);
+        entries[i].text_texture = NULL;
     }
 }
 

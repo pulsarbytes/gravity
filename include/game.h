@@ -17,6 +17,7 @@ void galaxies_generate(GameEvents *, NavigationState *, Point);
 Galaxy *galaxies_get_entry(GalaxyEntry *galaxies[], Point);
 Galaxy *galaxies_nearest_circumference(const NavigationState *, Point, int exclude);
 void gfx_draw_circle_approximation(SDL_Renderer *renderer, const Camera *, int x, int y, int r, SDL_Color color);
+void galaxies_draw_info_box(const Galaxy *, const Camera *);
 void gfx_draw_screen_frame(Camera *);
 void gfx_draw_section_lines(Camera *, int state, SDL_Color color, long double scale);
 void gfx_draw_speed_arc(const Ship *, const Camera *, long double scale);

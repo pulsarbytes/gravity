@@ -840,13 +840,13 @@ void game_run_navigate_state(GameState *game_state, InputState *input_state, Gam
     }
 
     // Create galaxy cloud
-    if (!nav_state->current_galaxy->initialized_hd || nav_state->current_galaxy->initialized_hd < nav_state->current_galaxy->total_groups_hd)
-        gfx_generate_gstars(nav_state->current_galaxy, true);
+    if (!nav_state->current_galaxy->initialized || nav_state->current_galaxy->initialized < nav_state->current_galaxy->total_groups)
+        gfx_generate_gstars(nav_state->current_galaxy, false);
 
     gfx_draw_screen_frame(camera);
 
     // Update velocity in console
-    console_update_entry(game_state->console_entries, V_INDEX, nav_state->velocity.magnitude);
+    console_update_entry(game_state->console_entries, CONSOLE_V, nav_state->velocity.magnitude);
 
     if (game_events->map_exit)
         game_events->map_exit = OFF;
@@ -925,7 +925,7 @@ void game_run_universe_state(GameState *game_state, InputState *input_state, Gam
         {
             double zoom_universe;
 
-            switch (nav_state->current_galaxy->class)
+            switch (nav_state->buffer_galaxy->class)
             {
             case 1:
                 zoom_universe = ZOOM_UNIVERSE * 10;
@@ -1167,6 +1167,15 @@ void game_run_universe_state(GameState *game_state, InputState *input_state, Gam
     SDL_SetRenderDrawColor(renderer, 255, 255, 255, 128);
     SDL_RenderDrawLine(renderer, (camera->w / 2) - 7, camera->h / 2, (camera->w / 2) + 7, camera->h / 2);
     SDL_RenderDrawLine(renderer, camera->w / 2, (camera->h / 2) - 7, camera->w / 2, (camera->h / 2) + 7);
+
+    // Draw galaxy info box
+    if (input_state->galaxy_hover)
+    {
+        if (!nav_state->current_galaxy->initialized || nav_state->current_galaxy->initialized < nav_state->current_galaxy->total_groups)
+            gfx_generate_gstars(nav_state->current_galaxy, false);
+
+        galaxies_draw_info_box(nav_state->current_galaxy, camera);
+    }
 
     gfx_draw_screen_frame(camera);
 

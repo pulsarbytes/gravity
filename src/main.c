@@ -161,7 +161,7 @@ int main(int argc, char *argv[])
         console_log_position(&game_state, nav_state);
 
         // Log game scale
-        console_update_entry(game_state.console_entries, SCALE_INDEX, game_state.game_scale);
+        console_update_entry(game_state.console_entries, CONSOLE_SCALE, game_state.game_scale);
 
         // Log FPS
         console_log_fps(game_state.console_entries, &fps, &last_time, &frame_count);

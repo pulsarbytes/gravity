@@ -44,9 +44,11 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
 
                     if (game_state->state == UNIVERSE)
                     {
-                        // if input_state->galaxy_hover
-                        // Convert current galaxy center to camera position
-                        // Center galaxy
+                        if (input_state->galaxy_hover)
+                        {
+                            // Convert current galaxy center to camera position
+                            // Center galaxy
+                        }
                     }
                 }
                 else if (game_state->state == MENU)
@@ -85,13 +87,6 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
                 input_state->mouse_position.x = event.motion.x;
                 input_state->mouse_position.y = event.motion.y;
 
-                if (game_state->state == UNIVERSE)
-                {
-                    // if input_state->galaxy_hover
-                    // show current galaxy info
-                    // printf("\n %d", input_state->galaxy_hover);
-                }
-
                 // If left mouse button is held down, update the position
                 if (event.motion.state & SDL_BUTTON_LMASK)
                 {
@@ -105,14 +100,7 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
                         game_events->stars_preview_start = ON;
 
                         // Calculate drag speed
-                        double speed_universe_step = 7000;
-
-                        if (game_state->game_scale >= 0.002 - epsilon)
-                            speed_universe_step = 10000;
-                        else if (game_state->game_scale >= 0.001 - epsilon)
-                            speed_universe_step = 8000;
-                        else if (game_state->game_scale >= 0.00001 - epsilon)
-                            speed_universe_step = 7000;
+                        double speed_universe_step = 10000;
 
                         // Update the position
                         nav_state->universe_offset.x -= delta_x / (game_state->game_scale * speed_universe_step);

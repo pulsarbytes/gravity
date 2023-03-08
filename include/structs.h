@@ -7,19 +7,28 @@ typedef struct
     char text[32];
     int state;
     SDL_Rect rect;
-    SDL_Texture *texture;
+    SDL_Texture *text_texture;
     SDL_Rect texture_rect;
     unsigned short disabled;
 } MenuButton;
+
+// Struct for an info box entry
+typedef struct
+{
+    char text[128];
+    int font_size;
+    SDL_Rect rect;
+    SDL_Texture *text_texture;
+    SDL_Rect texture_rect;
+} InfoBoxEntry;
 
 // Struct for a console entry
 typedef struct
 {
     char title[32];
     char value[16];
-    SDL_Surface *surface;
-    SDL_Texture *texture;
-    SDL_Rect rect;
+    SDL_Texture *text_texture;
+    SDL_Rect texture_rect;
 } ConsoleEntry;
 
 typedef struct

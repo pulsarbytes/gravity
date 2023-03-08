@@ -64,7 +64,7 @@ static void menu_create_logo(MenuButton *logo)
     // Create a texture from the text
     SDL_Surface *logo_surface = TTF_RenderText_Solid(fonts[FONT_SIZE_36], logo->text, colors[COLOR_WHITE_255]);
     SDL_Texture *logo_texture = SDL_CreateTextureFromSurface(renderer, logo_surface);
-    logo->texture = logo_texture;
+    logo->text_texture = logo_texture;
 
     // Set the position of the text within the button
     logo->texture_rect.w = logo_surface->w;
@@ -136,7 +136,7 @@ static void menu_draw_menu(GameState *game_state, InputState *input_state, int g
         game_state->menu[i].texture_rect.y = game_state->menu[i].rect.y + (game_state->menu[i].rect.h - game_state->menu[i].texture_rect.h) / 2;
 
         // Render the text texture onto the button
-        SDL_RenderCopy(renderer, game_state->menu[i].texture, NULL, &game_state->menu[i].texture_rect);
+        SDL_RenderCopy(renderer, game_state->menu[i].text_texture, NULL, &game_state->menu[i].texture_rect);
 
         num_buttons++;
     }
@@ -180,7 +180,7 @@ static void menu_populate_menu_array(MenuButton menu[])
         // Create a texture from the button text
         SDL_Surface *text_surface = TTF_RenderText_Solid(fonts[FONT_SIZE_14], menu[i].text, colors[COLOR_WHITE_255]);
         SDL_Texture *text_texture = SDL_CreateTextureFromSurface(renderer, text_surface);
-        menu[i].texture = text_texture;
+        menu[i].text_texture = text_texture;
         menu[i].texture_rect.w = text_surface->w;
         menu[i].texture_rect.h = text_surface->h;
 
@@ -210,7 +210,7 @@ void menu_run_menu_state(GameState *game_state, InputState *input_state, int gam
     // Draw logo
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
     SDL_RenderFillRect(renderer, &game_state->logo.rect);
-    SDL_RenderCopy(renderer, game_state->logo.texture, NULL, &game_state->logo.texture_rect);
+    SDL_RenderCopy(renderer, game_state->logo.text_texture, NULL, &game_state->logo.texture_rect);
 
     // Draw menu
     menu_draw_menu(game_state, input_state, game_started);
@@ -235,24 +235,24 @@ void menu_update_menu_entries(GameState *game_state)
     // Update Start button
     game_state->menu[MENU_BUTTON_START].disabled = true;
     SDL_Surface *start_surface = TTF_RenderText_Solid(fonts[FONT_SIZE_14], game_state->menu[MENU_BUTTON_START].text, colors[COLOR_WHITE_100]);
-    SDL_DestroyTexture(game_state->menu[MENU_BUTTON_START].texture);
+    SDL_DestroyTexture(game_state->menu[MENU_BUTTON_START].text_texture);
     SDL_Texture *start_texture = SDL_CreateTextureFromSurface(renderer, start_surface);
-    game_state->menu[MENU_BUTTON_START].texture = start_texture;
+    game_state->menu[MENU_BUTTON_START].text_texture = start_texture;
     SDL_FreeSurface(start_surface);
 
     // Update Resume button
     game_state->menu[MENU_BUTTON_RESUME].disabled = false;
     SDL_Surface *resume_surface = TTF_RenderText_Solid(fonts[FONT_SIZE_14], game_state->menu[MENU_BUTTON_RESUME].text, colors[COLOR_WHITE_255]);
-    SDL_DestroyTexture(game_state->menu[MENU_BUTTON_RESUME].texture);
+    SDL_DestroyTexture(game_state->menu[MENU_BUTTON_RESUME].text_texture);
     SDL_Texture *resume_texture = SDL_CreateTextureFromSurface(renderer, resume_surface);
-    game_state->menu[MENU_BUTTON_RESUME].texture = resume_texture;
+    game_state->menu[MENU_BUTTON_RESUME].text_texture = resume_texture;
     SDL_FreeSurface(resume_surface);
 
     // Update New button
     game_state->menu[MENU_BUTTON_NEW].disabled = false;
     SDL_Surface *new_surface = TTF_RenderText_Solid(fonts[FONT_SIZE_14], game_state->menu[MENU_BUTTON_NEW].text, colors[COLOR_WHITE_255]);
-    SDL_DestroyTexture(game_state->menu[MENU_BUTTON_NEW].texture);
+    SDL_DestroyTexture(game_state->menu[MENU_BUTTON_NEW].text_texture);
     SDL_Texture *new_texture = SDL_CreateTextureFromSurface(renderer, new_surface);
-    game_state->menu[MENU_BUTTON_NEW].texture = new_texture;
+    game_state->menu[MENU_BUTTON_NEW].text_texture = new_texture;
     SDL_FreeSurface(new_surface);
 }

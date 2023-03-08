@@ -1,18 +1,19 @@
 #ifndef ENUMS_H
 #define ENUMS_H
 
-// Fonts
 enum
 {
     FONT_SIZE_14,
+    FONT_SIZE_15,
+    FONT_SIZE_22,
     FONT_SIZE_36,
     FONT_COUNT
 };
 
-// Colors
 enum
 {
     COLOR_WHITE_255,
+    COLOR_WHITE_180,
     COLOR_WHITE_100,
     COLOR_ORANGE_32,
     COLOR_CYAN_70,
@@ -36,7 +37,6 @@ enum
     QUIT,
 };
 
-// Menu buttons
 enum
 {
     MENU_BUTTON_START,
@@ -58,14 +58,13 @@ enum
     ON
 };
 
-// Must be in sync with console_entries
 enum
 {
-    FPS_INDEX,
-    X_INDEX,
-    Y_INDEX,
-    V_INDEX,
-    SCALE_INDEX,
+    CONSOLE_FPS,
+    CONSOLE_X,
+    CONSOLE_Y,
+    CONSOLE_V,
+    CONSOLE_SCALE,
     CONSOLE_COUNT
 };
 
@@ -108,6 +107,17 @@ enum
     ENTITY_CELESTIALBODY,
     ENTITY_STAR,
     ENTITY_GALAXY
+};
+
+enum
+{
+    GALAXY_INFO_NAME,
+    GALAXY_INFO_X,
+    GALAXY_INFO_Y,
+    GALAXY_INFO_CLASS,
+    GALAXY_INFO_RADIUS,
+    GALAXY_INFO_STARS,
+    GALAXY_INFO_COUNT
 };
 
 #endif /* ENUMS_H */

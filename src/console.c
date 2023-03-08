@@ -46,8 +46,8 @@ void console_log_position(GameState *game_state, NavigationState nav_state)
         position.y = nav_state.universe_offset.y;
     }
 
-    console_update_entry(game_state->console_entries, X_INDEX, position.x);
-    console_update_entry(game_state->console_entries, Y_INDEX, position.y);
+    console_update_entry(game_state->console_entries, CONSOLE_X, position.x);
+    console_update_entry(game_state->console_entries, CONSOLE_Y, position.y);
 }
 
 /**
@@ -75,7 +75,7 @@ void console_log_fps(ConsoleEntry entries[], unsigned int *fps, unsigned int *la
     else
         *frame_count += 1;
 
-    console_update_entry(entries, FPS_INDEX, *fps);
+    console_update_entry(entries, CONSOLE_FPS, *fps);
 }
 
 /**
@@ -89,16 +89,16 @@ void console_render(ConsoleEntry entries[])
 {
     for (int i = 0; i < CONSOLE_COUNT; i++)
     {
-        entries[i].surface = TTF_RenderText_Solid(fonts[FONT_SIZE_14], entries[i].value, colors[COLOR_WHITE_255]);
-        entries[i].texture = SDL_CreateTextureFromSurface(renderer, entries[i].surface);
-        SDL_FreeSurface(entries[i].surface);
-        entries[i].rect.x = 120;
-        entries[i].rect.y = (i + 1) * 20;
-        entries[i].rect.w = 100;
-        entries[i].rect.h = 15;
-        SDL_RenderCopy(renderer, entries[i].texture, NULL, &entries[i].rect);
-        SDL_DestroyTexture(entries[i].texture);
-        entries[i].texture = NULL;
+        SDL_Surface *surface = TTF_RenderText_Solid(fonts[FONT_SIZE_14], entries[i].value, colors[COLOR_WHITE_255]);
+        entries[i].text_texture = SDL_CreateTextureFromSurface(renderer, surface);
+        SDL_FreeSurface(surface);
+        entries[i].texture_rect.x = 120;
+        entries[i].texture_rect.y = (i + 1) * 20;
+        entries[i].texture_rect.w = 100;
+        entries[i].texture_rect.h = 15;
+        SDL_RenderCopy(renderer, entries[i].text_texture, NULL, &entries[i].texture_rect);
+        SDL_DestroyTexture(entries[i].text_texture);
+        entries[i].text_texture = NULL;
     }
 }
 
@@ -116,7 +116,7 @@ void console_update_entry(ConsoleEntry entries[], int index, double value)
     char text[16];
     float rounded_value;
 
-    if (index == SCALE_INDEX)
+    if (index == CONSOLE_SCALE)
         rounded_value = value;
     else
         rounded_value = (int)value;
