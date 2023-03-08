@@ -42,83 +42,50 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
             // Left click down
             if (event.button.button == SDL_BUTTON_LEFT)
             {
-                if (game_state->state == UNIVERSE || game_state->state == MAP)
-                {
-                    // Record the mouse click position
-                    input_state->mouse_down_position.x = event.button.x;
-                    input_state->mouse_down_position.y = event.button.y;
-                }
-                else if (game_state->state == MENU)
-                {
-                    // Select menu button
-                    input_state->mouse_position.x = event.button.x;
-                    input_state->mouse_position.y = event.button.y;
+                Uint32 current_time = SDL_GetTicks();
 
-                    for (int i = 0; i < MENU_BUTTON_COUNT; i++)
+                // Detect double-clicks (500 milliseconds)
+                if (current_time - input_state->last_click_time < 500)
+                {
+                    input_state->click_count++;
+
+                    if (input_state->click_count == 2)
                     {
-                        if (!game_state->menu[i].disabled &&
-                            input_state->mouse_position.x >= game_state->menu[i].rect.x &&
-                            input_state->mouse_position.x <= game_state->menu[i].rect.x + game_state->menu[i].rect.w &&
-                            input_state->mouse_position.y >= game_state->menu[i].rect.y &&
-                            input_state->mouse_position.y <= game_state->menu[i].rect.y + game_state->menu[i].rect.h)
+                        // Center galaxy
+                        if (game_state->state == UNIVERSE)
                         {
-                            input_state->selected_button_index = i;
-
-                            if (game_state->menu[i].state == RESUME)
-                                game_change_state(game_state, game_events, save_state);
-                            else
-                                game_change_state(game_state, game_events, game_state->menu[i].state);
-                            break;
-                        }
-                    }
-                }
-            }
-            break;
-        case SDL_MOUSEBUTTONUP:
-            if (!input_state->is_mouse_dragging && input_state->mouse_down_position.x == event.button.x && input_state->mouse_down_position.y == event.button.y)
-            {
-                nav_state->current_galaxy->is_selected = false;
-
-                // Left click up
-                if (event.button.button == SDL_BUTTON_LEFT)
-                {
-                    // Center galaxy
-                    if (game_state->state == UNIVERSE)
-                    {
-                        if (input_state->is_hovering_galaxy)
-                        {
-                            // Convert current galaxy center to relative position (game_scale)
-                            double x = (nav_state->current_galaxy->position.x - camera->x) * game_state->game_scale * GALAXY_SCALE;
-                            double y = (nav_state->current_galaxy->position.y - camera->y) * game_state->game_scale * GALAXY_SCALE;
-
-                            // Calculate the difference between the camera center and the galaxy center
-                            int delta_x = (camera->w / 2) - (int)x;
-                            int delta_y = (camera->h / 2) - (int)y;
-
-                            // Adjust game_scale to new galaxy
-                            double zoom_universe;
-
-                            switch (nav_state->current_galaxy->class)
+                            if (input_state->is_hovering_galaxy)
                             {
-                            case 1:
-                                zoom_universe = ZOOM_UNIVERSE * 10;
-                                break;
-                            case 2:
-                                zoom_universe = ZOOM_UNIVERSE * 5;
-                                break;
-                            case 3:
-                                zoom_universe = ZOOM_UNIVERSE * 3;
-                                break;
-                            case 4:
-                                zoom_universe = ZOOM_UNIVERSE * 2;
-                                break;
-                            default:
-                                zoom_universe = ZOOM_UNIVERSE;
-                                break;
-                            }
+                                // Convert current galaxy center to relative position (game_scale)
+                                double x = (nav_state->current_galaxy->position.x - camera->x) * game_state->game_scale * GALAXY_SCALE;
+                                double y = (nav_state->current_galaxy->position.y - camera->y) * game_state->game_scale * GALAXY_SCALE;
 
-                            if (game_state->game_scale <= zoom_universe / GALAXY_SCALE + epsilon)
-                            {
+                                // Calculate the difference between the camera center and the galaxy center
+                                int delta_x = (camera->w / 2) - (int)x;
+                                int delta_y = (camera->h / 2) - (int)y;
+
+                                // Adjust game_scale to new galaxy
+                                double zoom_universe;
+
+                                switch (nav_state->current_galaxy->class)
+                                {
+                                case 1:
+                                    zoom_universe = ZOOM_UNIVERSE * 10;
+                                    break;
+                                case 2:
+                                    zoom_universe = ZOOM_UNIVERSE * 5;
+                                    break;
+                                case 3:
+                                    zoom_universe = ZOOM_UNIVERSE * 3;
+                                    break;
+                                case 4:
+                                    zoom_universe = ZOOM_UNIVERSE * 2;
+                                    break;
+                                default:
+                                    zoom_universe = ZOOM_UNIVERSE;
+                                    break;
+                                }
+
                                 // Center galaxy
                                 nav_state->universe_offset.x -= delta_x / (game_state->game_scale * GALAXY_SCALE);
                                 nav_state->universe_offset.y -= delta_y / (game_state->game_scale * GALAXY_SCALE);
@@ -129,8 +96,47 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
                                 game_state->game_scale = zoom_universe / GALAXY_SCALE;
                             }
                         }
+
+                        input_state->click_count = 0;
                     }
                 }
+                else
+                {
+                    input_state->click_count = 1;
+
+                    if (game_state->state == UNIVERSE || game_state->state == MAP)
+                    {
+                        // Record the mouse click position
+                        input_state->mouse_down_position.x = event.button.x;
+                        input_state->mouse_down_position.y = event.button.y;
+                    }
+                    else if (game_state->state == MENU)
+                    {
+                        // Select menu button
+                        input_state->mouse_position.x = event.button.x;
+                        input_state->mouse_position.y = event.button.y;
+
+                        for (int i = 0; i < MENU_BUTTON_COUNT; i++)
+                        {
+                            if (!game_state->menu[i].disabled &&
+                                input_state->mouse_position.x >= game_state->menu[i].rect.x &&
+                                input_state->mouse_position.x <= game_state->menu[i].rect.x + game_state->menu[i].rect.w &&
+                                input_state->mouse_position.y >= game_state->menu[i].rect.y &&
+                                input_state->mouse_position.y <= game_state->menu[i].rect.y + game_state->menu[i].rect.h)
+                            {
+                                input_state->selected_button_index = i;
+
+                                if (game_state->menu[i].state == RESUME)
+                                    game_change_state(game_state, game_events, save_state);
+                                else
+                                    game_change_state(game_state, game_events, game_state->menu[i].state);
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                input_state->last_click_time = current_time;
             }
             break;
         case SDL_MOUSEMOTION:

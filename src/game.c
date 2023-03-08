@@ -154,6 +154,8 @@ void game_reset(GameState *game_state, InputState *input_state, GameEvents *game
     input_state->mouse_position.y = 0;
     input_state->mouse_down_position.x = 0;
     input_state->mouse_down_position.y = 0;
+    input_state->last_click_time = 0;
+    input_state->click_count = 0;
     input_state->is_mouse_dragging = false;
     input_state->left_on = false;
     input_state->right_on = false;

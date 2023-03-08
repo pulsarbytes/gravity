@@ -172,6 +172,8 @@ typedef struct
 {
     Point mouse_position;
     Point mouse_down_position;
+    Uint32 last_click_time;
+    int click_count;
     bool is_mouse_dragging;
     bool left_on;
     bool right_on;
