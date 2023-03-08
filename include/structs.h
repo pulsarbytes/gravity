@@ -116,6 +116,7 @@ typedef struct
     int class;
     float radius;
     float cutoff;
+    int is_selected; // Whether the galaxy is selected in Universe
     Point position;
     SDL_Rect projection;
     SDL_Color color;
@@ -171,6 +172,7 @@ typedef struct
 {
     Point mouse_position;
     Point mouse_down_position;
+    int mouse_drag;
     int left;
     int right;
     int up;

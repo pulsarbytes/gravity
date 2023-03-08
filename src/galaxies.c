@@ -154,6 +154,7 @@ static Galaxy *galaxies_create_galaxy(Point position)
     galaxy->class = galaxies_size_class(distance);
     galaxy->radius = radius;
     galaxy->cutoff = UNIVERSE_SECTION_SIZE * class / 2;
+    galaxy->is_selected = OFF;
     galaxy->position.x = position.x;
     galaxy->position.y = position.y;
     galaxy->color.r = colors[COLOR_WHITE_255].r;
@@ -228,8 +229,10 @@ void galaxies_draw_galaxy(const InputState *input_state, NavigationState *nav_st
     int y = (galaxy->position.y - camera->y) * scale * GALAXY_SCALE;
     Point galaxy_position = {.x = x, .y = y};
 
-    if (maths_is_point_in_circle(input_state->mouse_position, galaxy_position, cutoff) &&
-        gfx_is_object_in_camera(camera, galaxy->position.x, galaxy->position.y, galaxy->radius, scale * GALAXY_SCALE))
+    bool galaxy_is_selected = strcmp(nav_state->current_galaxy->name, galaxy->name) == 0 && nav_state->current_galaxy->is_selected;
+
+    if (galaxy_is_selected || (maths_is_point_in_circle(input_state->mouse_position, galaxy_position, cutoff) &&
+                               gfx_is_object_in_camera(camera, galaxy->position.x, galaxy->position.y, galaxy->radius, scale * GALAXY_SCALE)))
     {
         // Reset stars and update current_galaxy
         if (strcmp(nav_state->current_galaxy->name, galaxy->name) != 0)

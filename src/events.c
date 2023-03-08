@@ -34,6 +34,9 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
             game_change_state(game_state, game_events, QUIT);
             break;
         case SDL_MOUSEBUTTONDOWN:
+            input_state->mouse_drag = OFF;
+            nav_state->current_galaxy->is_selected = OFF;
+
             // If left mouse button is pressed, record the initial mouse position
             if (event.button.button == SDL_BUTTON_LEFT)
             {
@@ -41,15 +44,6 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
                 {
                     input_state->mouse_down_position.x = event.button.x;
                     input_state->mouse_down_position.y = event.button.y;
-
-                    if (game_state->state == UNIVERSE)
-                    {
-                        if (input_state->galaxy_hover)
-                        {
-                            // Convert current galaxy center to camera position
-                            // Center galaxy
-                        }
-                    }
                 }
                 else if (game_state->state == MENU)
                 {
@@ -76,6 +70,63 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
                 }
             }
             break;
+        case SDL_MOUSEBUTTONUP:
+            if (!input_state->mouse_drag && input_state->mouse_down_position.x == event.button.x && input_state->mouse_down_position.y == event.button.y)
+            {
+                nav_state->current_galaxy->is_selected = OFF;
+
+                if (event.button.button == SDL_BUTTON_LEFT)
+                {
+                    if (game_state->state == UNIVERSE)
+                    {
+                        if (input_state->galaxy_hover)
+                        {
+                            // Convert current galaxy center to relative position (game_scale)
+                            double x = (nav_state->current_galaxy->position.x - camera->x) * game_state->game_scale * GALAXY_SCALE;
+                            double y = (nav_state->current_galaxy->position.y - camera->y) * game_state->game_scale * GALAXY_SCALE;
+
+                            // Calculate the difference between the camera center and the galaxy center
+                            int delta_x = (camera->w / 2) - (int)x;
+                            int delta_y = (camera->h / 2) - (int)y;
+
+                            // Adjust game_scale to new galaxy
+                            double zoom_universe;
+
+                            switch (nav_state->current_galaxy->class)
+                            {
+                            case 1:
+                                zoom_universe = ZOOM_UNIVERSE * 10;
+                                break;
+                            case 2:
+                                zoom_universe = ZOOM_UNIVERSE * 5;
+                                break;
+                            case 3:
+                                zoom_universe = ZOOM_UNIVERSE * 3;
+                                break;
+                            case 4:
+                                zoom_universe = ZOOM_UNIVERSE * 2;
+                                break;
+                            default:
+                                zoom_universe = ZOOM_UNIVERSE;
+                                break;
+                            }
+
+                            if (game_state->game_scale <= zoom_universe / GALAXY_SCALE + epsilon)
+                            {
+                                // Center galaxy
+                                nav_state->universe_offset.x -= delta_x / (game_state->game_scale * GALAXY_SCALE);
+                                nav_state->universe_offset.y -= delta_y / (game_state->game_scale * GALAXY_SCALE);
+
+                                // Set galaxy as selected
+                                nav_state->current_galaxy->is_selected = ON;
+
+                                game_state->game_scale = zoom_universe / GALAXY_SCALE;
+                            }
+                        }
+                    }
+                }
+            }
+            break;
         case SDL_MOUSEMOTION:
             if (game_state->state == MENU)
             {
@@ -90,6 +141,8 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
                 // If left mouse button is held down, update the position
                 if (event.motion.state & SDL_BUTTON_LMASK)
                 {
+                    input_state->mouse_drag = ON;
+
                     // Calculate the difference between the current mouse position and the initial mouse position
                     int delta_x = input_state->mouse_position.x - input_state->mouse_down_position.x;
                     int delta_y = input_state->mouse_position.y - input_state->mouse_down_position.y;
@@ -123,6 +176,7 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
                     {
                         input_state->right = OFF;
                         input_state->left = ON;
+                        nav_state->current_galaxy->is_selected = OFF;
                     }
                     else
                         input_state->left = OFF;
@@ -132,6 +186,7 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
                     {
                         input_state->left = OFF;
                         input_state->right = ON;
+                        nav_state->current_galaxy->is_selected = OFF;
                     }
                     else
                         input_state->right = OFF;
@@ -141,6 +196,7 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
                     {
                         input_state->down = OFF;
                         input_state->up = ON;
+                        nav_state->current_galaxy->is_selected = OFF;
                     }
                     else
                         input_state->up = OFF;
@@ -150,6 +206,7 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
                     {
                         input_state->up = OFF;
                         input_state->down = ON;
+                        nav_state->current_galaxy->is_selected = OFF;
                     }
                     else
                         input_state->down = OFF;

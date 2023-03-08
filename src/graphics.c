@@ -836,8 +836,13 @@ void gfx_generate_gstars(Galaxy *galaxy, bool high_definition)
             total_groups = full_size_diameter / (sections_in_group * GALAXY_SECTION_SIZE);
         }
 
-        galaxy->sections_in_group_hd = sections_in_group;
-        galaxy->sections_in_group = sections_in_group * 2;
+        if (high_definition)
+            galaxy->sections_in_group_hd = sections_in_group;
+        else
+        {
+            sections_in_group *= 2;
+            galaxy->sections_in_group = sections_in_group;
+        }
 
         // Make sure that full_size_radius can be divided by <section_size>
         corrected_radius = full_size_radius;
@@ -846,15 +851,12 @@ void gfx_generate_gstars(Galaxy *galaxy, bool high_definition)
             corrected_radius += GALAXY_SECTION_SIZE;
 
         // Total groups to check
-        galaxy->total_groups_hd = ((2 * corrected_radius / (sections_in_group * GALAXY_SECTION_SIZE)) + 1) *
-                                  ((2 * corrected_radius / (sections_in_group * GALAXY_SECTION_SIZE)) + 1);
-
-        galaxy->total_groups = ((2 * corrected_radius / (sections_in_group * 2 * GALAXY_SECTION_SIZE)) + 1) *
-                               ((2 * corrected_radius / (sections_in_group * 2 * GALAXY_SECTION_SIZE)) + 1);
-
-        // Double the sections_in_group for low def
-        if (!high_definition)
-            sections_in_group *= 2;
+        if (high_definition)
+            galaxy->total_groups_hd = ((2 * corrected_radius / (sections_in_group * GALAXY_SECTION_SIZE)) + 1) *
+                                      ((2 * corrected_radius / (sections_in_group * GALAXY_SECTION_SIZE)) + 1);
+        else
+            galaxy->total_groups = ((2 * corrected_radius / (sections_in_group * GALAXY_SECTION_SIZE)) + 1) *
+                                   ((2 * corrected_radius / (sections_in_group * GALAXY_SECTION_SIZE)) + 1);
     }
     else
     {

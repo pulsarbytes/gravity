@@ -154,6 +154,7 @@ void game_reset(GameState *game_state, InputState *input_state, GameEvents *game
     input_state->mouse_position.y = 0;
     input_state->mouse_down_position.x = 0;
     input_state->mouse_down_position.y = 0;
+    input_state->mouse_drag = OFF;
     input_state->left = OFF;
     input_state->right = OFF;
     input_state->up = OFF;
@@ -295,6 +296,9 @@ void game_reset(GameState *game_state, InputState *input_state, GameEvents *game
 
     // Copy current_galaxy_copy to current_galaxy
     memcpy(nav_state->current_galaxy, current_galaxy_copy, sizeof(Galaxy));
+
+    // Set current galaxy as selected
+    nav_state->current_galaxy->is_selected = ON;
 
     // Copy current_galaxy to buffer_galaxy
     memcpy(nav_state->buffer_galaxy, nav_state->current_galaxy, sizeof(Galaxy));
@@ -840,8 +844,8 @@ void game_run_navigate_state(GameState *game_state, InputState *input_state, Gam
     }
 
     // Create galaxy cloud
-    if (!nav_state->current_galaxy->initialized || nav_state->current_galaxy->initialized < nav_state->current_galaxy->total_groups)
-        gfx_generate_gstars(nav_state->current_galaxy, false);
+    if (!nav_state->current_galaxy->initialized_hd || nav_state->current_galaxy->initialized_hd < nav_state->current_galaxy->total_groups_hd)
+        gfx_generate_gstars(nav_state->current_galaxy, true);
 
     gfx_draw_screen_frame(camera);
 
@@ -1169,7 +1173,7 @@ void game_run_universe_state(GameState *game_state, InputState *input_state, Gam
     SDL_RenderDrawLine(renderer, camera->w / 2, (camera->h / 2) - 7, camera->w / 2, (camera->h / 2) + 7);
 
     // Draw galaxy info box
-    if (input_state->galaxy_hover)
+    if (input_state->galaxy_hover || nav_state->current_galaxy->is_selected)
     {
         if (!nav_state->current_galaxy->initialized || nav_state->current_galaxy->initialized < nav_state->current_galaxy->total_groups)
             gfx_generate_gstars(nav_state->current_galaxy, false);
