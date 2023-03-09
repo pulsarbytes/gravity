@@ -80,6 +80,7 @@ typedef struct CelestialBody
     struct CelestialBody *planets[MAX_PLANETS_MOONS];
     struct CelestialBody *parent;
     unsigned short level;
+    bool is_selected; // Whether the body is selected in Map
 } CelestialBody;
 
 typedef CelestialBody Planet;
@@ -174,6 +175,7 @@ typedef struct
     Point mouse_down_position;
     Uint32 last_click_time;
     int click_count;
+    bool is_mouse_double_clicked;
     bool is_mouse_dragging;
     bool left_on;
     bool right_on;
@@ -186,9 +188,10 @@ typedef struct
     bool zoom_in;
     bool zoom_out;
     bool console_on;
-    int orbits_on;
+    bool orbits_on;
     int selected_button_index;
-    int is_hovering_galaxy;
+    bool is_hovering_galaxy;
+    bool is_hovering_star;
 } InputState;
 
 typedef struct
@@ -217,6 +220,7 @@ typedef struct
     Galaxy *current_galaxy;
     Galaxy *buffer_galaxy; // Stores galaxy of current ship position
     Galaxy *previous_galaxy;
+    Star *current_star;
     PointState galaxy_offset;
     Point universe_cross_line; // Keep track of nearest line position
     Point navigate_offset;
@@ -234,6 +238,7 @@ typedef struct
     int landing_stage;
     long double game_scale;
     long double save_scale;
+    long double game_scale_override;
     int galaxy_region_size;
     MenuButton menu[MENU_BUTTON_COUNT];
     MenuButton logo;

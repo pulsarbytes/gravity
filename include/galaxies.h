@@ -22,6 +22,7 @@ bool maths_is_point_in_circle(Point, Point, int radius);
 uint64_t maths_hash_position_to_index(Point, int modulo, int entity_type);
 uint64_t maths_hash_position_to_uint64(Point);
 uint64_t maths_hash_position_to_uint64_2(Point);
+bool maths_points_equal(Point, Point);
 void stars_clear_table(StarEntry *stars[]);
 void utils_add_thousand_separators(int num, char *result, size_t result_size);
 

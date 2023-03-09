@@ -299,7 +299,7 @@ void galaxies_draw_galaxy(const InputState *input_state, NavigationState *nav_st
 /**
  * Draws a box on the screen that displays information about a galaxy.
  *
- * @param galaxy A pointer to the galaxy for which to display info.
+ * @param galaxy A pointer to the Galaxy for which to display info.
  * @param camera A pointer to the current Camera object.
  *
  * @return void
@@ -309,7 +309,7 @@ void galaxies_draw_info_box(const Galaxy *galaxy, const Camera *camera)
     // Draw background box
     SDL_SetRenderDrawColor(renderer, 20, 20, 20, 140);
     int width = 360;
-    int height = 250;
+    int height = 290;
     int padding = 20;
 
     SDL_Rect info_box_rect;
@@ -327,6 +327,11 @@ void galaxies_draw_info_box(const Galaxy *galaxy, const Camera *camera)
     strcpy(galaxy_name, galaxy->name);
     sprintf(entries[GALAXY_INFO_NAME].text, "%s", galaxy_name);
     entries[GALAXY_INFO_NAME].font_size = FONT_SIZE_22;
+
+    char entity_type[32];
+    strcpy(entity_type, "GALAXY");
+    sprintf(entries[GALAXY_INFO_TYPE].text, "%s", entity_type);
+    entries[GALAXY_INFO_TYPE].font_size = FONT_SIZE_15;
 
     char position_x_text[32];
     utils_add_thousand_separators((int)galaxy->position.x, position_x_text, sizeof(position_x_text));
@@ -369,7 +374,7 @@ void galaxies_draw_info_box(const Galaxy *galaxy, const Camera *camera)
         SDL_FreeSurface(text_surface);
     }
 
-    // Set the position for the name entry
+    // Name
     int name_height = 80;
     int entry_height = 30;
     int inner_padding = 40;
@@ -380,15 +385,26 @@ void galaxies_draw_info_box(const Galaxy *galaxy, const Camera *camera)
 
     SDL_RenderFillRect(renderer, &entries[GALAXY_INFO_NAME].rect);
 
-    // Set the position of the text within the name entry
     entries[GALAXY_INFO_NAME].texture_rect.x = entries[GALAXY_INFO_NAME].rect.x + inner_padding;
     entries[GALAXY_INFO_NAME].texture_rect.y = entries[GALAXY_INFO_NAME].rect.y + (entries[GALAXY_INFO_NAME].rect.h - entries[GALAXY_INFO_NAME].texture_rect.h) / 2;
 
-    // Render the text texture onto the name entry
     SDL_RenderCopy(renderer, entries[GALAXY_INFO_NAME].text_texture, NULL, &entries[GALAXY_INFO_NAME].texture_rect);
 
+    // Type
+    entries[GALAXY_INFO_TYPE].rect.w = width;
+    entries[GALAXY_INFO_TYPE].rect.h = entry_height;
+    entries[GALAXY_INFO_TYPE].rect.x = camera->w - (width + padding);
+    entries[GALAXY_INFO_TYPE].rect.y = padding + name_height;
+
+    SDL_RenderFillRect(renderer, &entries[GALAXY_INFO_TYPE].rect);
+
+    entries[GALAXY_INFO_TYPE].texture_rect.x = entries[GALAXY_INFO_TYPE].rect.x + inner_padding;
+    entries[GALAXY_INFO_TYPE].texture_rect.y = entries[GALAXY_INFO_TYPE].rect.y + (entries[GALAXY_INFO_TYPE].rect.h - entries[GALAXY_INFO_TYPE].texture_rect.h) / 2;
+
+    SDL_RenderCopy(renderer, entries[GALAXY_INFO_TYPE].text_texture, NULL, &entries[GALAXY_INFO_TYPE].texture_rect);
+
     // Set the position for the rest of the entries
-    for (int i = 1; i < GALAXY_INFO_COUNT; i++)
+    for (int i = 2; i < GALAXY_INFO_COUNT; i++)
     {
         entries[i].rect.w = width;
         entries[i].rect.h = entry_height;
@@ -535,7 +551,7 @@ void galaxies_generate(GameEvents *game_events, NavigationState *nav_state, Poin
             // Skip current galaxy, otherwise we lose track of where we are
             if (!game_events->start_galaxies_generation)
             {
-                if (position.x == nav_state->current_galaxy->position.x && position.y == nav_state->current_galaxy->position.y)
+                if (maths_points_equal(position, nav_state->current_galaxy->position))
                     continue;
             }
 
@@ -663,8 +679,7 @@ Galaxy *galaxies_nearest_circumference(const NavigationState *nav_state, Point p
             // Exlude current galaxy
             if (exclude)
             {
-                if (entry->galaxy->position.x == nav_state->current_galaxy->position.x &&
-                    entry->galaxy->position.y == nav_state->current_galaxy->position.y)
+                if (maths_points_equal(entry->galaxy->position, nav_state->current_galaxy->position))
                 {
                     entry = entry->next;
                     continue;

@@ -80,10 +80,11 @@ void utils_cleanup_resources(GameState *game_state, NavigationState *nav_state, 
     SDL_DestroyTexture(ship->texture);
     ship->texture = NULL;
 
-    // Free memory
+    // Free allocated memory
     free(nav_state->current_galaxy);
     free(nav_state->buffer_galaxy);
     free(nav_state->previous_galaxy);
+    free(nav_state->current_star);
 
     // Clean up menu textures
     for (int i = 0; i < MENU_BUTTON_COUNT; i++)

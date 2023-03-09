@@ -4,6 +4,8 @@
 // Function prototypes
 void stars_clear_table(StarEntry *stars[]);
 void stars_delete_outside_region(StarEntry *stars[], double bx, double by, int region_size);
+void stars_draw_info_box(const Star *, const Camera *);
+void stars_draw_planets_info_box(const Star *, const Camera *);
 void stars_draw_star_system(GameState *, const InputState *, NavigationState *, CelestialBody *, const Camera *);
 void stars_generate(GameState *, GameEvents *, NavigationState *, Bstar *bstars, Ship *ship);
 void stars_generate_preview(NavigationState *, const Camera *, Point *, int zoom_preview, long double scale);
@@ -25,8 +27,10 @@ uint64_t maths_hash_position_to_uint64(Point);
 uint64_t maths_hash_position_to_uint64_2(Point);
 bool maths_is_point_in_circle(Point, Point, int radius);
 bool maths_is_point_in_rectangle(Point, Point rect[]);
+bool maths_points_equal(Point, Point);
 void phys_apply_gravity_to_ship(GameState *, bool thrust_on, NavigationState *, CelestialBody *, Ship *ship, unsigned short star_class);
 void phys_calculate_orbital_velocity(float distance, float angle, float radius, float *vx, float *vy);
 void phys_update_velocity(Vector *velocity, const Ship *ship);
+void utils_add_thousand_separators(int num, char *result, size_t result_size);
 
 #endif

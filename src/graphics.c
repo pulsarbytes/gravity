@@ -1060,32 +1060,6 @@ void gfx_generate_menu_gstars(Galaxy *galaxy, Gstar *menustars)
 }
 
 /**
- * Checks if the mouse is over the current galaxy and toggles the variable input_state.is_hovering_galaxy.
- *
- * @param input_state A pointer to the current InputState.
- * @param nav_state A pointer to the current NavigationState.
- * @param camera A pointer to the current Camera object.
- * @param scale The scaling factor applied to the camera view.
- *
- * @return void
- */
-void gfx_toggle_galaxy_hover(InputState *input_state, const NavigationState *nav_state, const Camera *camera, long double scale)
-{
-    // Get relative position of current galaxy in game_scale
-    int current_cutoff = nav_state->current_galaxy->cutoff * scale * GALAXY_SCALE;
-    int current_x = (nav_state->current_galaxy->position.x - camera->x) * scale * GALAXY_SCALE;
-    int current_y = (nav_state->current_galaxy->position.y - camera->y) * scale * GALAXY_SCALE;
-
-    // Get current galaxy distance from mouse position
-    double distance = maths_distance_between_points(current_x, current_y, input_state->mouse_position.x, input_state->mouse_position.y);
-
-    if (distance > current_cutoff)
-        input_state->is_hovering_galaxy = false;
-    else
-        input_state->is_hovering_galaxy = true;
-}
-
-/**
  * Checks if an object with a given position and radius is within the bounds of the camera.
  *
  * @param camera The camera to check against.
@@ -1220,6 +1194,58 @@ void gfx_project_ship_on_edge(int state, const InputState *input_state, const Na
     // Draw projection reverse
     if (state == NAVIGATE && input_state->reverse_on)
         SDL_RenderCopyEx(renderer, ship->projection->texture, &ship->projection->reverse_img_rect, &ship->projection->rect, ship->projection->angle, &ship->projection->rotation_pt, SDL_FLIP_NONE);
+}
+
+/**
+ * Checks if the mouse is over the current galaxy and toggles the variable input_state.is_hovering_galaxy.
+ *
+ * @param input_state A pointer to the current InputState.
+ * @param nav_state A pointer to the current NavigationState.
+ * @param camera A pointer to the current Camera object.
+ * @param scale The scaling factor applied to the camera view.
+ *
+ * @return void
+ */
+void gfx_toggle_galaxy_hover(InputState *input_state, const NavigationState *nav_state, const Camera *camera, long double scale)
+{
+    // Get relative position of current galaxy in game_scale
+    int current_cutoff = nav_state->current_galaxy->cutoff * scale * GALAXY_SCALE;
+    int current_x = (nav_state->current_galaxy->position.x - camera->x) * scale * GALAXY_SCALE;
+    int current_y = (nav_state->current_galaxy->position.y - camera->y) * scale * GALAXY_SCALE;
+
+    // Get current galaxy distance from mouse position
+    double distance = maths_distance_between_points(current_x, current_y, input_state->mouse_position.x, input_state->mouse_position.y);
+
+    if (distance > current_cutoff)
+        input_state->is_hovering_galaxy = false;
+    else
+        input_state->is_hovering_galaxy = true;
+}
+
+/**
+ * Checks if the mouse is over the current star and toggles the variable input_state.is_hovering_star.
+ *
+ * @param input_state A pointer to the current InputState.
+ * @param nav_state A pointer to the current NavigationState.
+ * @param camera A pointer to the current Camera object.
+ * @param scale The scaling factor applied to the camera view.
+ *
+ * @return void
+ */
+void gfx_toggle_star_hover(InputState *input_state, const NavigationState *nav_state, const Camera *camera, long double scale)
+{
+    // Get relative position of current star in game_scale
+    int current_cutoff = nav_state->current_star->cutoff * scale;
+    int current_x = (nav_state->current_star->position.x - camera->x) * scale;
+    int current_y = (nav_state->current_star->position.y - camera->y) * scale;
+
+    // Get current star distance from mouse position
+    double distance = maths_distance_between_points(current_x, current_y, input_state->mouse_position.x, input_state->mouse_position.y);
+
+    if (distance > current_cutoff)
+        input_state->is_hovering_star = false;
+    else
+        input_state->is_hovering_star = true;
 }
 
 /**
@@ -1502,8 +1528,7 @@ static void gfx_update_projection_position(const NavigationState *nav_state, voi
         if (state == NAVIGATE || state == MAP)
         {
             // If in other galaxy, project position at buffer galaxy
-            if (state == MAP &&
-                (nav_state->current_galaxy->position.x != nav_state->buffer_galaxy->position.x || nav_state->current_galaxy->position.y != nav_state->buffer_galaxy->position.y))
+            if (state == MAP && !maths_points_equal(nav_state->current_galaxy->position, nav_state->buffer_galaxy->position))
             {
                 // Convert camera to Universe position
                 long double camera_x = nav_state->current_galaxy->position.x + (nav_state->map_offset.x / GALAXY_SCALE) - (camera->w / 2);

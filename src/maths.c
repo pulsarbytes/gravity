@@ -14,7 +14,6 @@
 
 // Static function prototypes
 static uint64_t maths_hash_double_to_uint64(double x);
-static bool maths_points_equal(Point, Point);
 
 /**
  * Check if a point exists in an array of points.
@@ -214,7 +213,7 @@ uint64_t maths_hash_position_to_uint64_2(Point position)
  *
  * @return True if the points are equal, false otherwise.
  */
-static bool maths_points_equal(Point a, Point b)
+bool maths_points_equal(Point a, Point b)
 {
     return a.x == b.x && a.y == b.y;
 }

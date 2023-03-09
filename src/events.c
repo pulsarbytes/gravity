@@ -38,6 +38,14 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
         case SDL_MOUSEBUTTONDOWN:
             input_state->is_mouse_dragging = false;
             nav_state->current_galaxy->is_selected = false;
+            nav_state->current_star->is_selected = false;
+
+            if (game_state->state == UNIVERSE || game_state->state == MAP)
+            {
+                // Record the mouse click position
+                input_state->mouse_down_position.x = event.button.x;
+                input_state->mouse_down_position.y = event.button.y;
+            }
 
             // Left click down
             if (event.button.button == SDL_BUTTON_LEFT)
@@ -64,36 +72,107 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
                                 int delta_x = (camera->w / 2) - (int)x;
                                 int delta_y = (camera->h / 2) - (int)y;
 
-                                // Adjust game_scale to new galaxy
-                                double zoom_universe;
-
-                                switch (nav_state->current_galaxy->class)
-                                {
-                                case 1:
-                                    zoom_universe = ZOOM_UNIVERSE * 10;
-                                    break;
-                                case 2:
-                                    zoom_universe = ZOOM_UNIVERSE * 5;
-                                    break;
-                                case 3:
-                                    zoom_universe = ZOOM_UNIVERSE * 3;
-                                    break;
-                                case 4:
-                                    zoom_universe = ZOOM_UNIVERSE * 2;
-                                    break;
-                                default:
-                                    zoom_universe = ZOOM_UNIVERSE;
-                                    break;
-                                }
-
                                 // Center galaxy
-                                nav_state->universe_offset.x -= delta_x / (game_state->game_scale * GALAXY_SCALE);
-                                nav_state->universe_offset.y -= delta_y / (game_state->game_scale * GALAXY_SCALE);
+                                if (abs(delta_x) > 0)
+                                    nav_state->universe_offset.x -= delta_x / (game_state->game_scale * GALAXY_SCALE);
 
-                                // Set galaxy as selected
-                                nav_state->current_galaxy->is_selected = true;
+                                if (abs(delta_y) > 0)
+                                    nav_state->universe_offset.y -= delta_y / (game_state->game_scale * GALAXY_SCALE);
 
-                                game_state->game_scale = zoom_universe / GALAXY_SCALE;
+                                if (abs(delta_x) > 0 || abs(delta_y) > 0)
+                                {
+                                    input_state->is_mouse_double_clicked = true;
+
+                                    // Set galaxy as selected
+                                    nav_state->current_galaxy->is_selected = true;
+
+                                    // Adjust game_scale to new galaxy
+                                    double zoom_universe;
+
+                                    switch (nav_state->current_galaxy->class)
+                                    {
+                                    case 1:
+                                        zoom_universe = ZOOM_UNIVERSE * 10;
+                                        break;
+                                    case 2:
+                                        zoom_universe = ZOOM_UNIVERSE * 5;
+                                        break;
+                                    case 3:
+                                        zoom_universe = ZOOM_UNIVERSE * 3;
+                                        break;
+                                    case 4:
+                                    case 5:
+                                    case 6:
+                                        zoom_universe = ZOOM_UNIVERSE * 2;
+                                        break;
+                                    default:
+                                        zoom_universe = ZOOM_UNIVERSE * 2;
+                                        break;
+                                    }
+
+                                    input_state->zoom_in = true;
+                                    input_state->zoom_out = false;
+                                    game_state->game_scale_override = zoom_universe / GALAXY_SCALE;
+                                }
+                            }
+                        }
+                        // Center star
+                        else if (game_state->state == MAP)
+                        {
+                            if (input_state->is_hovering_star)
+                            {
+                                // Convert current star center to relative position (game_scale)
+                                double x = (nav_state->current_star->position.x - camera->x) * game_state->game_scale;
+                                double y = (nav_state->current_star->position.y - camera->y) * game_state->game_scale;
+
+                                // Calculate the difference between the camera center and the star center
+                                int delta_x = (camera->w / 2) - (int)x;
+                                int delta_y = (camera->h / 2) - (int)y;
+
+                                // Center star
+                                if (abs(delta_x) > 0)
+                                    nav_state->map_offset.x -= delta_x / game_state->game_scale;
+
+                                if (abs(delta_y) > 0)
+                                    nav_state->map_offset.y -= delta_y / game_state->game_scale;
+
+                                if (abs(delta_x) > 0 || abs(delta_y) > 0)
+                                {
+                                    // Set star as selected
+                                    nav_state->current_star->is_selected = true;
+
+                                    // Adjust game_scale to new star
+                                    double zoom_map;
+
+                                    switch (nav_state->current_star->class)
+                                    {
+                                    case 1:
+                                        zoom_map = ZOOM_MAP * 9;
+                                        break;
+                                    case 2:
+                                        zoom_map = ZOOM_MAP * 5;
+                                        break;
+                                    case 3:
+                                        zoom_map = ZOOM_MAP * 3;
+                                        break;
+                                    case 4:
+                                        zoom_map = ZOOM_MAP * 2;
+                                        break;
+                                    case 5:
+                                        zoom_map = ZOOM_MAP * 2;
+                                        break;
+                                    case 6:
+                                        zoom_map = ZOOM_MAP * 2;
+                                        break;
+                                    default:
+                                        zoom_map = ZOOM_MAP * 1;
+                                        break;
+                                    }
+
+                                    input_state->zoom_in = true;
+                                    input_state->zoom_out = false;
+                                    game_state->game_scale_override = zoom_map;
+                                }
                             }
                         }
 
@@ -104,13 +183,7 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
                 {
                     input_state->click_count = 1;
 
-                    if (game_state->state == UNIVERSE || game_state->state == MAP)
-                    {
-                        // Record the mouse click position
-                        input_state->mouse_down_position.x = event.button.x;
-                        input_state->mouse_down_position.y = event.button.y;
-                    }
-                    else if (game_state->state == MENU)
+                    if (game_state->state == MENU)
                     {
                         // Select menu button
                         input_state->mouse_position.x = event.button.x;
@@ -189,6 +262,7 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
                         input_state->right_on = false;
                         input_state->left_on = true;
                         nav_state->current_galaxy->is_selected = false;
+                        nav_state->current_star->is_selected = false;
                     }
                     else
                         input_state->left_on = false;
@@ -199,6 +273,7 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
                         input_state->left_on = false;
                         input_state->right_on = true;
                         nav_state->current_galaxy->is_selected = false;
+                        nav_state->current_star->is_selected = false;
                     }
                     else
                         input_state->right_on = false;
@@ -209,6 +284,7 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
                         input_state->down_on = false;
                         input_state->up_on = true;
                         nav_state->current_galaxy->is_selected = false;
+                        nav_state->current_star->is_selected = false;
                     }
                     else
                         input_state->up_on = false;
@@ -219,6 +295,7 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
                         input_state->up_on = false;
                         input_state->down_on = true;
                         nav_state->current_galaxy->is_selected = false;
+                        nav_state->current_star->is_selected = false;
                     }
                     else
                         input_state->down_on = false;

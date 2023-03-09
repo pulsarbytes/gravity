@@ -7,6 +7,7 @@
 #include <stdbool.h>
 
 #include <SDL2/SDL.h>
+#include <SDL2/SDL_ttf.h>
 #include <SDL2/SDL_image.h>
 #include "../lib/pcg-c-basic-0.9/pcg_basic.h"
 
@@ -16,6 +17,7 @@
 #include "../include/stars.h"
 
 // External variable definitions
+extern TTF_Font *fonts[];
 extern SDL_Renderer *renderer;
 extern SDL_Color colors[];
 
@@ -201,6 +203,7 @@ static Star *stars_create_star(const NavigationState *nav_state, Point position,
     star->planets[0] = NULL;
     star->parent = NULL;
     star->level = LEVEL_STAR;
+    star->is_selected = false;
 
     return star;
 }
@@ -286,6 +289,158 @@ void stars_delete_outside_region(StarEntry *stars[], double bx, double by, int r
 }
 
 /**
+ * Draws a box on the screen that displays information about a star.
+ *
+ * @param galaxy A pointer to the Star for which to display info.
+ * @param camera A pointer to the current Camera object.
+ *
+ * @return void
+ */
+void stars_draw_info_box(const Star *star, const Camera *camera)
+{
+    // Draw background box
+    SDL_SetRenderDrawColor(renderer, 20, 20, 20, 140);
+    int width = 360;
+    int padding = 20;
+    int height = 290;
+
+    SDL_Rect info_box_rect;
+    info_box_rect.x = camera->w - (width + padding);
+    info_box_rect.y = padding;
+    info_box_rect.w = width;
+    info_box_rect.h = height;
+
+    SDL_RenderFillRect(renderer, &info_box_rect);
+
+    // Create info array
+    InfoBoxEntry entries[STAR_INFO_COUNT];
+
+    char star_name[128];
+    strcpy(star_name, star->name);
+    sprintf(entries[STAR_INFO_NAME].text, "%s", star_name);
+    entries[STAR_INFO_NAME].font_size = FONT_SIZE_22;
+
+    char entity_type[32];
+    strcpy(entity_type, "STAR");
+    sprintf(entries[STAR_INFO_TYPE].text, "%s", entity_type);
+    entries[STAR_INFO_TYPE].font_size = FONT_SIZE_15;
+
+    char position_x_text[32];
+    utils_add_thousand_separators((int)star->position.x, position_x_text, sizeof(position_x_text));
+    sprintf(entries[STAR_INFO_X].text, "Position X: %*s%s", 2, "", position_x_text);
+    entries[STAR_INFO_X].font_size = FONT_SIZE_15;
+
+    char position_y_text[32];
+    utils_add_thousand_separators((int)star->position.y, position_y_text, sizeof(position_y_text));
+    sprintf(entries[STAR_INFO_Y].text, "Position Y: %*s%s", 2, "", position_y_text);
+    entries[STAR_INFO_Y].font_size = FONT_SIZE_15;
+
+    char class_text[32];
+    sprintf(class_text, "%d", star->class);
+    sprintf(entries[STAR_INFO_CLASS].text, "Class: %*s%s", 7, "", class_text);
+    entries[STAR_INFO_CLASS].font_size = FONT_SIZE_15;
+
+    char radius_text[32];
+    utils_add_thousand_separators((int)star->radius, radius_text, sizeof(radius_text));
+    sprintf(entries[STAR_INFO_RADIUS].text, "Radius: %*s%s", 6, "", radius_text);
+    entries[STAR_INFO_RADIUS].font_size = FONT_SIZE_15;
+
+    // Get number of planets
+    int num_planets = 0;
+
+    for (int i = 0; i < MAX_PLANETS && star->planets[i] != NULL; i++)
+    {
+        num_planets++;
+    }
+
+    char planets_text[32];
+    sprintf(planets_text, "%d", num_planets);
+    sprintf(entries[STAR_INFO_PLANETS].text, "Planets: %*s%s", 5, "", planets_text);
+    entries[STAR_INFO_PLANETS].font_size = FONT_SIZE_15;
+
+    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 0);
+
+    for (int i = 0; i < STAR_INFO_COUNT; i++)
+    {
+        // Create a texture from the entry text
+        SDL_Surface *text_surface = TTF_RenderText_Solid(fonts[entries[i].font_size], entries[i].text, colors[COLOR_WHITE_180]);
+        SDL_Texture *text_texture = SDL_CreateTextureFromSurface(renderer, text_surface);
+        entries[i].text_texture = text_texture;
+        entries[i].texture_rect.w = text_surface->w;
+        entries[i].texture_rect.h = text_surface->h;
+
+        SDL_FreeSurface(text_surface);
+    }
+
+    // Name
+    int name_height = 80;
+    int entry_height = 30;
+    int inner_padding = 40;
+    entries[STAR_INFO_NAME].rect.w = width;
+    entries[STAR_INFO_NAME].rect.h = name_height;
+    entries[STAR_INFO_NAME].rect.x = camera->w - (width + padding);
+    entries[STAR_INFO_NAME].rect.y = padding;
+
+    SDL_RenderFillRect(renderer, &entries[STAR_INFO_NAME].rect);
+
+    entries[STAR_INFO_NAME].texture_rect.x = entries[STAR_INFO_NAME].rect.x + inner_padding;
+    entries[STAR_INFO_NAME].texture_rect.y = entries[STAR_INFO_NAME].rect.y + (entries[STAR_INFO_NAME].rect.h - entries[STAR_INFO_NAME].texture_rect.h) / 2;
+
+    SDL_RenderCopy(renderer, entries[STAR_INFO_NAME].text_texture, NULL, &entries[STAR_INFO_NAME].texture_rect);
+
+    // Type
+    entries[STAR_INFO_TYPE].rect.w = width;
+    entries[STAR_INFO_TYPE].rect.h = entry_height;
+    entries[STAR_INFO_TYPE].rect.x = camera->w - (width + padding);
+    entries[STAR_INFO_TYPE].rect.y = padding + name_height;
+
+    SDL_RenderFillRect(renderer, &entries[STAR_INFO_TYPE].rect);
+
+    entries[STAR_INFO_TYPE].texture_rect.x = entries[STAR_INFO_TYPE].rect.x + inner_padding;
+    entries[STAR_INFO_TYPE].texture_rect.y = entries[STAR_INFO_TYPE].rect.y + (entries[STAR_INFO_TYPE].rect.h - entries[STAR_INFO_TYPE].texture_rect.h) / 2;
+
+    SDL_RenderCopy(renderer, entries[STAR_INFO_TYPE].text_texture, NULL, &entries[STAR_INFO_TYPE].texture_rect);
+
+    // Set the position for the rest of the entries
+    for (int i = 2; i < STAR_INFO_COUNT; i++)
+    {
+        entries[i].rect.w = width;
+        entries[i].rect.h = entry_height;
+        entries[i].rect.x = camera->w - (width + padding);
+        entries[i].rect.y = padding + name_height + (i - 1) * entry_height;
+
+        SDL_RenderFillRect(renderer, &entries[i].rect);
+
+        // Set the position of the text within the entry
+        entries[i].texture_rect.x = entries[i].rect.x + inner_padding;
+        entries[i].texture_rect.y = entries[i].rect.y + (entries[i].rect.h - entries[i].texture_rect.h) / 2;
+
+        // Render the text texture onto the entry
+        SDL_RenderCopy(renderer, entries[i].text_texture, NULL, &entries[i].texture_rect);
+    }
+
+    // Destroy the textures
+    for (int i = 0; i < STAR_INFO_COUNT; i++)
+    {
+        SDL_DestroyTexture(entries[i].text_texture);
+        entries[i].text_texture = NULL;
+    }
+}
+
+/**
+ * Draws a box on the screen that displays information about the planets of a star.
+ *
+ * @param galaxy A pointer to the Star for which to display info.
+ * @param camera A pointer to the current Camera object.
+ *
+ * @return void
+ */
+void stars_draw_planets_info_box(const Star *star, const Camera *camera)
+{
+    // printf("\n%s", star->name);
+}
+
+/**
  * Draws a celestial body system, including its planets and orbits, onto the game's renderer.
  *
  * @param game_state The current game state.
@@ -315,6 +470,8 @@ void stars_draw_star_system(GameState *game_state, const InputState *input_state
     // Draw planets
     if (body->level != LEVEL_STAR)
     {
+        body->is_selected = body->parent->is_selected ? true : false;
+
         float orbit_opacity;
 
         if (game_state->state == NAVIGATE)
@@ -359,9 +516,6 @@ void stars_draw_star_system(GameState *game_state, const InputState *input_state
     }
     else if (body->level == LEVEL_STAR)
     {
-        // Get star distance from position
-        distance = maths_distance_between_points(body->position.x, body->position.y, position.x, position.y);
-
         if (game_state->state == MAP)
         {
             // Get relative position of star in game_scale
@@ -370,9 +524,12 @@ void stars_draw_star_system(GameState *game_state, const InputState *input_state
             int y = (body->position.y - camera->y) * game_state->game_scale;
             Point star_position = {.x = x, .y = y};
 
-            if (distance < body->cutoff ||
-                (maths_is_point_in_circle(input_state->mouse_position, star_position, radius) &&
-                 gfx_is_object_in_camera(camera, body->position.x, body->position.y, body->radius, game_state->game_scale)))
+            bool star_is_selected = strcmp(nav_state->current_star->name, body->name) == 0 && nav_state->current_star->is_selected;
+
+            if (gfx_is_object_in_camera(camera, body->position.x, body->position.y, body->cutoff, game_state->game_scale) &&
+                (star_is_selected || (maths_points_equal(nav_state->current_star->position, body->position)) ||
+                 (maths_is_point_in_circle(input_state->mouse_position, star_position, radius) &&
+                  gfx_is_object_in_camera(camera, body->position.x, body->position.y, body->radius, game_state->game_scale))))
             {
                 // Create system
                 if (!body->initialized)
@@ -399,6 +556,10 @@ void stars_draw_star_system(GameState *game_state, const InputState *input_state
                     stars_draw_star_system(game_state, input_state, nav_state, body->planets[i], camera);
                 }
 
+                // Update current_star
+                if (strcmp(nav_state->current_star->name, body->name) != 0)
+                    memcpy(nav_state->current_star, body, sizeof(Star));
+
                 if (input_state->orbits_on)
                 {
                     // Draw cutoff area circles
@@ -410,6 +571,9 @@ void stars_draw_star_system(GameState *game_state, const InputState *input_state
         }
         else if (game_state->state == NAVIGATE)
         {
+            // Get star distance from position
+            distance = maths_distance_between_points(body->position.x, body->position.y, position.x, position.y);
+
             if (distance < body->cutoff)
             {
                 // Draw planets
@@ -559,9 +723,7 @@ void stars_generate(GameState *game_state, GameEvents *game_events, NavigationSt
         Galaxy *next_galaxy = galaxies_nearest_circumference(nav_state, universe_position, false);
 
         // Found a new galaxy
-        if (next_galaxy != NULL &&
-            (next_galaxy->position.x != nav_state->current_galaxy->position.x ||
-             next_galaxy->position.y != nav_state->current_galaxy->position.y))
+        if (next_galaxy != NULL && !maths_points_equal(next_galaxy->position, nav_state->current_galaxy->position))
         {
             game_events->found_galaxy = true;
 
@@ -1119,6 +1281,7 @@ static void stars_populate_body(CelestialBody *body, Point position, pcg32_rando
                 planet->color.g = colors[COLOR_SKY_BLUE_255].g;
                 planet->color.b = colors[COLOR_SKY_BLUE_255].b;
                 planet->level = LEVEL_PLANET;
+                planet->is_selected = false;
                 planet->radius = radius;
                 planet->cutoff = orbit_width / 2;
 
@@ -1261,6 +1424,7 @@ static void stars_populate_body(CelestialBody *body, Point position, pcg32_rando
                 moon->color.g = colors[COLOR_GAINSBORO_255].g;
                 moon->color.b = colors[COLOR_GAINSBORO_255].b;
                 moon->level = LEVEL_MOON;
+                moon->is_selected = false;
                 moon->radius = radius;
 
                 // Calculate orbital velocity
