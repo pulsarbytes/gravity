@@ -525,11 +525,11 @@ void stars_draw_star_system(GameState *game_state, const InputState *input_state
             Point star_position = {.x = x, .y = y};
 
             bool star_is_selected = strcmp(nav_state->current_star->name, body->name) == 0 && nav_state->current_star->is_selected;
+            bool star_is_hovered = strcmp(nav_state->current_star->name, body->name) == 0 && input_state->is_hovering_star;
 
-            if (gfx_is_object_in_camera(camera, body->position.x, body->position.y, body->cutoff, game_state->game_scale) &&
-                (star_is_selected || (maths_points_equal(nav_state->current_star->position, body->position)) ||
-                 (maths_is_point_in_circle(input_state->mouse_position, star_position, radius) &&
-                  gfx_is_object_in_camera(camera, body->position.x, body->position.y, body->radius, game_state->game_scale))))
+            if (star_is_selected || star_is_hovered ||
+                (maths_is_point_in_circle(input_state->mouse_position, star_position, radius) &&
+                 gfx_is_object_in_camera(camera, body->position.x, body->position.y, body->radius, game_state->game_scale)))
             {
                 // Create system
                 if (!body->initialized)
@@ -562,10 +562,17 @@ void stars_draw_star_system(GameState *game_state, const InputState *input_state
 
                 if (input_state->orbits_on)
                 {
+                    unsigned short color_code;
+
+                    if (star_is_selected)
+                        color_code = COLOR_CYAN_40;
+                    else
+                        color_code = COLOR_MAGENTA_40;
+
                     // Draw cutoff area circles
-                    gfx_draw_circle(renderer, camera, x, y, radius - 1, colors[COLOR_MAGENTA_40]);
-                    gfx_draw_circle(renderer, camera, x, y, radius - 2, colors[COLOR_MAGENTA_40]);
-                    gfx_draw_circle(renderer, camera, x, y, radius - 3, colors[COLOR_MAGENTA_40]);
+                    gfx_draw_circle(renderer, camera, x, y, radius - 1, colors[color_code]);
+                    gfx_draw_circle(renderer, camera, x, y, radius - 2, colors[color_code]);
+                    gfx_draw_circle(renderer, camera, x, y, radius - 3, colors[color_code]);
                 }
             }
         }

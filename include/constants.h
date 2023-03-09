@@ -2,10 +2,11 @@
 #define CONSTANTS_H
 
 // System settings
-#define FPS 60 // Default: 60
-#define FULLSCREEN 1
 #define MAX(x, y) ((x) > (y) ? (x) : (y))
-#define MAX_OBJECT_NAME 64 // Default: 64
+#define FULLSCREEN 1
+#define FPS 60                    // Default: 60
+#define MAX_OBJECT_NAME 64        // Default: 64
+#define DOUBLE_CLICK_INTERVAL 400 // Default: 400
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
 #endif

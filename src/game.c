@@ -159,6 +159,8 @@ void game_reset(GameState *game_state, InputState *input_state, GameEvents *game
     input_state->click_count = 0;
     input_state->is_mouse_double_clicked = false;
     input_state->is_mouse_dragging = false;
+    input_state->clicked_inside_galaxy = false;
+    input_state->clicked_inside_star = false;
     input_state->left_on = false;
     input_state->right_on = false;
     input_state->up_on = false;
@@ -472,7 +474,10 @@ void game_run_map_state(GameState *game_state, InputState *input_state, GameEven
         if (game_state->game_scale - zoom_step >= ZOOM_MAP_MIN - epsilon)
         {
             // Reset scale
-            game_state->game_scale -= zoom_step;
+            if (game_state->game_scale_override)
+                game_state->game_scale = game_state->game_scale_override;
+            else
+                game_state->game_scale -= zoom_step;
 
             // Reset region_size
             if (game_state->game_scale < ZOOM_MAP_REGION_SWITCH - epsilon)
@@ -503,8 +508,11 @@ void game_run_map_state(GameState *game_state, InputState *input_state, GameEven
                     gfx_zoom_star_system(nav_state->stars[s]->star, game_state->game_scale);
             }
         }
+        else if (game_state->game_scale_override)
+            game_state->game_scale = game_state->game_scale_override;
 
         input_state->zoom_out = false;
+        game_state->game_scale_override = 0;
     }
 
     stars_generate(game_state, game_events, nav_state, bstars, ship);
@@ -937,6 +945,10 @@ void game_run_universe_state(GameState *game_state, InputState *input_state, Gam
         ship->previous_position.x = ship->position.x;
         ship->previous_position.y = ship->position.y;
 
+        // Reset current_galaxy
+        if (strcmp(nav_state->current_galaxy->name, nav_state->buffer_galaxy->name) != 0)
+            memcpy(nav_state->current_galaxy, nav_state->buffer_galaxy, sizeof(Galaxy));
+
         // Initialize cross lines for stars preview
         // Add GALAXY_SECTION_SIZE to map_offset so that stars generation is triggered on startup
         if (cross_point.x == 0.0)
@@ -988,7 +1000,10 @@ void game_run_universe_state(GameState *game_state, InputState *input_state, Gam
         game_events->start_stars_preview = true;
 
         if (game_events->is_centering_universe)
-            game_events->is_centering_universe = false;
+        {
+            stars_clear_table(nav_state->stars);
+            nav_state->current_galaxy->is_selected = true;
+        }
     }
     else
         galaxies_generate(game_events, nav_state, nav_state->universe_offset);
@@ -1148,6 +1163,8 @@ void game_run_universe_state(GameState *game_state, InputState *input_state, Gam
                 nav_state->map_offset.y = (nav_state->universe_offset.y - nav_state->current_galaxy->position.y) * GALAXY_SCALE;
             }
         }
+        else if (game_state->game_scale_override)
+            game_state->game_scale = game_state->game_scale_override;
 
         zoom_preview = true;
         input_state->zoom_in = false;
@@ -1169,13 +1186,19 @@ void game_run_universe_state(GameState *game_state, InputState *input_state, Gam
         if (game_state->game_scale - zoom_universe_step >= ZOOM_UNIVERSE_MIN / GALAXY_SCALE - epsilon)
         {
             // Reset scale
-            game_state->game_scale -= zoom_universe_step;
+            if (game_state->game_scale_override)
+                game_state->game_scale = game_state->game_scale_override;
+            else
+                game_state->game_scale -= zoom_universe_step;
         }
+        else if (game_state->game_scale_override)
+            game_state->game_scale = game_state->game_scale_override;
 
         stars_clear_table(nav_state->stars);
 
         zoom_preview = true;
         input_state->zoom_out = false;
+        game_state->game_scale_override = 0;
         game_events->start_stars_preview = true;
         cross_point.x += GALAXY_SCALE; // fake increment so that it triggers star preview generation
         cross_point.y += GALAXY_SCALE;
@@ -1222,6 +1245,9 @@ void game_run_universe_state(GameState *game_state, InputState *input_state, Gam
 
     if (game_events->is_entering_universe)
         game_events->is_entering_universe = false;
+
+    if (game_events->is_centering_universe)
+        game_events->is_centering_universe = false;
 
     if (input_state->is_mouse_double_clicked)
         input_state->is_mouse_double_clicked = false;

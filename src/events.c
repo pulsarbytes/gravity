@@ -37,8 +37,6 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
             break;
         case SDL_MOUSEBUTTONDOWN:
             input_state->is_mouse_dragging = false;
-            nav_state->current_galaxy->is_selected = false;
-            nav_state->current_star->is_selected = false;
 
             if (game_state->state == UNIVERSE || game_state->state == MAP)
             {
@@ -50,12 +48,22 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
             // Left click down
             if (event.button.button == SDL_BUTTON_LEFT)
             {
+                if (game_state->state == UNIVERSE && input_state->is_hovering_galaxy)
+                    input_state->clicked_inside_galaxy = true;
+
+                if (game_state->state == MAP && input_state->is_hovering_star)
+                    input_state->clicked_inside_star = true;
+
                 Uint32 current_time = SDL_GetTicks();
 
                 // Detect double-clicks (500 milliseconds)
-                if (current_time - input_state->last_click_time < 500)
+                if (current_time - input_state->last_click_time < DOUBLE_CLICK_INTERVAL)
                 {
-                    input_state->click_count++;
+                    if (game_state->state == UNIVERSE && input_state->is_hovering_galaxy)
+                        input_state->click_count++;
+
+                    if (game_state->state == MAP && input_state->is_hovering_star)
+                        input_state->click_count++;
 
                     if (input_state->click_count == 2)
                     {
@@ -83,36 +91,42 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
                                 {
                                     input_state->is_mouse_double_clicked = true;
 
-                                    // Set galaxy as selected
-                                    nav_state->current_galaxy->is_selected = true;
-
                                     // Adjust game_scale to new galaxy
-                                    double zoom_universe;
+                                    double new_scale;
 
                                     switch (nav_state->current_galaxy->class)
                                     {
                                     case 1:
-                                        zoom_universe = ZOOM_UNIVERSE * 10;
+                                        new_scale = ZOOM_UNIVERSE * 10;
                                         break;
                                     case 2:
-                                        zoom_universe = ZOOM_UNIVERSE * 5;
+                                        new_scale = ZOOM_UNIVERSE * 5;
                                         break;
                                     case 3:
-                                        zoom_universe = ZOOM_UNIVERSE * 3;
+                                        new_scale = ZOOM_UNIVERSE * 3;
                                         break;
                                     case 4:
                                     case 5:
                                     case 6:
-                                        zoom_universe = ZOOM_UNIVERSE * 2;
+                                        new_scale = ZOOM_UNIVERSE * 2;
                                         break;
                                     default:
-                                        zoom_universe = ZOOM_UNIVERSE * 2;
+                                        new_scale = ZOOM_UNIVERSE * 2;
                                         break;
                                     }
 
-                                    input_state->zoom_in = true;
-                                    input_state->zoom_out = false;
-                                    game_state->game_scale_override = zoom_universe / GALAXY_SCALE;
+                                    if (game_state->game_scale > (new_scale / GALAXY_SCALE) - epsilon)
+                                    {
+                                        input_state->zoom_out = true;
+                                        input_state->zoom_in = false;
+                                    }
+                                    else
+                                    {
+                                        input_state->zoom_in = true;
+                                        input_state->zoom_out = false;
+                                    }
+
+                                    game_state->game_scale_override = new_scale / GALAXY_SCALE;
                                 }
                             }
                         }
@@ -138,40 +152,46 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
 
                                 if (abs(delta_x) > 0 || abs(delta_y) > 0)
                                 {
-                                    // Set star as selected
-                                    nav_state->current_star->is_selected = true;
-
                                     // Adjust game_scale to new star
-                                    double zoom_map;
+                                    double new_scale;
 
                                     switch (nav_state->current_star->class)
                                     {
                                     case 1:
-                                        zoom_map = ZOOM_MAP * 9;
+                                        new_scale = ZOOM_MAP * 9;
                                         break;
                                     case 2:
-                                        zoom_map = ZOOM_MAP * 5;
+                                        new_scale = ZOOM_MAP * 5;
                                         break;
                                     case 3:
-                                        zoom_map = ZOOM_MAP * 3;
+                                        new_scale = ZOOM_MAP * 3;
                                         break;
                                     case 4:
-                                        zoom_map = ZOOM_MAP * 2;
+                                        new_scale = ZOOM_MAP * 2;
                                         break;
                                     case 5:
-                                        zoom_map = ZOOM_MAP * 2;
+                                        new_scale = ZOOM_MAP * 2;
                                         break;
                                     case 6:
-                                        zoom_map = ZOOM_MAP * 2;
+                                        new_scale = ZOOM_MAP * 2;
                                         break;
                                     default:
-                                        zoom_map = ZOOM_MAP * 1;
+                                        new_scale = ZOOM_MAP * 1;
                                         break;
                                     }
 
-                                    input_state->zoom_in = true;
-                                    input_state->zoom_out = false;
-                                    game_state->game_scale_override = zoom_map;
+                                    if (game_state->game_scale > new_scale - epsilon)
+                                    {
+                                        input_state->zoom_in = false;
+                                        input_state->zoom_out = true;
+                                    }
+                                    else
+                                    {
+                                        input_state->zoom_in = true;
+                                        input_state->zoom_out = false;
+                                    }
+
+                                    game_state->game_scale_override = new_scale;
                                 }
                             }
                         }
@@ -181,7 +201,21 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
                 }
                 else
                 {
-                    input_state->click_count = 1;
+                    if (game_state->state == UNIVERSE)
+                    {
+                        if (input_state->is_hovering_galaxy)
+                            input_state->click_count = 1;
+                        else
+                            input_state->click_count = 0;
+                    }
+
+                    if (game_state->state == MAP)
+                    {
+                        if (input_state->is_hovering_star)
+                            input_state->click_count = 1;
+                        else
+                            input_state->click_count = 0;
+                    }
 
                     if (game_state->state == MENU)
                     {
@@ -210,6 +244,38 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
                 }
 
                 input_state->last_click_time = current_time;
+            }
+            break;
+        case SDL_MOUSEBUTTONUP:
+            if (!input_state->is_mouse_dragging)
+            {
+                if (event.button.button == SDL_BUTTON_LEFT)
+                {
+                    if (game_state->state == UNIVERSE)
+                    {
+                        // Deselect galaxy
+                        if (!input_state->is_hovering_galaxy && !input_state->clicked_inside_galaxy)
+                            nav_state->current_galaxy->is_selected = false;
+
+                        // Set galaxy as selected
+                        if (input_state->is_hovering_galaxy)
+                            nav_state->current_galaxy->is_selected = true;
+
+                        input_state->clicked_inside_galaxy = false;
+                    }
+                    else if (game_state->state == MAP)
+                    {
+                        // Deselect star
+                        if (!input_state->is_hovering_star && !input_state->clicked_inside_star)
+                            nav_state->current_star->is_selected = false;
+
+                        // Set star as selected
+                        if (input_state->is_hovering_star)
+                            nav_state->current_star->is_selected = true;
+
+                        input_state->clicked_inside_star = false;
+                    }
+                }
             }
             break;
         case SDL_MOUSEMOTION:
@@ -254,52 +320,52 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
                     input_state->mouse_down_position.x = input_state->mouse_position.x;
                     input_state->mouse_down_position.y = input_state->mouse_position.y;
                 }
-                else
-                {
-                    // Scroll left
-                    if (input_state->mouse_position.x < MOUSE_SCROLL_DISTANCE)
-                    {
-                        input_state->right_on = false;
-                        input_state->left_on = true;
-                        nav_state->current_galaxy->is_selected = false;
-                        nav_state->current_star->is_selected = false;
-                    }
-                    else
-                        input_state->left_on = false;
+                // else
+                // {
+                //     // Scroll left
+                //     if (input_state->mouse_position.x < MOUSE_SCROLL_DISTANCE)
+                //     {
+                //         input_state->right_on = false;
+                //         input_state->left_on = true;
+                //         nav_state->current_galaxy->is_selected = false;
+                //         nav_state->current_star->is_selected = false;
+                //     }
+                //     else
+                //         input_state->left_on = false;
 
-                    // Scroll right
-                    if (input_state->mouse_position.x > camera->w - MOUSE_SCROLL_DISTANCE)
-                    {
-                        input_state->left_on = false;
-                        input_state->right_on = true;
-                        nav_state->current_galaxy->is_selected = false;
-                        nav_state->current_star->is_selected = false;
-                    }
-                    else
-                        input_state->right_on = false;
+                //     // Scroll right
+                //     if (input_state->mouse_position.x > camera->w - MOUSE_SCROLL_DISTANCE)
+                //     {
+                //         input_state->left_on = false;
+                //         input_state->right_on = true;
+                //         nav_state->current_galaxy->is_selected = false;
+                //         nav_state->current_star->is_selected = false;
+                //     }
+                //     else
+                //         input_state->right_on = false;
 
-                    // Scroll up
-                    if (input_state->mouse_position.y < MOUSE_SCROLL_DISTANCE)
-                    {
-                        input_state->down_on = false;
-                        input_state->up_on = true;
-                        nav_state->current_galaxy->is_selected = false;
-                        nav_state->current_star->is_selected = false;
-                    }
-                    else
-                        input_state->up_on = false;
+                //     // Scroll up
+                //     if (input_state->mouse_position.y < MOUSE_SCROLL_DISTANCE)
+                //     {
+                //         input_state->down_on = false;
+                //         input_state->up_on = true;
+                //         nav_state->current_galaxy->is_selected = false;
+                //         nav_state->current_star->is_selected = false;
+                //     }
+                //     else
+                //         input_state->up_on = false;
 
-                    // Scroll down
-                    if (input_state->mouse_position.y > camera->h - MOUSE_SCROLL_DISTANCE)
-                    {
-                        input_state->up_on = false;
-                        input_state->down_on = true;
-                        nav_state->current_galaxy->is_selected = false;
-                        nav_state->current_star->is_selected = false;
-                    }
-                    else
-                        input_state->down_on = false;
-                }
+                //     // Scroll down
+                //     if (input_state->mouse_position.y > camera->h - MOUSE_SCROLL_DISTANCE)
+                //     {
+                //         input_state->up_on = false;
+                //         input_state->down_on = true;
+                //         nav_state->current_galaxy->is_selected = false;
+                //         nav_state->current_star->is_selected = false;
+                //     }
+                //     else
+                //         input_state->down_on = false;
+                // }
             }
             break;
         case SDL_MOUSEWHEEL:

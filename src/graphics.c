@@ -48,6 +48,11 @@ void gfx_create_default_colors(void)
     colors[COLOR_ORANGE_32].b = 0;
     colors[COLOR_ORANGE_32].a = 32;
 
+    colors[COLOR_CYAN_40].r = 0;
+    colors[COLOR_CYAN_40].g = 255;
+    colors[COLOR_CYAN_40].b = 255;
+    colors[COLOR_CYAN_40].a = 40;
+
     colors[COLOR_CYAN_70].r = 0;
     colors[COLOR_CYAN_70].g = 255;
     colors[COLOR_CYAN_70].b = 255;

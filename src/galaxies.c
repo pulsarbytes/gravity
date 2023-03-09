@@ -230,9 +230,11 @@ void galaxies_draw_galaxy(const InputState *input_state, NavigationState *nav_st
     Point galaxy_position = {.x = x, .y = y};
 
     bool galaxy_is_selected = strcmp(nav_state->current_galaxy->name, galaxy->name) == 0 && nav_state->current_galaxy->is_selected;
+    bool galaxy_is_hovered = strcmp(nav_state->current_galaxy->name, galaxy->name) == 0 && input_state->is_hovering_galaxy;
 
-    if (galaxy_is_selected || (maths_is_point_in_circle(input_state->mouse_position, galaxy_position, cutoff) &&
-                               gfx_is_object_in_camera(camera, galaxy->position.x, galaxy->position.y, galaxy->radius, scale * GALAXY_SCALE)))
+    if (galaxy_is_selected || galaxy_is_hovered ||
+        (maths_is_point_in_circle(input_state->mouse_position, galaxy_position, cutoff) &&
+         gfx_is_object_in_camera(camera, galaxy->position.x, galaxy->position.y, galaxy->radius, scale * GALAXY_SCALE)))
     {
         // Reset stars and update current_galaxy
         if (strcmp(nav_state->current_galaxy->name, galaxy->name) != 0)
@@ -241,8 +243,17 @@ void galaxies_draw_galaxy(const InputState *input_state, NavigationState *nav_st
             memcpy(nav_state->current_galaxy, galaxy, sizeof(Galaxy));
         }
 
-        // Draw cutoff circle
-        gfx_draw_circle(renderer, camera, x, y, cutoff, colors[COLOR_CYAN_70]);
+        // Draw cutoff area circles
+        unsigned short color_code;
+
+        if (galaxy_is_selected)
+            color_code = COLOR_CYAN_40;
+        else
+            color_code = COLOR_MAGENTA_40;
+
+        gfx_draw_circle(renderer, camera, x, y, cutoff - 1, colors[color_code]);
+        gfx_draw_circle(renderer, camera, x, y, cutoff - 2, colors[color_code]);
+        gfx_draw_circle(renderer, camera, x, y, cutoff - 3, colors[color_code]);
 
         // Generate gstars
         if (!galaxy->initialized || galaxy->initialized < galaxy->total_groups)

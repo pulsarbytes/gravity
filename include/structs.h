@@ -177,6 +177,8 @@ typedef struct
     int click_count;
     bool is_mouse_double_clicked;
     bool is_mouse_dragging;
+    bool clicked_inside_galaxy;
+    bool clicked_inside_star;
     bool left_on;
     bool right_on;
     bool up_on;
