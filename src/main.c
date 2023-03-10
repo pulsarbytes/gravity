@@ -41,7 +41,7 @@ SDL_Color colors[COLOR_COUNT];
 void console_log_fps(ConsoleEntry entries[], unsigned int *fps, unsigned int *last_time, unsigned int *frame_count);
 void console_log_position(GameState *, NavigationState);
 void console_update_entry(ConsoleEntry entries[], int index, double value);
-void console_render(ConsoleEntry entries[]);
+void console_render(ConsoleEntry entries[], const Camera *);
 void events_loop(GameState *, InputState *, GameEvents *, NavigationState *, const Camera *);
 Ship game_create_ship(int radius, Point, long double scale);
 void game_reset(GameState *, InputState *, GameEvents *, NavigationState *, Bstar *bstars, Ship *, Camera *, bool reset);
@@ -170,7 +170,7 @@ int main(int argc, char *argv[])
         if (input_state.console_on && CONSOLE_ON &&
             (game_state.state == NAVIGATE || game_state.state == MAP || game_state.state == UNIVERSE))
         {
-            console_render(game_state.console_entries);
+            console_render(game_state.console_entries, &camera);
         }
 
         // Switch buffers, display back buffer

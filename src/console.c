@@ -86,7 +86,7 @@ void console_log_fps(ConsoleEntry entries[], unsigned int *fps, unsigned int *la
  *
  * @return void
  */
-void console_render(ConsoleEntry entries[])
+void console_render(ConsoleEntry entries[], const Camera *camera)
 {
     for (int i = 0; i < CONSOLE_COUNT; i++)
     {
@@ -94,7 +94,7 @@ void console_render(ConsoleEntry entries[])
         entries[i].text_texture = SDL_CreateTextureFromSurface(renderer, surface);
         SDL_FreeSurface(surface);
         entries[i].texture_rect.x = 120;
-        entries[i].texture_rect.y = (i + 1) * 20;
+        entries[i].texture_rect.y = camera->h - 50 - (i + 1) * 20; //(i + 1) * 20;
         entries[i].texture_rect.w = 100;
         entries[i].texture_rect.h = 15;
         SDL_RenderCopy(renderer, entries[i].text_texture, NULL, &entries[i].texture_rect);

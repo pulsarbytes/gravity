@@ -405,8 +405,11 @@ void game_run_map_state(GameState *game_state, InputState *input_state, GameEven
         }
 
         // Reset ship position
-        ship->position.x = ship->previous_position.x;
-        ship->position.y = ship->previous_position.y;
+        if (!game_events->is_exiting_universe)
+        {
+            ship->position.x = ship->previous_position.x;
+            ship->position.y = ship->previous_position.y;
+        }
 
         // Reset region size
         game_state->galaxy_region_size = GALAXY_REGION_SIZE;
@@ -946,8 +949,17 @@ void game_run_universe_state(GameState *game_state, InputState *input_state, Gam
         ship->previous_position.y = ship->position.y;
 
         // Reset current_galaxy
-        if (strcmp(nav_state->current_galaxy->name, nav_state->buffer_galaxy->name) != 0)
-            memcpy(nav_state->current_galaxy, nav_state->buffer_galaxy, sizeof(Galaxy));
+        if (!game_events->is_exiting_map)
+        {
+            if (strcmp(nav_state->current_galaxy->name, nav_state->buffer_galaxy->name) != 0)
+                memcpy(nav_state->current_galaxy, nav_state->buffer_galaxy, sizeof(Galaxy));
+        }
+
+        if (game_events->is_centering_universe)
+        {
+            stars_clear_table(nav_state->stars);
+            nav_state->current_galaxy->is_selected = true;
+        }
 
         // Initialize cross lines for stars preview
         // Add GALAXY_SECTION_SIZE to map_offset so that stars generation is triggered on startup
@@ -998,12 +1010,6 @@ void game_run_universe_state(GameState *game_state, InputState *input_state, Gam
 
         // Trigger generation of stars preview
         game_events->start_stars_preview = true;
-
-        if (game_events->is_centering_universe)
-        {
-            stars_clear_table(nav_state->stars);
-            nav_state->current_galaxy->is_selected = true;
-        }
     }
     else
         galaxies_generate(game_events, nav_state, nav_state->universe_offset);

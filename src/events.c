@@ -36,11 +36,12 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
             game_change_state(game_state, game_events, QUIT);
             break;
         case SDL_MOUSEBUTTONDOWN:
+            // Reset is_mouse_dragging
             input_state->is_mouse_dragging = false;
 
+            // Record the mouse click position
             if (game_state->state == UNIVERSE || game_state->state == MAP)
             {
-                // Record the mouse click position
                 input_state->mouse_down_position.x = event.button.x;
                 input_state->mouse_down_position.y = event.button.y;
             }
@@ -245,6 +246,53 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
 
                 input_state->last_click_time = current_time;
             }
+
+            if (event.button.button == SDL_BUTTON_RIGHT)
+            {
+                // Scroll left
+                if (input_state->mouse_position.x < MOUSE_SCROLL_DISTANCE)
+                {
+                    input_state->right_on = false;
+                    input_state->left_on = true;
+                    nav_state->current_galaxy->is_selected = false;
+                    nav_state->current_star->is_selected = false;
+                }
+                else
+                    input_state->left_on = false;
+
+                // Scroll right
+                if (input_state->mouse_position.x > camera->w - MOUSE_SCROLL_DISTANCE)
+                {
+                    input_state->left_on = false;
+                    input_state->right_on = true;
+                    nav_state->current_galaxy->is_selected = false;
+                    nav_state->current_star->is_selected = false;
+                }
+                else
+                    input_state->right_on = false;
+
+                // Scroll up
+                if (input_state->mouse_position.y < MOUSE_SCROLL_DISTANCE)
+                {
+                    input_state->down_on = false;
+                    input_state->up_on = true;
+                    nav_state->current_galaxy->is_selected = false;
+                    nav_state->current_star->is_selected = false;
+                }
+                else
+                    input_state->up_on = false;
+
+                // Scroll down
+                if (input_state->mouse_position.y > camera->h - MOUSE_SCROLL_DISTANCE)
+                {
+                    input_state->up_on = false;
+                    input_state->down_on = true;
+                    nav_state->current_galaxy->is_selected = false;
+                    nav_state->current_star->is_selected = false;
+                }
+            }
+            else
+                input_state->down_on = false;
             break;
         case SDL_MOUSEBUTTONUP:
             if (!input_state->is_mouse_dragging)
@@ -275,6 +323,15 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
 
                         input_state->clicked_inside_star = false;
                     }
+                }
+
+                if (event.button.button == SDL_BUTTON_RIGHT)
+                {
+                    // Stop scrolling
+                    input_state->right_on = false;
+                    input_state->left_on = false;
+                    input_state->down_on = false;
+                    input_state->up_on = false;
                 }
             }
             break;
@@ -320,52 +377,6 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
                     input_state->mouse_down_position.x = input_state->mouse_position.x;
                     input_state->mouse_down_position.y = input_state->mouse_position.y;
                 }
-                // else
-                // {
-                //     // Scroll left
-                //     if (input_state->mouse_position.x < MOUSE_SCROLL_DISTANCE)
-                //     {
-                //         input_state->right_on = false;
-                //         input_state->left_on = true;
-                //         nav_state->current_galaxy->is_selected = false;
-                //         nav_state->current_star->is_selected = false;
-                //     }
-                //     else
-                //         input_state->left_on = false;
-
-                //     // Scroll right
-                //     if (input_state->mouse_position.x > camera->w - MOUSE_SCROLL_DISTANCE)
-                //     {
-                //         input_state->left_on = false;
-                //         input_state->right_on = true;
-                //         nav_state->current_galaxy->is_selected = false;
-                //         nav_state->current_star->is_selected = false;
-                //     }
-                //     else
-                //         input_state->right_on = false;
-
-                //     // Scroll up
-                //     if (input_state->mouse_position.y < MOUSE_SCROLL_DISTANCE)
-                //     {
-                //         input_state->down_on = false;
-                //         input_state->up_on = true;
-                //         nav_state->current_galaxy->is_selected = false;
-                //         nav_state->current_star->is_selected = false;
-                //     }
-                //     else
-                //         input_state->up_on = false;
-
-                //     // Scroll down
-                //     if (input_state->mouse_position.y > camera->h - MOUSE_SCROLL_DISTANCE)
-                //     {
-                //         input_state->up_on = false;
-                //         input_state->down_on = true;
-                //         nav_state->current_galaxy->is_selected = false;
-                //         nav_state->current_star->is_selected = false;
-                //     }
-                //     else
-                //         input_state->down_on = false;
-                // }
             }
             break;
         case SDL_MOUSEWHEEL:
