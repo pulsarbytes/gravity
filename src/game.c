@@ -527,6 +527,7 @@ void game_run_map_state(GameState *game_state, InputState *input_state, GameEven
             {
                 game_events->is_exiting_map = true;
                 game_events->switch_to_universe = true;
+                input_state->click_count = 0;
                 game_events->is_entering_universe = true;
                 game_change_state(game_state, game_events, UNIVERSE);
 
@@ -1198,6 +1199,7 @@ void game_run_universe_state(GameState *game_state, InputState *input_state, Gam
             if (game_state->game_scale >= ZOOM_MAP_SWITCH - epsilon)
             {
                 game_events->switch_to_map = true;
+                input_state->click_count = 0;
                 game_events->is_entering_map = true;
                 game_change_state(game_state, game_events, MAP);
 

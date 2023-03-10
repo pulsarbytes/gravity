@@ -28,31 +28,6 @@ static int gfx_update_projection_opacity(double distance, int region_size, int s
  */
 void gfx_create_default_colors(void)
 {
-    colors[COLOR_WHITE_255].r = 255;
-    colors[COLOR_WHITE_255].g = 255;
-    colors[COLOR_WHITE_255].b = 255;
-    colors[COLOR_WHITE_255].a = 255;
-
-    colors[COLOR_WHITE_180].r = 255;
-    colors[COLOR_WHITE_180].g = 255;
-    colors[COLOR_WHITE_180].b = 255;
-    colors[COLOR_WHITE_180].a = 180;
-
-    colors[COLOR_WHITE_100].r = 255;
-    colors[COLOR_WHITE_100].g = 255;
-    colors[COLOR_WHITE_100].b = 255;
-    colors[COLOR_WHITE_100].a = 100;
-
-    colors[COLOR_ORANGE_32].r = 255;
-    colors[COLOR_ORANGE_32].g = 165;
-    colors[COLOR_ORANGE_32].b = 0;
-    colors[COLOR_ORANGE_32].a = 32;
-
-    colors[COLOR_ORANGE_255].r = 255;
-    colors[COLOR_ORANGE_255].g = 165;
-    colors[COLOR_ORANGE_255].b = 0;
-    colors[COLOR_ORANGE_255].a = 255;
-
     colors[COLOR_CYAN_40].r = 0;
     colors[COLOR_CYAN_40].g = 255;
     colors[COLOR_CYAN_40].b = 255;
@@ -62,6 +37,36 @@ void gfx_create_default_colors(void)
     colors[COLOR_CYAN_70].g = 255;
     colors[COLOR_CYAN_70].b = 255;
     colors[COLOR_CYAN_70].a = 70;
+
+    colors[COLOR_GAINSBORO_255].r = 220;
+    colors[COLOR_GAINSBORO_255].g = 220;
+    colors[COLOR_GAINSBORO_255].b = 220;
+    colors[COLOR_GAINSBORO_255].a = 255;
+
+    colors[COLOR_LAVENDER_255].r = 224;
+    colors[COLOR_LAVENDER_255].g = 176;
+    colors[COLOR_LAVENDER_255].b = 255;
+    colors[COLOR_LAVENDER_255].a = 255;
+
+    colors[COLOR_LIGHT_BLUE_255].r = 192;
+    colors[COLOR_LIGHT_BLUE_255].g = 192;
+    colors[COLOR_LIGHT_BLUE_255].b = 255;
+    colors[COLOR_LIGHT_BLUE_255].a = 255;
+
+    colors[COLOR_LIGHT_GREEN_255].r = 192;
+    colors[COLOR_LIGHT_GREEN_255].g = 255;
+    colors[COLOR_LIGHT_GREEN_255].b = 192;
+    colors[COLOR_LIGHT_GREEN_255].a = 255;
+
+    colors[COLOR_LIGHT_ORANGE_255].r = 255;
+    colors[COLOR_LIGHT_ORANGE_255].g = 192;
+    colors[COLOR_LIGHT_ORANGE_255].b = 128;
+    colors[COLOR_LIGHT_ORANGE_255].a = 255;
+
+    colors[COLOR_LIGHT_RED_255].r = 255;
+    colors[COLOR_LIGHT_RED_255].g = 128;
+    colors[COLOR_LIGHT_RED_255].b = 128;
+    colors[COLOR_LIGHT_RED_255].a = 255;
 
     colors[COLOR_MAGENTA_40].r = 255;
     colors[COLOR_MAGENTA_40].g = 0;
@@ -73,20 +78,40 @@ void gfx_create_default_colors(void)
     colors[COLOR_MAGENTA_70].b = 255;
     colors[COLOR_MAGENTA_70].a = 70;
 
-    colors[COLOR_YELLOW_255].r = 255;
-    colors[COLOR_YELLOW_255].g = 255;
-    colors[COLOR_YELLOW_255].b = 0;
-    colors[COLOR_YELLOW_255].a = 255;
+    colors[COLOR_ORANGE_32].r = 255;
+    colors[COLOR_ORANGE_32].g = 165;
+    colors[COLOR_ORANGE_32].b = 0;
+    colors[COLOR_ORANGE_32].a = 32;
+
+    colors[COLOR_PALE_YELLOW_255].r = 255;
+    colors[COLOR_PALE_YELLOW_255].g = 255;
+    colors[COLOR_PALE_YELLOW_255].b = 192;
+    colors[COLOR_PALE_YELLOW_255].a = 255;
 
     colors[COLOR_SKY_BLUE_255].r = 135;
     colors[COLOR_SKY_BLUE_255].g = 206;
     colors[COLOR_SKY_BLUE_255].b = 235;
     colors[COLOR_SKY_BLUE_255].a = 255;
 
-    colors[COLOR_GAINSBORO_255].r = 220;
-    colors[COLOR_GAINSBORO_255].g = 220;
-    colors[COLOR_GAINSBORO_255].b = 220;
-    colors[COLOR_GAINSBORO_255].a = 255;
+    colors[COLOR_WHITE_100].r = 255;
+    colors[COLOR_WHITE_100].g = 255;
+    colors[COLOR_WHITE_100].b = 255;
+    colors[COLOR_WHITE_100].a = 100;
+
+    colors[COLOR_WHITE_180].r = 255;
+    colors[COLOR_WHITE_180].g = 255;
+    colors[COLOR_WHITE_180].b = 255;
+    colors[COLOR_WHITE_180].a = 180;
+
+    colors[COLOR_WHITE_255].r = 255;
+    colors[COLOR_WHITE_255].g = 255;
+    colors[COLOR_WHITE_255].b = 255;
+    colors[COLOR_WHITE_255].a = 255;
+
+    colors[COLOR_YELLOW_255].r = 255;
+    colors[COLOR_YELLOW_255].g = 255;
+    colors[COLOR_YELLOW_255].b = 0;
+    colors[COLOR_YELLOW_255].a = 255;
 }
 
 /**
@@ -304,14 +329,14 @@ void gfx_draw_galaxy_cloud(Galaxy *galaxy, const Camera *camera, int gstars_coun
 
         if (high_definition)
         {
-            SDL_SetRenderDrawColor(renderer, 255, 255, 255, (int)opacity);
+            SDL_SetRenderDrawColor(renderer, galaxy->gstars_hd[i].color.r, galaxy->gstars_hd[i].color.g, galaxy->gstars_hd[i].color.b, (int)opacity);
 
             x = (galaxy->position.x - camera->x + galaxy->gstars_hd[i].position.x / GALAXY_SCALE) * scale * GALAXY_SCALE;
             y = (galaxy->position.y - camera->y + galaxy->gstars_hd[i].position.y / GALAXY_SCALE) * scale * GALAXY_SCALE;
         }
         else
         {
-            SDL_SetRenderDrawColor(renderer, 255, 255, 255, (int)opacity);
+            SDL_SetRenderDrawColor(renderer, galaxy->gstars[i].color.r, galaxy->gstars[i].color.g, galaxy->gstars[i].color.b, (int)opacity);
 
             x = (galaxy->position.x - camera->x + galaxy->gstars[i].position.x / GALAXY_SCALE) * scale * GALAXY_SCALE;
             y = (galaxy->position.y - camera->y + galaxy->gstars[i].position.y / GALAXY_SCALE) * scale * GALAXY_SCALE;
@@ -338,7 +363,7 @@ void gfx_draw_menu_galaxy_cloud(const Camera *camera, Gstar *menustars)
     {
         int x, y;
 
-        SDL_SetRenderDrawColor(renderer, 255, 255, 255, menustars[i].opacity);
+        SDL_SetRenderDrawColor(renderer, menustars[i].color.r, menustars[i].color.g, menustars[i].color.b, menustars[i].opacity);
 
         x = camera->w - camera->w / 4 + (menustars[i].position.x / GALAXY_SCALE) * scaling_factor;
         y = camera->h / 3 + (menustars[i].position.y / GALAXY_SCALE) * scaling_factor;
@@ -988,6 +1013,7 @@ void gfx_generate_gstars(Galaxy *galaxy, bool high_definition)
                 star.position.x = ix;
                 star.position.y = iy;
 
+                // Calculate opacity
                 double distance = stars_nearest_center_distance(position, galaxy, initseq, GALAXY_CLOUD_DENSITY);
                 unsigned short class = stars_size_class(distance);
                 float class_opacity_max = class * (255 / 6);
@@ -996,6 +1022,36 @@ void gfx_generate_gstars(Galaxy *galaxy, bool high_definition)
                 int opacity = (abs(pcg32_random_r(&rng)) % (int)class_opacity_max + (int)class_opacity_min);
                 star.opacity = opacity;
                 star.opacity = star.opacity < 0 ? 0 : star.opacity;
+
+                // Calculate color
+                unsigned short color_code;
+
+                switch (class)
+                {
+                case STAR_CLASS_1:
+                    color_code = COLOR_LIGHT_RED_255;
+                    break;
+                case STAR_CLASS_2:
+                    color_code = COLOR_LIGHT_ORANGE_255;
+                    break;
+                case STAR_CLASS_3:
+                    color_code = COLOR_PALE_YELLOW_255;
+                    break;
+                case STAR_CLASS_4:
+                    color_code = COLOR_LIGHT_GREEN_255;
+                    break;
+                case STAR_CLASS_5:
+                    color_code = COLOR_LIGHT_BLUE_255;
+                    break;
+                case STAR_CLASS_6:
+                    color_code = COLOR_LAVENDER_255;
+                    break;
+                default:
+                    color_code = COLOR_LIGHT_RED_255;
+                    break;
+                }
+
+                star.color = colors[color_code];
 
                 star.final_star = true;
 
@@ -1098,6 +1154,7 @@ void gfx_generate_menu_gstars(Galaxy *galaxy, Gstar *menustars)
                 star.position.x = ix;
                 star.position.y = iy;
 
+                // Calculate opacity
                 double distance = stars_nearest_center_distance(position, galaxy, initseq, MENU_GALAXY_CLOUD_DENSITY);
                 unsigned short class = stars_size_class(distance);
                 float class_opacity_max = class * (255 / 6) + 20; // There are only a few Class 6 galaxies, increase max value by 20
@@ -1106,6 +1163,36 @@ void gfx_generate_menu_gstars(Galaxy *galaxy, Gstar *menustars)
                 int opacity = (abs(pcg32_random_r(&rng)) % (int)class_opacity_max + (int)class_opacity_min);
                 star.opacity = opacity * (1 - pow(distance_from_center / (galaxy->radius * GALAXY_SCALE), 3));
                 star.opacity = star.opacity < 0 ? 0 : star.opacity;
+
+                // Calculate color
+                unsigned short color_code;
+
+                switch (class)
+                {
+                case STAR_CLASS_1:
+                    color_code = COLOR_LIGHT_RED_255;
+                    break;
+                case STAR_CLASS_2:
+                    color_code = COLOR_LIGHT_ORANGE_255;
+                    break;
+                case STAR_CLASS_3:
+                    color_code = COLOR_PALE_YELLOW_255;
+                    break;
+                case STAR_CLASS_4:
+                    color_code = COLOR_LIGHT_GREEN_255;
+                    break;
+                case STAR_CLASS_5:
+                    color_code = COLOR_LIGHT_BLUE_255;
+                    break;
+                case STAR_CLASS_6:
+                    color_code = COLOR_LAVENDER_255;
+                    break;
+                default:
+                    color_code = COLOR_LIGHT_RED_255;
+                    break;
+                }
+
+                star.color = colors[color_code];
 
                 star.final_star = true;
                 menustars[i++] = star;
@@ -1468,7 +1555,7 @@ void gfx_update_gstars_position(Galaxy *galaxy, Point ship_position, const Camer
         else if (opacity < 0)
             opacity = 0;
 
-        SDL_SetRenderDrawColor(renderer, 255, 255, 255, (unsigned short)opacity);
+        SDL_SetRenderDrawColor(renderer, galaxy->gstars_hd[i].color.r, galaxy->gstars_hd[i].color.g, galaxy->gstars_hd[i].color.b, (unsigned short)opacity);
         SDL_RenderDrawPoint(renderer, x, y);
 
         i++;

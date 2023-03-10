@@ -131,29 +131,37 @@ static Star *stars_create_star(const NavigationState *nav_state, Point position,
     pcg32_srandom_r(&rng, seed, nav_state->initseq);
 
     float radius;
+    unsigned short color_code;
 
     switch (class)
     {
     case STAR_CLASS_1:
         radius = abs(pcg32_random_r(&rng)) % STAR_CLASS_1_RADIUS_MAX + STAR_CLASS_1_RADIUS_MIN;
+        color_code = COLOR_LIGHT_RED_255;
         break;
     case STAR_CLASS_2:
         radius = abs(pcg32_random_r(&rng)) % STAR_CLASS_2_RADIUS_MAX + STAR_CLASS_2_RADIUS_MIN;
+        color_code = COLOR_LIGHT_ORANGE_255;
         break;
     case STAR_CLASS_3:
         radius = abs(pcg32_random_r(&rng)) % STAR_CLASS_3_RADIUS_MAX + STAR_CLASS_3_RADIUS_MIN;
+        color_code = COLOR_PALE_YELLOW_255;
         break;
     case STAR_CLASS_4:
         radius = abs(pcg32_random_r(&rng)) % STAR_CLASS_4_RADIUS_MAX + STAR_CLASS_4_RADIUS_MIN;
+        color_code = COLOR_LIGHT_GREEN_255;
         break;
     case STAR_CLASS_5:
         radius = abs(pcg32_random_r(&rng)) % STAR_CLASS_5_RADIUS_MAX + STAR_CLASS_5_RADIUS_MIN;
+        color_code = COLOR_LIGHT_BLUE_255;
         break;
     case STAR_CLASS_6:
         radius = abs(pcg32_random_r(&rng)) % STAR_CLASS_6_RADIUS_MAX + STAR_CLASS_6_RADIUS_MIN;
+        color_code = COLOR_LAVENDER_255;
         break;
     default:
         radius = abs(pcg32_random_r(&rng)) % STAR_CLASS_1_RADIUS_MAX + STAR_CLASS_1_RADIUS_MIN;
+        color_code = COLOR_LIGHT_RED_255;
         break;
     }
 
@@ -197,9 +205,7 @@ static Star *stars_create_star(const NavigationState *nav_state, Point position,
     star->rect.y = (star->position.y - star->radius) * scale;
     star->rect.w = 2 * star->radius * scale;
     star->rect.h = 2 * star->radius * scale;
-    star->color.r = colors[COLOR_WHITE_255].r;
-    star->color.g = colors[COLOR_WHITE_255].g;
-    star->color.b = colors[COLOR_WHITE_255].b;
+    star->color = colors[color_code];
     star->num_planets = 0;
     star->planets[0] = NULL;
     star->parent = NULL;
@@ -483,10 +489,9 @@ void stars_draw_planets_info_box(const Star *star, const Camera *camera)
     }
 
     // Draw star
-    SDL_Color star_color = colors[COLOR_ORANGE_255];
     int x = camera->w - (width - 1.4 * inner_padding);
     int y_star = padding + info_box_height + inner_padding;
-    gfx_draw_fill_circle(renderer, x, y_star, inner_padding / 2, star_color);
+    gfx_draw_fill_circle(renderer, x, y_star, inner_padding / 2, star->color);
 
     // Draw line
     SDL_SetRenderDrawColor(renderer, 255, 255, 255, 30);
@@ -504,10 +509,9 @@ void stars_draw_planets_info_box(const Star *star, const Camera *camera)
     {
         float planet_orbit = line_height * star->planets[i]->orbit_radius / star->cutoff;
         float planet_diameter = star->planets[i]->radius / planets_scaling_factor;
-        SDL_Color planet_color = {star->planets[i]->color.r, star->planets[i]->color.g, star->planets[i]->color.b, 255};
         y_so_far += planet_orbit + planet_diameter;
 
-        gfx_draw_fill_circle(renderer, x, y_so_far - planet_diameter / 2, star->planets[i]->radius / planets_scaling_factor, planet_color);
+        gfx_draw_fill_circle(renderer, x, y_so_far - planet_diameter / 2, star->planets[i]->radius / planets_scaling_factor, star->planets[i]->color);
 
         // Draw moons
         if (star->planets[i]->num_planets > 0)
@@ -524,9 +528,8 @@ void stars_draw_planets_info_box(const Star *star, const Camera *camera)
             {
                 float moon_orbit = line_width * star->planets[i]->planets[j]->orbit_radius / star->planets[i]->cutoff;
                 float moon_diameter = star->planets[i]->planets[j]->radius / moon_scaling_factor;
-                SDL_Color moon_color = {star->planets[i]->planets[j]->color.r, star->planets[i]->planets[j]->color.g, star->planets[i]->planets[j]->color.b, 255};
                 x_so_far += moon_orbit + moon_diameter;
-                gfx_draw_fill_circle(renderer, x_so_far, y_so_far - planet_diameter / 2, star->planets[i]->planets[j]->radius / moon_scaling_factor, moon_color);
+                gfx_draw_fill_circle(renderer, x_so_far, y_so_far - planet_diameter / 2, star->planets[i]->planets[j]->radius / moon_scaling_factor, star->planets[i]->planets[j]->color);
             }
         }
     }
@@ -1392,9 +1395,7 @@ static void stars_populate_body(CelestialBody *body, Point position, pcg32_rando
                 sprintf(planet->name + strlen(planet->name), "-%s-%d", "P", i); // Append to planet name
                 planet->image = "../assets/images/earth.png";
                 planet->class = stars_planet_size_class(orbit_width);
-                planet->color.r = colors[COLOR_SKY_BLUE_255].r;
-                planet->color.g = colors[COLOR_SKY_BLUE_255].g;
-                planet->color.b = colors[COLOR_SKY_BLUE_255].b;
+                planet->color = colors[COLOR_SKY_BLUE_255];
                 planet->level = LEVEL_PLANET;
                 planet->is_selected = false;
                 planet->radius = radius;
@@ -1538,9 +1539,7 @@ static void stars_populate_body(CelestialBody *body, Point position, pcg32_rando
                 sprintf(moon->name + strlen(moon->name), "-%s-%d", "M", i); // Append to moon name
                 moon->image = "../assets/images/moon.png";
                 moon->class = 0;
-                moon->color.r = colors[COLOR_GAINSBORO_255].r;
-                moon->color.g = colors[COLOR_GAINSBORO_255].g;
-                moon->color.b = colors[COLOR_GAINSBORO_255].b;
+                moon->color = colors[COLOR_GAINSBORO_255];
                 moon->level = LEVEL_MOON;
                 moon->is_selected = false;
                 moon->radius = radius;

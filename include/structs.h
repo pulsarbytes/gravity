@@ -103,6 +103,7 @@ typedef struct
     Point position;
     unsigned short opacity;
     bool final_star;
+    SDL_Color color;
 } Gstar;
 
 typedef struct
