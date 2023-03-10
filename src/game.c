@@ -275,7 +275,7 @@ void game_reset(GameState *game_state, InputState *input_state, GameEvents *game
 
     if (!reset)
     {
-        // Allocate memory for galaxies
+        // Allocate memory for current_galaxy
         nav_state->current_galaxy = (Galaxy *)malloc(sizeof(Galaxy));
 
         if (nav_state->current_galaxy == NULL)
@@ -284,6 +284,7 @@ void game_reset(GameState *game_state, InputState *input_state, GameEvents *game
             return;
         }
 
+        // Allocate memory for buffer_galaxy
         nav_state->buffer_galaxy = (Galaxy *)malloc(sizeof(Galaxy));
 
         if (nav_state->buffer_galaxy == NULL)
@@ -292,6 +293,7 @@ void game_reset(GameState *game_state, InputState *input_state, GameEvents *game
             return;
         }
 
+        // Allocate memory for previous_galaxy
         nav_state->previous_galaxy = (Galaxy *)malloc(sizeof(Galaxy));
 
         if (nav_state->previous_galaxy == NULL)
@@ -300,7 +302,7 @@ void game_reset(GameState *game_state, InputState *input_state, GameEvents *game
             return;
         }
 
-        // Allocate memory for current star
+        // Allocate memory for current_star
         nav_state->current_star = (Star *)malloc(sizeof(Star));
 
         if (nav_state->current_star == NULL)
@@ -309,8 +311,20 @@ void game_reset(GameState *game_state, InputState *input_state, GameEvents *game
             return;
         }
 
-        // Initialize empty star
+        // Initialize current_star
         nav_state->current_star->class = 0;
+
+        // Allocate memory for buffer_star
+        nav_state->buffer_star = (Star *)malloc(sizeof(Star));
+
+        if (nav_state->buffer_star == NULL)
+        {
+            fprintf(stderr, "Error: Could not allocate memory for buffer_star.\n");
+            return;
+        }
+
+        // Initialize buffer_star
+        nav_state->buffer_star->class = 0;
     }
 
     // Copy current_galaxy_copy to current_galaxy
@@ -372,6 +386,20 @@ void game_run_map_state(GameState *game_state, InputState *input_state, GameEven
         if (game_events->is_entering_map && !game_state->save_scale)
             game_state->save_scale = game_state->game_scale;
 
+        if (game_events->is_centering_map || (game_events->is_entering_map && !game_events->switch_to_map))
+        {
+            // Reset stars and galaxy to current position
+            if (!maths_points_equal(nav_state->current_galaxy->position, nav_state->buffer_galaxy->position))
+            {
+                stars_clear_table(nav_state->stars);
+                memcpy(nav_state->current_galaxy, nav_state->buffer_galaxy, sizeof(Galaxy));
+
+                // Reset galaxy_offset
+                nav_state->galaxy_offset.current_x = nav_state->galaxy_offset.buffer_x;
+                nav_state->galaxy_offset.current_y = nav_state->galaxy_offset.buffer_y;
+            }
+        }
+
         if (!game_events->switch_to_map)
         {
             game_state->game_scale = ZOOM_MAP;
@@ -379,6 +407,20 @@ void game_run_map_state(GameState *game_state, InputState *input_state, GameEven
             // Reset map_offset
             nav_state->map_offset.x = ship->previous_position.x;
             nav_state->map_offset.y = ship->previous_position.y;
+        }
+
+        // Reset current_star
+        if (maths_points_equal(nav_state->current_galaxy->position, nav_state->buffer_galaxy->position))
+        {
+            if (nav_state->current_star != NULL && nav_state->buffer_star != NULL)
+            {
+                if (strcmp(nav_state->current_star->name, nav_state->buffer_star->name) != 0)
+                    memcpy(nav_state->current_star, nav_state->buffer_star, sizeof(Star));
+
+                // Select current star
+                if (!nav_state->current_star->is_selected)
+                    nav_state->current_star->is_selected = true;
+            }
         }
 
         // Zoom in
@@ -393,17 +435,6 @@ void game_run_map_state(GameState *game_state, InputState *input_state, GameEven
 
     if (game_events->is_centering_map)
     {
-        // Reset stars and galaxy to current position
-        if (!maths_points_equal(nav_state->current_galaxy->position, nav_state->buffer_galaxy->position))
-        {
-            stars_clear_table(nav_state->stars);
-            memcpy(nav_state->current_galaxy, nav_state->buffer_galaxy, sizeof(Galaxy));
-
-            // Reset galaxy_offset
-            nav_state->galaxy_offset.current_x = nav_state->galaxy_offset.buffer_x;
-            nav_state->galaxy_offset.current_y = nav_state->galaxy_offset.buffer_y;
-        }
-
         // Reset ship position
         if (!game_events->is_exiting_universe)
         {
@@ -621,13 +652,17 @@ void game_run_map_state(GameState *game_state, InputState *input_state, GameEven
     SDL_RenderDrawLine(renderer, (camera->w / 2) - 7, camera->h / 2, (camera->w / 2) + 7, camera->h / 2);
     SDL_RenderDrawLine(renderer, camera->w / 2, (camera->h / 2) - 7, camera->w / 2, (camera->h / 2) + 7);
 
-    // Draw star info box
-    if (nav_state->current_star->class && (input_state->is_hovering_star || nav_state->current_star->is_selected))
-        stars_draw_info_box(nav_state->current_star, camera);
-
-    // Draw planets info box
-    if (nav_state->current_star->is_selected)
+    if (nav_state->current_star->is_selected &&
+        gfx_is_object_in_camera(camera, nav_state->current_star->position.x, nav_state->current_star->position.y, nav_state->current_star->cutoff, game_state->game_scale))
+    {
+        // Draw planets info box
+        // if (nav_state->current_star->is_selected || input_state->is_hovering_star)
         stars_draw_planets_info_box(nav_state->current_star, camera);
+
+        // Draw star info box
+        // if (nav_state->current_star->class && (input_state->is_hovering_star || nav_state->current_star->is_selected))
+        stars_draw_info_box(nav_state->current_star, camera);
+    }
 
     gfx_draw_screen_frame(camera);
 
@@ -701,6 +736,10 @@ void game_run_navigate_state(GameState *game_state, InputState *input_state, Gam
                 gfx_zoom_star_system(nav_state->stars[s]->star, game_state->game_scale);
         }
     }
+
+    // Select current star
+    if (nav_state->current_star != NULL && !nav_state->current_star->is_selected)
+        nav_state->current_star->is_selected = true;
 
     // Add small tolerance to account for floating-point precision errors
     const double epsilon = ZOOM_EPSILON;
@@ -1213,19 +1252,22 @@ void game_run_universe_state(GameState *game_state, InputState *input_state, Gam
     gfx_update_camera(camera, nav_state->universe_offset, game_state->game_scale * GALAXY_SCALE);
 
     // Draw ship projection
-    ship->projection->rect.x = (nav_state->galaxy_offset.current_x + ship->position.x / GALAXY_SCALE - camera->x) * (game_state->game_scale * GALAXY_SCALE) - SHIP_PROJECTION_RADIUS;
-    ship->projection->rect.y = (nav_state->galaxy_offset.current_y + ship->position.y / GALAXY_SCALE - camera->y) * (game_state->game_scale * GALAXY_SCALE) - SHIP_PROJECTION_RADIUS;
-    ship->projection->angle = ship->angle;
-
-    if (!game_events->switch_to_map && (ship->projection->rect.x + ship->projection->radius < 0 ||
-                                        ship->projection->rect.x + ship->projection->radius > camera->w ||
-                                        ship->projection->rect.y + ship->projection->radius < 0 ||
-                                        ship->projection->rect.y + ship->projection->radius > camera->h))
+    if (!game_events->switch_to_map)
     {
-        gfx_project_ship_on_edge(game_state->state, input_state, nav_state, ship, camera, game_state->game_scale);
+        ship->projection->rect.x = (nav_state->galaxy_offset.current_x + ship->position.x / GALAXY_SCALE - camera->x) * (game_state->game_scale * GALAXY_SCALE) - SHIP_PROJECTION_RADIUS;
+        ship->projection->rect.y = (nav_state->galaxy_offset.current_y + ship->position.y / GALAXY_SCALE - camera->y) * (game_state->game_scale * GALAXY_SCALE) - SHIP_PROJECTION_RADIUS;
+        ship->projection->angle = ship->angle;
+
+        if ((ship->projection->rect.x + ship->projection->radius < 0 ||
+             ship->projection->rect.x + ship->projection->radius > camera->w ||
+             ship->projection->rect.y + ship->projection->radius < 0 ||
+             ship->projection->rect.y + ship->projection->radius > camera->h))
+        {
+            gfx_project_ship_on_edge(game_state->state, input_state, nav_state, ship, camera, game_state->game_scale);
+        }
+        else
+            SDL_RenderCopyEx(renderer, ship->projection->texture, &ship->projection->main_img_rect, &ship->projection->rect, ship->projection->angle, &ship->projection->rotation_pt, SDL_FLIP_NONE);
     }
-    else
-        SDL_RenderCopyEx(renderer, ship->projection->texture, &ship->projection->main_img_rect, &ship->projection->rect, ship->projection->angle, &ship->projection->rotation_pt, SDL_FLIP_NONE);
 
     // Draw cross at position
     SDL_SetRenderDrawColor(renderer, 255, 255, 255, 128);
@@ -1233,7 +1275,8 @@ void game_run_universe_state(GameState *game_state, InputState *input_state, Gam
     SDL_RenderDrawLine(renderer, camera->w / 2, (camera->h / 2) - 7, camera->w / 2, (camera->h / 2) + 7);
 
     // Draw galaxy info box
-    if (input_state->is_hovering_galaxy || nav_state->current_galaxy->is_selected)
+    // if (input_state->is_hovering_galaxy || nav_state->current_galaxy->is_selected)
+    if (nav_state->current_galaxy->is_selected)
     {
         if (!nav_state->current_galaxy->initialized || nav_state->current_galaxy->initialized < nav_state->current_galaxy->total_groups)
             gfx_generate_gstars(nav_state->current_galaxy, false);

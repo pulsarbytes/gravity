@@ -68,6 +68,7 @@ typedef struct CelestialBody
     unsigned short class;
     float radius;
     float cutoff;
+    float orbit_radius;
     Point position;
     float vx;
     float vy;
@@ -77,6 +78,7 @@ typedef struct CelestialBody
     SDL_Rect rect;
     SDL_Rect projection;
     SDL_Color color;
+    unsigned short num_planets;
     struct CelestialBody *planets[MAX_PLANETS_MOONS];
     struct CelestialBody *parent;
     unsigned short level;
@@ -223,6 +225,7 @@ typedef struct
     Galaxy *buffer_galaxy; // Stores galaxy of current ship position
     Galaxy *previous_galaxy;
     Star *current_star;
+    Star *buffer_star; // Stores star of current ship position
     PointState galaxy_offset;
     Point universe_cross_line; // Keep track of nearest line position
     Point navigate_offset;

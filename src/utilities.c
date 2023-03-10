@@ -85,6 +85,7 @@ void utils_cleanup_resources(GameState *game_state, NavigationState *nav_state, 
     free(nav_state->buffer_galaxy);
     free(nav_state->previous_galaxy);
     free(nav_state->current_star);
+    free(nav_state->buffer_star);
 
     // Clean up menu textures
     for (int i = 0; i < MENU_BUTTON_COUNT; i++)

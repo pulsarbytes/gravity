@@ -48,6 +48,11 @@ void gfx_create_default_colors(void)
     colors[COLOR_ORANGE_32].b = 0;
     colors[COLOR_ORANGE_32].a = 32;
 
+    colors[COLOR_ORANGE_255].r = 255;
+    colors[COLOR_ORANGE_255].g = 165;
+    colors[COLOR_ORANGE_255].b = 0;
+    colors[COLOR_ORANGE_255].a = 255;
+
     colors[COLOR_CYAN_40].r = 0;
     colors[COLOR_CYAN_40].g = 255;
     colors[COLOR_CYAN_40].b = 255;
@@ -197,6 +202,51 @@ void gfx_draw_circle_approximation(SDL_Renderer *renderer, const Camera *camera,
             SDL_RenderDrawLine(renderer, x3, y3, x4, y4);
             SDL_RenderDrawLine(renderer, x4, y4, x2, y2);
         }
+    }
+}
+
+/**
+ * Draws and fills a circle on an SDL renderer using the Midpoint Circle Algorithm.
+ *
+ * @param renderer The SDL renderer to draw the circle on.
+ * @param xc The x-coordinate of the circle's center.
+ * @param yc The y-coordinate of the circle's center.
+ * @param radius The radius of the circle.
+ * @param color And SDL color object.
+ *
+ * @return None
+ */
+void gfx_draw_fill_circle(SDL_Renderer *renderer, int xc, int yc, int radius, SDL_Color color)
+{
+    int x = 0;
+    int y = radius;
+    int d = 1 - radius;
+    int deltaE = 3;
+    int deltaSE = -2 * radius + 5;
+
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+    SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a);
+
+    while (y >= x)
+    {
+        SDL_RenderDrawLine(renderer, xc - x, yc + y, xc + x, yc + y);
+        SDL_RenderDrawLine(renderer, xc - x, yc - y, xc + x, yc - y);
+        SDL_RenderDrawLine(renderer, xc - y, yc + x, xc + y, yc + x);
+        SDL_RenderDrawLine(renderer, xc - y, yc - x, xc + y, yc - x);
+        if (d < 0)
+        {
+            d += deltaE;
+            deltaE += 2;
+            deltaSE += 2;
+        }
+        else
+        {
+            d += deltaSE;
+            deltaE += 2;
+            deltaSE += 4;
+            y--;
+        }
+        x++;
     }
 }
 

@@ -350,6 +350,9 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
                 if (event.motion.state & SDL_BUTTON_LMASK)
                 {
                     input_state->is_mouse_dragging = true;
+                    input_state->click_count = 0;
+                    input_state->clicked_inside_galaxy = false;
+                    input_state->clicked_inside_star = false;
 
                     // Calculate the difference between the current mouse position and the initial mouse position
                     int delta_x = input_state->mouse_position.x - input_state->mouse_down_position.x;
@@ -455,10 +458,13 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
             }
             else if (game_state->state == MAP)
             {
-                nav_state->map_offset.x += ((mouse_x - camera->w / 2)) / (game_state->game_scale) -
-                                           ((mouse_x - camera->w / 2)) / (((game_state->game_scale) + zoom_step));
-                nav_state->map_offset.y += ((mouse_y - camera->h / 2)) / (game_state->game_scale) -
-                                           ((mouse_y - camera->h / 2)) / (((game_state->game_scale) + zoom_step));
+                if (game_state->game_scale + zoom_step <= ZOOM_MAX + epsilon)
+                {
+                    nav_state->map_offset.x += ((mouse_x - camera->w / 2)) / (game_state->game_scale) -
+                                               ((mouse_x - camera->w / 2)) / (((game_state->game_scale) + zoom_step));
+                    nav_state->map_offset.y += ((mouse_y - camera->h / 2)) / (game_state->game_scale) -
+                                               ((mouse_y - camera->h / 2)) / (((game_state->game_scale) + zoom_step));
+                }
             }
 
             break;

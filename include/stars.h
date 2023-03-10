@@ -17,6 +17,7 @@ void stars_update_orbital_positions(GameState *, const InputState *, NavigationS
 void galaxies_generate(GameEvents *, NavigationState *, Point);
 Galaxy *galaxies_nearest_circumference(const NavigationState *, Point, int exclude);
 void gfx_draw_circle(SDL_Renderer *renderer, const Camera *, int xc, int yc, int radius, SDL_Color color);
+void gfx_draw_fill_circle(SDL_Renderer *, int xc, int yc, int radius, SDL_Color);
 bool gfx_is_object_in_camera(const Camera *, double x, double y, float radius, long double scale);
 void gfx_project_body_on_edge(const GameState *, const NavigationState *, CelestialBody *, const Camera *);
 bool maths_check_point_in_array(Point, Point arr[], int len);

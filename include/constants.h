@@ -99,7 +99,7 @@
                                 // Class 4: -100000, -40000
                                 // Class 5: -110000, -120000
                                 // Class 6: -250000, -60000
-#define GALAXY_START_X -150000  // Default: 0
+#define GALAXY_START_X -149900  // Default: 0
 #define GALAXY_START_Y -60000   // Default: 0
 
 // Galaxies
