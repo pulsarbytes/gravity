@@ -175,7 +175,7 @@
 #define PLANET_CLASS_6_ORBIT_MIN 5 // Default: 5
 #define PLANET_CLASS_6_ORBIT_MAX 4 // Default: 4 (+ 5 = 9)
 
-#define MOON_RADIUS_MIN 3                  // Default: 3
+#define MOON_RADIUS_MIN 10                 // Default: 7
 #define PLANET_CLASS_1_MOON_RADIUS_MAX 12  // Default: 12
 #define PLANET_CLASS_2_MOON_RADIUS_MAX 24  // Default: 24
 #define PLANET_CLASS_3_MOON_RADIUS_MAX 32  // Default: 32

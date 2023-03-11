@@ -307,9 +307,10 @@ void stars_draw_info_box(const Star *star, const Camera *camera)
 {
     // Draw background box
     SDL_SetRenderDrawColor(renderer, 12, 12, 12, 255);
-    int width = 360;
+    int width = 370;
     int padding = 20;
-    int height = 290;
+    int inner_padding = 40;
+    int height = 280;
 
     SDL_Rect info_box_rect;
     info_box_rect.x = camera->w - (width + padding);
@@ -326,11 +327,6 @@ void stars_draw_info_box(const Star *star, const Camera *camera)
     strcpy(star_name, star->name);
     sprintf(entries[STAR_INFO_NAME].text, "%s", star_name);
     entries[STAR_INFO_NAME].font_size = FONT_SIZE_22;
-
-    char entity_type[32];
-    strcpy(entity_type, "STAR");
-    sprintf(entries[STAR_INFO_TYPE].text, "%s", entity_type);
-    entries[STAR_INFO_TYPE].font_size = FONT_SIZE_15;
 
     char position_x_text[32];
     utils_add_thousand_separators((int)star->position.x, position_x_text, sizeof(position_x_text));
@@ -372,12 +368,10 @@ void stars_draw_info_box(const Star *star, const Camera *camera)
     }
 
     // Name
-    int name_height = 80;
-    int entry_height = 30;
-    int inner_padding = 40;
+    int name_height = 100;
     entries[STAR_INFO_NAME].rect.w = width;
     entries[STAR_INFO_NAME].rect.h = name_height;
-    entries[STAR_INFO_NAME].rect.x = camera->w - (width + padding);
+    entries[STAR_INFO_NAME].rect.x = camera->w - (width + padding) + 1.5 * padding;
     entries[STAR_INFO_NAME].rect.y = padding;
 
     SDL_RenderFillRect(renderer, &entries[STAR_INFO_NAME].rect);
@@ -387,21 +381,10 @@ void stars_draw_info_box(const Star *star, const Camera *camera)
 
     SDL_RenderCopy(renderer, entries[STAR_INFO_NAME].text_texture, NULL, &entries[STAR_INFO_NAME].texture_rect);
 
-    // Type
-    entries[STAR_INFO_TYPE].rect.w = width;
-    entries[STAR_INFO_TYPE].rect.h = entry_height;
-    entries[STAR_INFO_TYPE].rect.x = camera->w - (width + padding);
-    entries[STAR_INFO_TYPE].rect.y = padding + name_height;
-
-    SDL_RenderFillRect(renderer, &entries[STAR_INFO_TYPE].rect);
-
-    entries[STAR_INFO_TYPE].texture_rect.x = entries[STAR_INFO_TYPE].rect.x + inner_padding;
-    entries[STAR_INFO_TYPE].texture_rect.y = entries[STAR_INFO_TYPE].rect.y + (entries[STAR_INFO_TYPE].rect.h - entries[STAR_INFO_TYPE].texture_rect.h) / 2;
-
-    SDL_RenderCopy(renderer, entries[STAR_INFO_TYPE].text_texture, NULL, &entries[STAR_INFO_TYPE].texture_rect);
-
     // Set the position for the rest of the entries
-    for (int i = 2; i < STAR_INFO_COUNT; i++)
+    int entry_height = 30;
+
+    for (int i = 1; i < STAR_INFO_COUNT; i++)
     {
         entries[i].rect.w = width;
         entries[i].rect.h = entry_height;
@@ -417,6 +400,11 @@ void stars_draw_info_box(const Star *star, const Camera *camera)
         // Render the text texture onto the entry
         SDL_RenderCopy(renderer, entries[i].text_texture, NULL, &entries[i].texture_rect);
     }
+
+    // Star circle
+    int x_star = camera->w - (width + padding) + inner_padding + 5;
+    int y_star = padding - 2 + name_height / 2;
+    gfx_draw_fill_circle(renderer, x_star, y_star, 8, star->color);
 
     // Destroy the textures
     for (int i = 0; i < STAR_INFO_COUNT; i++)
@@ -438,10 +426,10 @@ void stars_draw_planets_info_box(const Star *star, const Camera *camera)
 {
     // Draw background box
     SDL_SetRenderDrawColor(renderer, 15, 15, 15, 255);
-    int width = 360;
+    int width = 370;
     int padding = 20;
     int inner_padding = 40;
-    int info_box_height = 290;
+    int info_box_height = 280;
     int height = camera->h - 2 * padding - info_box_height;
 
     SDL_Rect info_box_rect;
@@ -454,49 +442,41 @@ void stars_draw_planets_info_box(const Star *star, const Camera *camera)
 
     // Calculate scaling factors from star class
     int planets_scaling_factor;
-    int moon_scaling_factor;
 
     switch (star->class)
     {
     case STAR_CLASS_1:
         planets_scaling_factor = 4;
-        moon_scaling_factor = 4;
         break;
     case STAR_CLASS_2:
-        planets_scaling_factor = 8;
-        moon_scaling_factor = 4;
+        planets_scaling_factor = 4;
         break;
     case STAR_CLASS_3:
-        planets_scaling_factor = 12;
-        moon_scaling_factor = 4;
+        planets_scaling_factor = 6;
         break;
     case STAR_CLASS_4:
-        planets_scaling_factor = 16;
-        moon_scaling_factor = 8;
+        planets_scaling_factor = 6;
         break;
     case STAR_CLASS_5:
-        planets_scaling_factor = 16;
-        moon_scaling_factor = 8;
+        planets_scaling_factor = 12;
         break;
     case STAR_CLASS_6:
-        planets_scaling_factor = 20;
-        moon_scaling_factor = 8;
+        planets_scaling_factor = 12;
         break;
     default:
         planets_scaling_factor = 4;
-        moon_scaling_factor = 4;
         break;
     }
 
-    // Draw star
+    // Draw separator line
     int x = camera->w - (width - 1.4 * inner_padding);
-    int y_star = padding + info_box_height + inner_padding;
-    gfx_draw_fill_circle(renderer, x, y_star, inner_padding / 2, star->color);
+    SDL_SetRenderDrawColor(renderer, star->color.r, star->color.g, star->color.b, 80);
+    SDL_RenderDrawLine(renderer, camera->w - (width + padding), padding + info_box_height, camera->w - padding, padding + info_box_height);
 
     // Draw line
     SDL_SetRenderDrawColor(renderer, 255, 255, 255, 30);
 
-    int y1_line = y_star + inner_padding / 2;
+    int y1_line = padding + info_box_height + 1; // + 1 line
     int y2_line = camera->h - padding;
     int line_height = y2_line - y1_line;
     SDL_RenderDrawLine(renderer, x, y1_line, x, y2_line);
@@ -507,19 +487,19 @@ void stars_draw_planets_info_box(const Star *star, const Camera *camera)
 
     for (int i = 0; i < MAX_PLANETS && star->planets[i] != NULL; i++)
     {
-        float planet_orbit = line_height * star->planets[i]->orbit_radius / star->cutoff;
+        float planet_orbit = star->planets[i]->orbit_radius * line_height / star->cutoff;
         float planet_diameter = star->planets[i]->radius / planets_scaling_factor;
         y_so_far += planet_orbit + planet_diameter;
 
-        gfx_draw_fill_circle(renderer, x, y_so_far - planet_diameter / 2, star->planets[i]->radius / planets_scaling_factor, star->planets[i]->color);
+        gfx_draw_fill_circle(renderer, x, y_so_far - planet_diameter / 2, planet_diameter, star->planets[i]->color);
 
         // Draw moons
         if (star->planets[i]->num_planets > 0)
         {
             // Line represents planet cutoff distance
-            SDL_SetRenderDrawColor(renderer, 255, 255, 255, 20);
+            SDL_SetRenderDrawColor(renderer, 255, 255, 255, 30);
             int x1_line = x + star->planets[i]->radius / planets_scaling_factor;
-            int x2_line = camera->w - padding - 2 * inner_padding;
+            int x2_line = x1_line + planet_orbit / 2;
             int line_width = x2_line - x1_line;
             SDL_RenderDrawLine(renderer, x1_line, y_so_far - planet_diameter / 2, x2_line, y_so_far - planet_diameter / 2);
             float x_so_far = x1_line;
@@ -527,9 +507,9 @@ void stars_draw_planets_info_box(const Star *star, const Camera *camera)
             for (int j = 0; j < MAX_MOONS && star->planets[i]->planets[j] != NULL; j++)
             {
                 float moon_orbit = line_width * star->planets[i]->planets[j]->orbit_radius / star->planets[i]->cutoff;
-                float moon_diameter = star->planets[i]->planets[j]->radius / moon_scaling_factor;
+                float moon_diameter = star->planets[i]->planets[j]->radius / planets_scaling_factor;
                 x_so_far += moon_orbit + moon_diameter;
-                gfx_draw_fill_circle(renderer, x_so_far, y_so_far - planet_diameter / 2, star->planets[i]->planets[j]->radius / moon_scaling_factor, star->planets[i]->planets[j]->color);
+                gfx_draw_fill_circle(renderer, x_so_far, y_so_far - planet_diameter / 2, moon_diameter, star->planets[i]->planets[j]->color);
             }
         }
     }
@@ -984,12 +964,11 @@ void stars_generate(GameState *game_state, GameEvents *game_events, NavigationSt
  * @param nav_state A pointer to the current NavigationState struct.
  * @param camera A pointer to the current Camera struct.
  * @param cross_point A pointer to a Point struct representing the current position of the cross point.
- * @param zoom_preview An int representing the level of zoom for the preview.
  * @param scale A long double representing the current scale of the galaxy.
  *
  * @return void
  */
-void stars_generate_preview(NavigationState *nav_state, const Camera *camera, Point *cross_point, int zoom_preview, long double scale)
+void stars_generate_preview(GameEvents *game_events, NavigationState *nav_state, const Camera *camera, Point *cross_point, long double scale)
 {
     // Check how many sections fit in camera
     double section_size_scaled = GALAXY_SECTION_SIZE * scale;
@@ -1131,7 +1110,7 @@ void stars_generate_preview(NavigationState *nav_state, const Camera *camera, Po
 
             // If this point has been checked in previous function call,
             // check that point is not within previous boundaries
-            if (initialized && !zoom_preview && scale <= 0.001 + epsilon)
+            if (initialized && !game_events->zoom_preview && scale <= 0.001 + epsilon)
             {
                 if (maths_is_point_in_rectangle(position, rect))
                     continue;

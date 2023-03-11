@@ -201,21 +201,22 @@ typedef struct
 
 typedef struct
 {
+    bool is_game_started;
     bool start_stars_generation;
     bool start_stars_preview;
     bool start_galaxies_generation;
-    bool is_game_started;
-    bool is_entering_map;
-    bool is_exiting_map;
-    bool is_centering_map;
-    bool switch_to_universe;
-    bool is_entering_universe;
-    bool is_exiting_universe;
-    bool is_centering_universe;
-    bool switch_to_map;
     bool has_exited_galaxy;
     bool found_galaxy;
     bool generate_bstars;
+    bool switch_to_map;   // Enter map from Universe via zoom
+    bool is_entering_map; // Enter Map via `M`
+    bool is_exiting_map;  // Exit Map via `N` or `U`
+    bool is_centering_map;
+    bool switch_to_universe;   // Enter Universe from Map via zoom
+    bool is_entering_universe; // Enter Universe via `U`
+    bool is_exiting_universe;  // Exit Universe via `N` or `M`
+    bool is_centering_universe;
+    bool zoom_preview; // Whether the stars preview has been requested by a zoom event
 } GameEvents;
 
 typedef struct

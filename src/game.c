@@ -20,7 +20,11 @@ extern SDL_Color colors[];
 
 // Static function prototypes
 static void game_draw_ship(GameState *, const InputState *, const NavigationState *, Ship *, const Camera *);
+static void game_scroll_map(const GameState *, const InputState *, NavigationState *, const Camera *);
+static void game_scroll_universe(const GameState *, const InputState *, GameEvents *, NavigationState *, const Camera *);
 static void game_update_ship_position(GameState *, const InputState *, Ship *, const Camera *);
+static void game_zoom_map(GameState *, InputState *, GameEvents *, NavigationState *);
+static void game_zoom_universe(GameState *, InputState *, GameEvents *, NavigationState *, Point *);
 
 /**
  * Changes the state of the game to a new state and updates relevant game events.
@@ -186,6 +190,10 @@ void game_reset(GameState *game_state, InputState *input_state, GameEvents *game
     game_events->start_stars_generation = true;
     game_events->start_stars_preview = true;
     game_events->start_galaxies_generation = true;
+    game_events->has_exited_galaxy = false;
+    game_events->found_galaxy = false;
+    game_events->generate_bstars = false;
+    game_events->switch_to_map = false;
     game_events->is_entering_map = false;
     game_events->is_exiting_map = false;
     game_events->is_centering_map = false;
@@ -193,10 +201,7 @@ void game_reset(GameState *game_state, InputState *input_state, GameEvents *game
     game_events->is_entering_universe = false;
     game_events->is_exiting_universe = false;
     game_events->is_centering_universe = false;
-    game_events->switch_to_map = false;
-    game_events->has_exited_galaxy = false;
-    game_events->found_galaxy = false;
-    game_events->generate_bstars = false;
+    game_events->zoom_preview = false;
 
     // Galaxy position
     // Retrieved from saved game or use default values if this is a new game
@@ -356,42 +361,28 @@ void game_reset(GameState *game_state, InputState *input_state, GameEvents *game
  */
 void game_run_map_state(GameState *game_state, InputState *input_state, GameEvents *game_events, NavigationState *nav_state, Bstar *bstars, Ship *ship, Camera *camera)
 {
-    // Add small tolerance to account for floating-point precision errors
     const double epsilon = ZOOM_EPSILON;
-
-    double zoom_step = ZOOM_STEP;
-
-    if (game_events->switch_to_map)
-        stars_clear_table(nav_state->stars);
-
-    // Reset region_size
-    if (game_state->game_scale < ZOOM_MAP_REGION_SWITCH - epsilon)
-    {
-        if (game_events->switch_to_map)
-            game_state->galaxy_region_size = GALAXY_REGION_SIZE_MAX;
-
-        // Trigger generation of new stars for new region size
-        game_events->start_stars_generation = true;
-    }
-
-    if (game_events->is_entering_map)
-    {
-        // Save ship position
-        ship->previous_position.x = ship->position.x;
-        ship->previous_position.y = ship->position.y;
-    }
 
     if (game_events->is_entering_map || game_events->is_centering_map)
     {
-        if (game_events->is_entering_map && !game_state->save_scale)
-            game_state->save_scale = game_state->game_scale;
+        stars_clear_table(nav_state->stars);
+        game_events->start_stars_generation = true;
+
+        if (game_events->is_entering_map)
+        {
+            // Save ship position
+            ship->previous_position.x = ship->position.x;
+            ship->previous_position.y = ship->position.y;
+
+            if (!game_state->save_scale)
+                game_state->save_scale = game_state->game_scale;
+        }
 
         if (game_events->is_centering_map || (game_events->is_entering_map && !game_events->switch_to_map))
         {
-            // Reset stars and galaxy to current position
+            // Reset galaxy to current position
             if (!maths_points_equal(nav_state->current_galaxy->position, nav_state->buffer_galaxy->position))
             {
-                stars_clear_table(nav_state->stars);
                 memcpy(nav_state->current_galaxy, nav_state->buffer_galaxy, sizeof(Galaxy));
 
                 // Reset galaxy_offset
@@ -400,7 +391,13 @@ void game_run_map_state(GameState *game_state, InputState *input_state, GameEven
             }
         }
 
-        if (!game_events->switch_to_map)
+        if (game_events->switch_to_map)
+        {
+            // Reset region_size
+            if (game_state->game_scale < ZOOM_MAP_REGION_SWITCH - epsilon)
+                game_state->galaxy_region_size = GALAXY_REGION_SIZE_MAX;
+        }
+        else
         {
             game_state->game_scale = ZOOM_MAP;
 
@@ -431,129 +428,35 @@ void game_run_map_state(GameState *game_state, InputState *input_state, GameEven
         }
 
         gfx_update_camera(camera, nav_state->map_offset, game_state->game_scale);
+
+        if (game_events->is_centering_map)
+        {
+            // Reset ship position
+            if (!game_events->is_exiting_universe)
+            {
+                ship->position.x = ship->previous_position.x;
+                ship->position.y = ship->previous_position.y;
+            }
+
+            // Reset region size
+            game_state->galaxy_region_size = GALAXY_REGION_SIZE;
+
+            // Delete stars that end up outside the region
+            if (game_state->game_scale - ZOOM_STEP <= ZOOM_MAP_REGION_SWITCH + epsilon)
+            {
+                double bx = maths_get_nearest_section_line(nav_state->map_offset.x, GALAXY_SECTION_SIZE);
+                double by = maths_get_nearest_section_line(nav_state->map_offset.y, GALAXY_SECTION_SIZE);
+
+                stars_delete_outside_region(nav_state->stars, bx, by, game_state->galaxy_region_size);
+            }
+
+            game_events->is_centering_map = false;
+        }
     }
 
-    if (game_events->is_centering_map)
-    {
-        // Reset ship position
-        if (!game_events->is_exiting_universe)
-        {
-            ship->position.x = ship->previous_position.x;
-            ship->position.y = ship->previous_position.y;
-        }
-
-        // Reset region size
-        game_state->galaxy_region_size = GALAXY_REGION_SIZE;
-
-        // Delete stars that end up outside the region
-        if (game_state->game_scale - zoom_step <= ZOOM_MAP_REGION_SWITCH + epsilon)
-        {
-            double bx = maths_get_nearest_section_line(nav_state->map_offset.x, GALAXY_SECTION_SIZE);
-            double by = maths_get_nearest_section_line(nav_state->map_offset.y, GALAXY_SECTION_SIZE);
-
-            stars_delete_outside_region(nav_state->stars, bx, by, game_state->galaxy_region_size);
-        }
-
-        game_events->is_centering_map = false;
-    }
-
-    // Zoom
-    if (input_state->zoom_in)
-    {
-        if (game_state->game_scale <= ZOOM_MAP_REGION_SWITCH - epsilon)
-            zoom_step /= 10;
-
-        if (game_state->game_scale + zoom_step <= ZOOM_MAX + epsilon)
-        {
-            // Reset scale
-            if (game_state->game_scale_override)
-                game_state->game_scale = game_state->game_scale_override;
-            else
-                game_state->game_scale += zoom_step;
-
-            // Reset region_size
-            if (game_state->game_scale >= ZOOM_MAP_REGION_SWITCH - epsilon)
-            {
-                game_state->galaxy_region_size = GALAXY_REGION_SIZE;
-
-                // Delete stars that end up outside the region
-                if (game_state->game_scale <= ZOOM_MAP_REGION_SWITCH + zoom_step + epsilon)
-                {
-                    double bx = maths_get_nearest_section_line(nav_state->map_offset.x, GALAXY_SECTION_SIZE);
-                    double by = maths_get_nearest_section_line(nav_state->map_offset.y, GALAXY_SECTION_SIZE);
-
-                    stars_delete_outside_region(nav_state->stars, bx, by, game_state->galaxy_region_size);
-                }
-            }
-
-            // Zoom in
-            for (int s = 0; s < MAX_STARS; s++)
-            {
-                if (nav_state->stars[s] != NULL && nav_state->stars[s]->star != NULL)
-                    gfx_zoom_star_system(nav_state->stars[s]->star, game_state->game_scale);
-            }
-        }
-        else if (game_state->game_scale_override)
-            game_state->game_scale = game_state->game_scale_override;
-
-        input_state->zoom_in = false;
-        game_state->game_scale_override = 0;
-    }
-
-    if (input_state->zoom_out)
-    {
-        if (game_state->game_scale <= ZOOM_MAP_REGION_SWITCH + epsilon)
-            zoom_step = ZOOM_STEP / 10;
-
-        if (game_state->game_scale - zoom_step >= ZOOM_MAP_MIN - epsilon)
-        {
-            // Reset scale
-            if (game_state->game_scale_override)
-                game_state->game_scale = game_state->game_scale_override;
-            else
-                game_state->game_scale -= zoom_step;
-
-            // Reset region_size
-            if (game_state->game_scale < ZOOM_MAP_REGION_SWITCH - epsilon)
-            {
-                game_state->galaxy_region_size = GALAXY_REGION_SIZE_MAX;
-
-                // Trigger generation of new stars for new region size
-                game_events->start_stars_generation = true;
-            }
-
-            // Switch to Universe mode
-            if (game_state->game_scale <= ZOOM_MAP_SWITCH - epsilon)
-            {
-                game_events->is_exiting_map = true;
-                game_events->switch_to_universe = true;
-                input_state->click_count = 0;
-                game_events->is_entering_universe = true;
-                game_change_state(game_state, game_events, UNIVERSE);
-
-                // Update universe_offset
-                nav_state->universe_offset.x = nav_state->current_galaxy->position.x + nav_state->map_offset.x / GALAXY_SCALE;
-                nav_state->universe_offset.y = nav_state->current_galaxy->position.y + nav_state->map_offset.y / GALAXY_SCALE;
-            }
-
-            // Zoom out
-            for (int s = 0; s < MAX_STARS; s++)
-            {
-                if (nav_state->stars[s] != NULL && nav_state->stars[s]->star != NULL)
-                    gfx_zoom_star_system(nav_state->stars[s]->star, game_state->game_scale);
-            }
-        }
-        else if (game_state->game_scale_override)
-            game_state->game_scale = game_state->game_scale_override;
-
-        input_state->zoom_out = false;
-        game_state->game_scale_override = 0;
-    }
-
+    game_zoom_map(game_state, input_state, game_events, nav_state);
     stars_generate(game_state, game_events, nav_state, bstars, ship);
-
     gfx_update_camera(camera, nav_state->map_offset, game_state->game_scale);
-
     gfx_draw_section_lines(camera, game_state->state, colors[COLOR_ORANGE_32], game_state->game_scale);
 
     // Check for nearest galaxy, excluding current galaxy
@@ -587,22 +490,7 @@ void game_run_map_state(GameState *game_state, InputState *input_state, GameEven
     if (!nav_state->current_galaxy->initialized_hd || nav_state->current_galaxy->initialized_hd < nav_state->current_galaxy->total_groups_hd)
         gfx_generate_gstars(nav_state->current_galaxy, true);
 
-    // Move through map
-    double rate_x = 0, rate_y = 0;
-
-    if (input_state->right_on)
-        rate_x = MAP_SPEED_MIN + (MAP_SPEED_MAX - MAP_SPEED_MIN) * (camera->w / 1000) / game_state->game_scale;
-    else if (input_state->left_on)
-        rate_x = -(MAP_SPEED_MIN + (MAP_SPEED_MAX - MAP_SPEED_MIN) * (camera->w / 1000) / game_state->game_scale);
-
-    nav_state->map_offset.x += rate_x;
-
-    if (input_state->down_on)
-        rate_y = MAP_SPEED_MIN + (MAP_SPEED_MAX - MAP_SPEED_MIN) * (camera->w / 1000) / game_state->game_scale;
-    else if (input_state->up_on)
-        rate_y = -(MAP_SPEED_MIN + (MAP_SPEED_MAX - MAP_SPEED_MIN) * (camera->w / 1000) / game_state->game_scale);
-
-    nav_state->map_offset.y += rate_y;
+    game_scroll_map(game_state, input_state, nav_state, camera);
 
     // Process star system
     if (!game_events->switch_to_universe && !game_events->is_entering_map && !input_state->zoom_in && !input_state->zoom_out)
@@ -690,6 +578,8 @@ void game_run_map_state(GameState *game_state, InputState *input_state, GameEven
  */
 void game_run_navigate_state(GameState *game_state, InputState *input_state, GameEvents *game_events, NavigationState *nav_state, Bstar *bstars, Ship *ship, Camera *camera)
 {
+    const double epsilon = ZOOM_EPSILON;
+
     if (game_events->is_exiting_map || game_events->is_exiting_universe)
     {
         // Reset stars and galaxy to current position
@@ -742,9 +632,7 @@ void game_run_navigate_state(GameState *game_state, InputState *input_state, Gam
     if (nav_state->current_star != NULL && !nav_state->current_star->is_selected)
         nav_state->current_star->is_selected = true;
 
-    // Add small tolerance to account for floating-point precision errors
-    const double epsilon = ZOOM_EPSILON;
-
+    // Zoom in
     if (input_state->zoom_in)
     {
         if (game_state->game_scale + ZOOM_STEP <= ZOOM_MAX + epsilon)
@@ -763,6 +651,7 @@ void game_run_navigate_state(GameState *game_state, InputState *input_state, Gam
         input_state->zoom_in = false;
     }
 
+    // Zoom out
     if (input_state->zoom_out)
     {
         if (game_state->game_scale - ZOOM_STEP >= ZOOM_NAVIGATE_MIN - epsilon)
@@ -886,7 +775,6 @@ void game_run_navigate_state(GameState *game_state, InputState *input_state, Gam
     }
 
     phys_update_velocity(&nav_state->velocity, ship);
-
     game_update_ship_position(game_state, input_state, ship, camera);
 
     // Update position
@@ -955,10 +843,10 @@ void game_run_navigate_state(GameState *game_state, InputState *input_state, Gam
  */
 void game_run_universe_state(GameState *game_state, InputState *input_state, GameEvents *game_events, NavigationState *nav_state, Ship *ship, Camera *camera)
 {
-    static int zoom_preview = false;
+    const double epsilon = ZOOM_EPSILON / GALAXY_SCALE;
     static Point cross_point = {0.0, 0.0};
 
-    if (game_events->is_exiting_map)
+    if (game_events->is_exiting_map || game_events->switch_to_universe)
     {
         // Reset stars
         if (!maths_points_equal(nav_state->current_galaxy->position, nav_state->buffer_galaxy->position))
@@ -989,17 +877,16 @@ void game_run_universe_state(GameState *game_state, InputState *input_state, Gam
         ship->previous_position.y = ship->position.y;
 
         // Reset current_galaxy
-        if (!game_events->is_exiting_map)
+        if (!game_events->switch_to_universe)
         {
             if (strcmp(nav_state->current_galaxy->name, nav_state->buffer_galaxy->name) != 0)
                 memcpy(nav_state->current_galaxy, nav_state->buffer_galaxy, sizeof(Galaxy));
         }
 
         if (game_events->is_centering_universe)
-        {
             stars_clear_table(nav_state->stars);
-            nav_state->current_galaxy->is_selected = true;
-        }
+
+        nav_state->current_galaxy->is_selected = true;
 
         // Initialize cross lines for stars preview
         // Add GALAXY_SECTION_SIZE to map_offset so that stars generation is triggered on startup
@@ -1069,9 +956,6 @@ void game_run_universe_state(GameState *game_state, InputState *input_state, Gam
         break;
     }
 
-    // Add small tolerance to account for floating-point precision errors
-    const double epsilon = ZOOM_EPSILON / GALAXY_SCALE;
-
     if (game_state->game_scale >= zoom_universe_stars - epsilon)
     {
         if (game_events->start_stars_preview)
@@ -1080,9 +964,9 @@ void game_run_universe_state(GameState *game_state, InputState *input_state, Gam
             nav_state->map_offset.x = (nav_state->universe_offset.x - nav_state->current_galaxy->position.x) * GALAXY_SCALE;
             nav_state->map_offset.y = (nav_state->universe_offset.y - nav_state->current_galaxy->position.y) * GALAXY_SCALE;
 
-            stars_generate_preview(nav_state, camera, &cross_point, zoom_preview, game_state->game_scale);
+            stars_generate_preview(game_events, nav_state, camera, &cross_point, game_state->game_scale);
             game_events->start_stars_preview = false;
-            zoom_preview = false;
+            game_events->zoom_preview = false;
         }
 
         for (int i = 0; i < MAX_STARS; i++)
@@ -1128,129 +1012,8 @@ void game_run_universe_state(GameState *game_state, InputState *input_state, Gam
     // Check if mouse is over current galaxy
     gfx_toggle_galaxy_hover(input_state, nav_state, camera, game_state->game_scale);
 
-    // Move through map
-    double rate_x = 0, rate_y = 0;
-    double speed_universe_step = 700;
-
-    if (game_state->game_scale >= 0.004 - epsilon)
-        speed_universe_step = 10000;
-    else if (game_state->game_scale >= 0.003 - epsilon)
-        speed_universe_step = 3000;
-    else if (game_state->game_scale >= 0.002 - epsilon)
-        speed_universe_step = 1000;
-    else if (game_state->game_scale >= 0.001 - epsilon)
-        speed_universe_step = 800;
-    else if (game_state->game_scale >= 0.00001 - epsilon)
-        speed_universe_step = 700;
-
-    if (input_state->right_on || input_state->left_on || input_state->down_on || input_state->up_on)
-        game_events->start_stars_preview = true;
-
-    if (input_state->right_on)
-        rate_x = UNIVERSE_SPEED_MIN + (UNIVERSE_SPEED_MAX - UNIVERSE_SPEED_MIN) * (camera->w / 1000) / (game_state->game_scale * speed_universe_step);
-    else if (input_state->left_on)
-        rate_x = -(UNIVERSE_SPEED_MIN + (UNIVERSE_SPEED_MAX - UNIVERSE_SPEED_MIN) * (camera->w / 1000) / (game_state->game_scale * speed_universe_step));
-
-    rate_x /= (double)GALAXY_SCALE / 1000;
-    nav_state->universe_offset.x += rate_x;
-
-    if (input_state->down_on)
-        rate_y = UNIVERSE_SPEED_MIN + (UNIVERSE_SPEED_MAX - UNIVERSE_SPEED_MIN) * (camera->w / 1000) / (game_state->game_scale * speed_universe_step);
-    else if (input_state->up_on)
-        rate_y = -(UNIVERSE_SPEED_MIN + (UNIVERSE_SPEED_MAX - UNIVERSE_SPEED_MIN) * (camera->w / 1000) / (game_state->game_scale * speed_universe_step));
-
-    rate_y /= (double)GALAXY_SCALE / 1000;
-    nav_state->universe_offset.y += rate_y;
-
-    // Wrap around position (rectangle defines boundaries)
-    if (nav_state->universe_offset.x > UNIVERSE_X_LIMIT)
-        nav_state->universe_offset.x -= UNIVERSE_X_LIMIT * 2;
-    else if (nav_state->universe_offset.x < -UNIVERSE_X_LIMIT)
-        nav_state->universe_offset.x += UNIVERSE_X_LIMIT * 2;
-
-    if (nav_state->universe_offset.y > UNIVERSE_Y_LIMIT)
-        nav_state->universe_offset.y -= UNIVERSE_Y_LIMIT * 2;
-    else if (nav_state->universe_offset.y < -UNIVERSE_Y_LIMIT)
-        nav_state->universe_offset.y += UNIVERSE_Y_LIMIT * 2;
-
-    // Zoom
-    double zoom_universe_step = ZOOM_UNIVERSE_STEP;
-
-    if (input_state->zoom_in)
-    {
-        if (game_state->game_scale >= 0.001 - epsilon)
-            zoom_universe_step = ZOOM_UNIVERSE_STEP;
-        else if (game_state->game_scale >= 0.0001 - epsilon)
-            zoom_universe_step = ZOOM_UNIVERSE_STEP / 10;
-        else if (game_state->game_scale >= 0.00001 - epsilon)
-            zoom_universe_step = ZOOM_UNIVERSE_STEP / 100;
-        else if (game_state->game_scale > 0)
-            zoom_universe_step = ZOOM_UNIVERSE_STEP / 1000;
-
-        if (game_state->game_scale + zoom_universe_step <= ZOOM_MAP_SWITCH + epsilon)
-        {
-            // Reset scale
-            if (game_state->game_scale_override)
-                game_state->game_scale = game_state->game_scale_override;
-            else
-                game_state->game_scale += zoom_universe_step;
-
-            // Switch to Map mode
-            if (game_state->game_scale >= ZOOM_MAP_SWITCH - epsilon)
-            {
-                game_events->switch_to_map = true;
-                input_state->click_count = 0;
-                game_events->is_entering_map = true;
-                game_change_state(game_state, game_events, MAP);
-
-                stars_clear_table(nav_state->stars);
-
-                // Update map_offset
-                nav_state->map_offset.x = (nav_state->universe_offset.x - nav_state->current_galaxy->position.x) * GALAXY_SCALE;
-                nav_state->map_offset.y = (nav_state->universe_offset.y - nav_state->current_galaxy->position.y) * GALAXY_SCALE;
-            }
-        }
-        else if (game_state->game_scale_override)
-            game_state->game_scale = game_state->game_scale_override;
-
-        zoom_preview = true;
-        input_state->zoom_in = false;
-        game_state->game_scale_override = 0;
-        game_events->start_stars_preview = true;
-        cross_point.x += GALAXY_SCALE; // fake increment so that it triggers star preview generation
-        cross_point.y += GALAXY_SCALE;
-    }
-
-    if (input_state->zoom_out)
-    {
-        if (game_state->game_scale <= 0.00001 + epsilon)
-            zoom_universe_step = ZOOM_UNIVERSE_STEP / 1000;
-        else if (game_state->game_scale <= 0.0001 + epsilon)
-            zoom_universe_step = ZOOM_UNIVERSE_STEP / 100;
-        else if (game_state->game_scale <= 0.001 + epsilon)
-            zoom_universe_step = ZOOM_UNIVERSE_STEP / 10;
-
-        if (game_state->game_scale - zoom_universe_step >= ZOOM_UNIVERSE_MIN / GALAXY_SCALE - epsilon)
-        {
-            // Reset scale
-            if (game_state->game_scale_override)
-                game_state->game_scale = game_state->game_scale_override;
-            else
-                game_state->game_scale -= zoom_universe_step;
-        }
-        else if (game_state->game_scale_override)
-            game_state->game_scale = game_state->game_scale_override;
-
-        stars_clear_table(nav_state->stars);
-
-        zoom_preview = true;
-        input_state->zoom_out = false;
-        game_state->game_scale_override = 0;
-        game_events->start_stars_preview = true;
-        cross_point.x += GALAXY_SCALE; // fake increment so that it triggers star preview generation
-        cross_point.y += GALAXY_SCALE;
-    }
-
+    game_scroll_universe(game_state, input_state, game_events, nav_state, camera);
+    game_zoom_universe(game_state, input_state, game_events, nav_state, &cross_point);
     gfx_update_camera(camera, nav_state->universe_offset, game_state->game_scale * GALAXY_SCALE);
 
     // Draw ship projection
@@ -1302,6 +1065,94 @@ void game_run_universe_state(GameState *game_state, InputState *input_state, Gam
 
     if (input_state->is_mouse_double_clicked)
         input_state->is_mouse_double_clicked = false;
+}
+
+/**
+ * Moves the map by a given speed based on the input state and camera parameters.
+ *
+ * @param game_state A pointer to the game state struct.
+ * @param input_state A pointer to the input state struct.
+ * @param nav_state A pointer to the navigation state struct.
+ * @param camera A pointer to the camera struct.
+ *
+ * @return void
+ */
+static void game_scroll_map(const GameState *game_state, const InputState *input_state, NavigationState *nav_state, const Camera *camera)
+{
+    double rate_x = 0, rate_y = 0;
+
+    if (input_state->right_on)
+        rate_x = MAP_SPEED_MIN + (MAP_SPEED_MAX - MAP_SPEED_MIN) * (camera->w / 1000) / game_state->game_scale;
+    else if (input_state->left_on)
+        rate_x = -(MAP_SPEED_MIN + (MAP_SPEED_MAX - MAP_SPEED_MIN) * (camera->w / 1000) / game_state->game_scale);
+
+    nav_state->map_offset.x += rate_x;
+
+    if (input_state->down_on)
+        rate_y = MAP_SPEED_MIN + (MAP_SPEED_MAX - MAP_SPEED_MIN) * (camera->w / 1000) / game_state->game_scale;
+    else if (input_state->up_on)
+        rate_y = -(MAP_SPEED_MIN + (MAP_SPEED_MAX - MAP_SPEED_MIN) * (camera->w / 1000) / game_state->game_scale);
+
+    nav_state->map_offset.y += rate_y;
+}
+
+/**
+ * Moves the universe by a given speed based on the input state and camera parameters.
+ *
+ * @param game_state A pointer to the game state struct.
+ * @param input_state A pointer to the input state struct.
+ * @param game_events A pointer to the game events struct.
+ * @param nav_state A pointer to the navigation state struct.
+ * @param camera A pointer to the camera struct.
+ *
+ * @return void
+ */
+static void game_scroll_universe(const GameState *game_state, const InputState *input_state, GameEvents *game_events, NavigationState *nav_state, const Camera *camera)
+{
+    const double epsilon = ZOOM_EPSILON / GALAXY_SCALE;
+    double rate_x = 0, rate_y = 0;
+    double speed_universe_step = 700;
+
+    if (game_state->game_scale >= 0.004 - epsilon)
+        speed_universe_step = 10000;
+    else if (game_state->game_scale >= 0.003 - epsilon)
+        speed_universe_step = 3000;
+    else if (game_state->game_scale >= 0.002 - epsilon)
+        speed_universe_step = 1000;
+    else if (game_state->game_scale >= 0.001 - epsilon)
+        speed_universe_step = 800;
+    else if (game_state->game_scale >= 0.00001 - epsilon)
+        speed_universe_step = 700;
+
+    if (input_state->right_on || input_state->left_on || input_state->down_on || input_state->up_on)
+        game_events->start_stars_preview = true;
+
+    if (input_state->right_on)
+        rate_x = UNIVERSE_SPEED_MIN + (UNIVERSE_SPEED_MAX - UNIVERSE_SPEED_MIN) * (camera->w / 1000) / (game_state->game_scale * speed_universe_step);
+    else if (input_state->left_on)
+        rate_x = -(UNIVERSE_SPEED_MIN + (UNIVERSE_SPEED_MAX - UNIVERSE_SPEED_MIN) * (camera->w / 1000) / (game_state->game_scale * speed_universe_step));
+
+    rate_x /= (double)GALAXY_SCALE / 1000;
+    nav_state->universe_offset.x += rate_x;
+
+    if (input_state->down_on)
+        rate_y = UNIVERSE_SPEED_MIN + (UNIVERSE_SPEED_MAX - UNIVERSE_SPEED_MIN) * (camera->w / 1000) / (game_state->game_scale * speed_universe_step);
+    else if (input_state->up_on)
+        rate_y = -(UNIVERSE_SPEED_MIN + (UNIVERSE_SPEED_MAX - UNIVERSE_SPEED_MIN) * (camera->w / 1000) / (game_state->game_scale * speed_universe_step));
+
+    rate_y /= (double)GALAXY_SCALE / 1000;
+    nav_state->universe_offset.y += rate_y;
+
+    // Wrap around position (rectangle defines boundaries)
+    if (nav_state->universe_offset.x > UNIVERSE_X_LIMIT)
+        nav_state->universe_offset.x -= UNIVERSE_X_LIMIT * 2;
+    else if (nav_state->universe_offset.x < -UNIVERSE_X_LIMIT)
+        nav_state->universe_offset.x += UNIVERSE_X_LIMIT * 2;
+
+    if (nav_state->universe_offset.y > UNIVERSE_Y_LIMIT)
+        nav_state->universe_offset.y -= UNIVERSE_Y_LIMIT * 2;
+    else if (nav_state->universe_offset.y < -UNIVERSE_Y_LIMIT)
+        nav_state->universe_offset.y += UNIVERSE_Y_LIMIT * 2;
 }
 
 /**
@@ -1369,5 +1220,207 @@ static void game_update_ship_position(GameState *game_state, const InputState *i
         // Dynamic rect position based on ship position
         ship->rect.x = (int)((ship->position.x - camera->x) * game_state->game_scale - ship->radius);
         ship->rect.y = (int)((ship->position.y - camera->y) * game_state->game_scale - ship->radius);
+    }
+}
+
+/**
+ * Zoom in/out the map, resets the region size, and zooms in/out on each star system.
+ *
+ * @param game_state A pointer to the game state object.
+ * @param input_state A pointer to the input state object.
+ * @param game_events A pointer to the game events object.
+ * @param nav_state A pointer to the navigation state object.
+ *
+ * @return void
+ */
+static void game_zoom_map(GameState *game_state, InputState *input_state, GameEvents *game_events, NavigationState *nav_state)
+{
+    const double epsilon = ZOOM_EPSILON;
+    double zoom_step = ZOOM_STEP;
+
+    // Zoom in
+    if (input_state->zoom_in)
+    {
+        if (game_state->game_scale <= ZOOM_MAP_REGION_SWITCH - epsilon)
+            zoom_step /= 10;
+
+        if (game_state->game_scale + zoom_step <= ZOOM_MAX + epsilon)
+        {
+            // Reset scale
+            if (game_state->game_scale_override)
+                game_state->game_scale = game_state->game_scale_override;
+            else
+                game_state->game_scale += zoom_step;
+
+            // Reset region_size
+            if (game_state->game_scale >= ZOOM_MAP_REGION_SWITCH - epsilon)
+            {
+                game_state->galaxy_region_size = GALAXY_REGION_SIZE;
+
+                // Delete stars that end up outside the region
+                if (game_state->game_scale <= ZOOM_MAP_REGION_SWITCH + zoom_step + epsilon)
+                {
+                    double bx = maths_get_nearest_section_line(nav_state->map_offset.x, GALAXY_SECTION_SIZE);
+                    double by = maths_get_nearest_section_line(nav_state->map_offset.y, GALAXY_SECTION_SIZE);
+
+                    stars_delete_outside_region(nav_state->stars, bx, by, game_state->galaxy_region_size);
+                }
+            }
+
+            // Zoom in
+            for (int s = 0; s < MAX_STARS; s++)
+            {
+                if (nav_state->stars[s] != NULL && nav_state->stars[s]->star != NULL)
+                    gfx_zoom_star_system(nav_state->stars[s]->star, game_state->game_scale);
+            }
+        }
+        else if (game_state->game_scale_override)
+            game_state->game_scale = game_state->game_scale_override;
+
+        input_state->zoom_in = false;
+        game_state->game_scale_override = 0;
+    }
+
+    // Zoom out
+    if (input_state->zoom_out)
+    {
+        if (game_state->game_scale <= ZOOM_MAP_REGION_SWITCH + epsilon)
+            zoom_step = ZOOM_STEP / 10;
+
+        if (game_state->game_scale - zoom_step >= ZOOM_MAP_MIN - epsilon)
+        {
+            // Reset scale
+            if (game_state->game_scale_override)
+                game_state->game_scale = game_state->game_scale_override;
+            else
+                game_state->game_scale -= zoom_step;
+
+            // Reset region_size
+            if (game_state->game_scale < ZOOM_MAP_REGION_SWITCH - epsilon)
+            {
+                game_state->galaxy_region_size = GALAXY_REGION_SIZE_MAX;
+
+                // Trigger generation of new stars for new region size
+                game_events->start_stars_generation = true;
+            }
+
+            // Switch to Universe mode
+            if (game_state->game_scale <= ZOOM_MAP_SWITCH - epsilon)
+            {
+                game_events->switch_to_universe = true;
+                input_state->click_count = 0;
+                game_events->is_entering_universe = true;
+                game_change_state(game_state, game_events, UNIVERSE);
+
+                // Update universe_offset
+                nav_state->universe_offset.x = nav_state->current_galaxy->position.x + nav_state->map_offset.x / GALAXY_SCALE;
+                nav_state->universe_offset.y = nav_state->current_galaxy->position.y + nav_state->map_offset.y / GALAXY_SCALE;
+            }
+
+            // Zoom out
+            for (int s = 0; s < MAX_STARS; s++)
+            {
+                if (nav_state->stars[s] != NULL && nav_state->stars[s]->star != NULL)
+                    gfx_zoom_star_system(nav_state->stars[s]->star, game_state->game_scale);
+            }
+        }
+        else if (game_state->game_scale_override)
+            game_state->game_scale = game_state->game_scale_override;
+
+        input_state->zoom_out = false;
+        game_state->game_scale_override = 0;
+    }
+}
+
+/**
+ * Zoom in/out the universe, resets the region size, and zooms in/out on each star system.
+ *
+ * @param game_state A pointer to the game state object.
+ * @param input_state A pointer to the input state object.
+ * @param game_events A pointer to the game events object.
+ * @param nav_state A pointer to the navigation state object.
+ * @param cross_point A pointer to the cross_point Point.
+ *
+ * @return void
+ */
+static void game_zoom_universe(GameState *game_state, InputState *input_state, GameEvents *game_events, NavigationState *nav_state, Point *cross_point)
+{
+    const double epsilon = ZOOM_EPSILON / GALAXY_SCALE;
+    double zoom_universe_step = ZOOM_UNIVERSE_STEP;
+
+    if (input_state->zoom_in)
+    {
+        if (game_state->game_scale >= 0.001 - epsilon)
+            zoom_universe_step = ZOOM_UNIVERSE_STEP;
+        else if (game_state->game_scale >= 0.0001 - epsilon)
+            zoom_universe_step = ZOOM_UNIVERSE_STEP / 10;
+        else if (game_state->game_scale >= 0.00001 - epsilon)
+            zoom_universe_step = ZOOM_UNIVERSE_STEP / 100;
+        else if (game_state->game_scale > 0)
+            zoom_universe_step = ZOOM_UNIVERSE_STEP / 1000;
+
+        if (game_state->game_scale + zoom_universe_step <= ZOOM_MAP_SWITCH + epsilon)
+        {
+            // Reset scale
+            if (game_state->game_scale_override)
+                game_state->game_scale = game_state->game_scale_override;
+            else
+                game_state->game_scale += zoom_universe_step;
+
+            // Switch to Map mode
+            if (game_state->game_scale >= ZOOM_MAP_SWITCH - epsilon)
+            {
+                game_events->switch_to_map = true;
+                input_state->click_count = 0;
+                game_events->is_entering_map = true;
+                game_change_state(game_state, game_events, MAP);
+
+                stars_clear_table(nav_state->stars);
+
+                // Update map_offset
+                nav_state->map_offset.x = (nav_state->universe_offset.x - nav_state->current_galaxy->position.x) * GALAXY_SCALE;
+                nav_state->map_offset.y = (nav_state->universe_offset.y - nav_state->current_galaxy->position.y) * GALAXY_SCALE;
+            }
+        }
+        else if (game_state->game_scale_override)
+            game_state->game_scale = game_state->game_scale_override;
+
+        game_events->zoom_preview = true;
+        input_state->zoom_in = false;
+        game_state->game_scale_override = 0;
+        game_events->start_stars_preview = true;
+        cross_point->x += GALAXY_SCALE; // fake increment so that it triggers star preview generation
+        cross_point->y += GALAXY_SCALE;
+    }
+
+    // Zoom out
+    if (input_state->zoom_out)
+    {
+        if (game_state->game_scale <= 0.00001 + epsilon)
+            zoom_universe_step = ZOOM_UNIVERSE_STEP / 1000;
+        else if (game_state->game_scale <= 0.0001 + epsilon)
+            zoom_universe_step = ZOOM_UNIVERSE_STEP / 100;
+        else if (game_state->game_scale <= 0.001 + epsilon)
+            zoom_universe_step = ZOOM_UNIVERSE_STEP / 10;
+
+        if (game_state->game_scale - zoom_universe_step >= ZOOM_UNIVERSE_MIN / GALAXY_SCALE - epsilon)
+        {
+            // Reset scale
+            if (game_state->game_scale_override)
+                game_state->game_scale = game_state->game_scale_override;
+            else
+                game_state->game_scale -= zoom_universe_step;
+        }
+        else if (game_state->game_scale_override)
+            game_state->game_scale = game_state->game_scale_override;
+
+        stars_clear_table(nav_state->stars);
+
+        game_events->zoom_preview = true;
+        input_state->zoom_out = false;
+        game_state->game_scale_override = 0;
+        game_events->start_stars_preview = true;
+        cross_point->x += GALAXY_SCALE; // fake increment so that it triggers star preview generation
+        cross_point->y += GALAXY_SCALE;
     }
 }

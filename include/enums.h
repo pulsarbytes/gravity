@@ -125,7 +125,6 @@ enum
 enum
 {
     STAR_INFO_NAME,
-    STAR_INFO_TYPE,
     STAR_INFO_X,
     STAR_INFO_Y,
     STAR_INFO_CLASS,
