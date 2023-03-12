@@ -97,8 +97,9 @@ void stars_clear_table(StarEntry *stars[])
         while (entry != NULL)
         {
             Point position = {.x = entry->x, .y = entry->y};
+            StarEntry *next_entry = entry->next;
             stars_delete_entry(stars, position);
-            entry = entry->next;
+            entry = next_entry;
         }
     }
 }
@@ -178,11 +179,13 @@ static Star *stars_create_star(const NavigationState *nav_state, Point position,
     uint64_t position_hash = maths_hash_position_to_uint64(position);
 
     star->initialized = 0;
+    memset(star->name, 0, sizeof(star->name));
     sprintf(star->name, "%s-%lu", "S", position_hash);
     star->image = "../assets/images/sol.png";
-    star->class = stars_size_class(distance);
+    star->class = class;
     star->radius = radius;
     star->cutoff = GALAXY_SECTION_SIZE * class / 2;
+    star->orbit_radius = 0;
     star->position.x = position.x;
     star->position.y = position.y;
     star->vx = 0.0;
@@ -205,9 +208,15 @@ static Star *stars_create_star(const NavigationState *nav_state, Point position,
     star->rect.y = (star->position.y - star->radius) * scale;
     star->rect.w = 2 * star->radius * scale;
     star->rect.h = 2 * star->radius * scale;
+    star->projection = (SDL_Rect){0, 0, 0, 0};
     star->color = colors[color_code];
     star->num_planets = 0;
-    star->planets[0] = NULL;
+
+    for (int i = 0; i < MAX_PLANETS; i++)
+    {
+        star->planets[i] = NULL;
+    }
+
     star->parent = NULL;
     star->level = LEVEL_STAR;
     star->is_selected = false;
@@ -960,6 +969,7 @@ void stars_generate(GameState *game_state, GameEvents *game_events, NavigationSt
 
 /**
  * Generates a preview of the stars within the current section of the galaxy.
+ * The function implements lazy initialization of stars in batches.
  *
  * @param nav_state A pointer to the current NavigationState struct.
  * @param camera A pointer to the current Camera struct.
@@ -1043,8 +1053,11 @@ void stars_generate_preview(GameEvents *game_events, NavigationState *nav_state,
     double by = maths_get_nearest_section_line(nav_state->map_offset.y, section_size);
 
     // Check whether nearest section lines have changed
-    if ((int)bx == (int)cross_point->x && (int)by == (int)cross_point->y)
-        return;
+    if (!game_events->lazy_load_started)
+    {
+        if ((int)bx == (int)cross_point->x && (int)by == (int)cross_point->y)
+            return;
+    }
 
     // Keep track of new lines
     if ((int)bx != (int)cross_point->x)
@@ -1102,6 +1115,14 @@ void stars_generate_preview(GameEvents *game_events, NavigationState *nav_state,
     // Set galaxy hash as initseq
     nav_state->initseq = maths_hash_position_to_uint64_2(nav_state->current_galaxy->position);
 
+    // Initialize current batch
+    const int num_batches = 20; // Number of BSTARS_BATCH_SIZE per batch
+    int current_batch = 0;
+
+    // Check whether lazy-loading has already started
+    if (!game_events->lazy_load_started)
+        game_events->lazy_load_started = true;
+
     for (ix = left_boundary; ix < right_boundary; ix += section_size)
     {
         for (iy = top_boundary; iy < bottom_boundary; iy += section_size)
@@ -1145,10 +1166,31 @@ void stars_generate_preview(GameEvents *game_events, NavigationState *nav_state,
 
                     // Add star to hash table
                     stars_add_entry(nav_state->stars, position, star);
+
+                    current_batch++;
                 }
+            }
+
+            if (current_batch >= num_batches * BSTARS_BATCH_SIZE)
+            {
+                // Store previous boundaries
+                boundaries_minus.x = left_boundary;
+                boundaries_minus.y = top_boundary;
+                boundaries_plus.x = ix;
+                boundaries_plus.y = iy;
+                initialized = true;
+
+                // Delete stars that end up outside the region
+                int region_size = sections_in_camera_x;
+                stars_delete_outside_region(nav_state->stars, bx, by, region_size);
+
+                return;
             }
         }
     }
+
+    // End lazy loading
+    game_events->lazy_load_started = false;
 
     // Store previous boundaries
     boundaries_minus.x = left_boundary;
@@ -1160,6 +1202,43 @@ void stars_generate_preview(GameEvents *game_events, NavigationState *nav_state,
     // Delete stars that end up outside the region
     int region_size = sections_in_camera_x;
     stars_delete_outside_region(nav_state->stars, bx, by, region_size);
+}
+
+/**
+ * Initializes a Star structure with default values.
+ *
+ * @param star a pointer to a Star structure to be initialized.
+ *
+ * @return void
+ */
+void stars_initialize_star(Star *star)
+{
+    star->initialized = 0;
+    memset(star->name, 0, sizeof(star->name));
+    star->image = NULL;
+    star->class = 0;
+    star->radius = 0;
+    star->cutoff = 0;
+    star->orbit_radius = 0;
+    star->position = (Point){0, 0};
+    star->vx = 0;
+    star->vy = 0;
+    star->dx = 0;
+    star->dy = 0;
+    star->texture = NULL;
+    star->rect = (SDL_Rect){0, 0, 0, 0};
+    star->projection = (SDL_Rect){0, 0, 0, 0};
+    star->color = (SDL_Color){0, 0, 0, 0};
+    star->num_planets = 0;
+
+    for (int i = 0; i < MAX_PLANETS_MOONS; i++)
+    {
+        star->planets[i] = NULL;
+    }
+
+    star->parent = NULL;
+    star->level = 0;
+    star->is_selected = false;
 }
 
 /**
@@ -1370,13 +1449,12 @@ static void stars_populate_body(CelestialBody *body, Point position, pcg32_rando
                     return;
                 }
 
+                planet->initialized = 0;
+                memset(planet->name, 0, sizeof(planet->name));
                 strcpy(planet->name, body->name);                               // Copy star name to planet name
                 sprintf(planet->name + strlen(planet->name), "-%s-%d", "P", i); // Append to planet name
                 planet->image = "../assets/images/earth.png";
                 planet->class = stars_planet_size_class(orbit_width);
-                planet->color = colors[COLOR_SKY_BLUE_255];
-                planet->level = LEVEL_PLANET;
-                planet->is_selected = false;
                 planet->radius = radius;
                 planet->cutoff = orbit_width / 2;
                 planet->orbit_radius = orbit_width;
@@ -1400,11 +1478,19 @@ static void stars_populate_body(CelestialBody *body, Point position, pcg32_rando
                 planet->rect.y = (planet->position.y - planet->radius) * scale;
                 planet->rect.w = 2 * planet->radius * scale;
                 planet->rect.h = 2 * planet->radius * scale;
+                planet->projection = (SDL_Rect){0, 0, 0, 0};
+                planet->color = colors[COLOR_SKY_BLUE_255];
                 planet->num_planets = 0;
-                planet->planets[0] = NULL;
-                planet->parent = body;
-                planet->parent->num_planets++;
 
+                for (int i = 0; i < MAX_MOONS; i++)
+                {
+                    planet->planets[i] = NULL;
+                }
+
+                planet->parent = body;
+                planet->level = LEVEL_PLANET;
+                planet->is_selected = false;
+                planet->parent->num_planets++;
                 body->planets[i] = planet;
                 body->planets[i + 1] = NULL;
                 i++;
@@ -1514,14 +1600,14 @@ static void stars_populate_body(CelestialBody *body, Point position, pcg32_rando
                     return;
                 }
 
+                moon->initialized = 0;
+                memset(moon->name, 0, sizeof(moon->name));
                 strcpy(moon->name, body->name);                             // Copy planet name to moon name
                 sprintf(moon->name + strlen(moon->name), "-%s-%d", "M", i); // Append to moon name
                 moon->image = "../assets/images/moon.png";
                 moon->class = 0;
-                moon->color = colors[COLOR_GAINSBORO_255];
-                moon->level = LEVEL_MOON;
-                moon->is_selected = false;
                 moon->radius = radius;
+                moon->cutoff = orbit_width;
                 moon->orbit_radius = orbit_width;
 
                 // Calculate orbital velocity
@@ -1543,11 +1629,19 @@ static void stars_populate_body(CelestialBody *body, Point position, pcg32_rando
                 moon->rect.y = (moon->position.y - moon->radius) * scale;
                 moon->rect.w = 2 * moon->radius * scale;
                 moon->rect.h = 2 * moon->radius * scale;
+                moon->projection = (SDL_Rect){0, 0, 0, 0};
+                moon->color = colors[COLOR_GAINSBORO_255];
                 moon->num_planets = 0;
-                moon->planets[0] = NULL;
-                moon->parent = body;
-                moon->parent->num_planets++;
 
+                for (int i = 0; i < MAX_MOONS; i++)
+                {
+                    moon->planets[i] = NULL;
+                }
+
+                moon->parent = body;
+                moon->level = LEVEL_MOON;
+                moon->is_selected = false;
+                moon->parent->num_planets++;
                 body->planets[i] = moon;
                 body->planets[i + 1] = NULL;
                 i++;

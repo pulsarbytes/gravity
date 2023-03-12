@@ -29,7 +29,7 @@ extern SDL_Color colors[];
  */
 void console_log_position(GameState *game_state, NavigationState nav_state)
 {
-    Point position;
+    Point position = {.x = 0, .y = 0};
 
     if (game_state->state == NAVIGATE)
     {
@@ -115,7 +115,9 @@ void console_render(ConsoleEntry entries[], const Camera *camera)
 void console_update_entry(ConsoleEntry entries[], int index, double value)
 {
     char text[16];
-    float rounded_value;
+    memset(text, 0, sizeof(text));
+
+    float rounded_value = 0.0;
 
     if (index == CONSOLE_SCALE)
         rounded_value = value;

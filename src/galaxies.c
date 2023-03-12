@@ -74,8 +74,9 @@ void galaxies_clear_table(GalaxyEntry *galaxies[])
         while (entry != NULL)
         {
             Point position = {.x = entry->x, .y = entry->y};
+            GalaxyEntry *next_entry = entry->next;
             galaxies_delete_entry(galaxies, position);
-            entry = entry->next;
+            entry = next_entry;
         }
     }
 }
@@ -150,21 +151,28 @@ static Galaxy *galaxies_create_galaxy(Point position)
     galaxy->sections_in_group_hd = 0;
     galaxy->total_groups = 0;
     galaxy->total_groups_hd = 0;
+    memset(galaxy->name, 0, sizeof(galaxy->name));
     sprintf(galaxy->name, "%s-%lu", "G", position_hash);
-    galaxy->class = galaxies_size_class(distance);
+    galaxy->class = class;
     galaxy->radius = radius;
     galaxy->cutoff = UNIVERSE_SECTION_SIZE * class / 2;
     galaxy->is_selected = false;
     galaxy->position.x = position.x;
     galaxy->position.y = position.y;
-    galaxy->color.r = colors[COLOR_WHITE_255].r;
-    galaxy->color.g = colors[COLOR_WHITE_255].g;
-    galaxy->color.b = colors[COLOR_WHITE_255].b;
+    galaxy->projection = (SDL_Rect){0, 0, 0, 0};
+    galaxy->color = colors[COLOR_WHITE_255];
 
     for (int i = 0; i < MAX_GSTARS; i++)
     {
+        galaxy->gstars[i].position = (Point){0, 0};
+        galaxy->gstars[i].opacity = 0;
         galaxy->gstars[i].final_star = false;
+        galaxy->gstars[i].color = (SDL_Color){0, 0, 0, 0};
+
+        galaxy->gstars_hd[i].position = (Point){0, 0};
+        galaxy->gstars_hd[i].opacity = 0;
         galaxy->gstars_hd[i].final_star = false;
+        galaxy->gstars_hd[i].color = (SDL_Color){0, 0, 0, 0};
     }
 
     return galaxy;

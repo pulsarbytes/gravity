@@ -14,6 +14,7 @@
         "stdbool.h": "c",
         "stars.h": "c",
         "math.h": "c",
-        "sdl.h": "c"
+        "sdl.h": "c",
+        "typeinfo": "c"
     }
 }

@@ -216,7 +216,8 @@ typedef struct
     bool is_entering_universe; // Enter Universe via `U`
     bool is_exiting_universe;  // Exit Universe via `N` or `M`
     bool is_centering_universe;
-    bool zoom_preview; // Whether the stars preview has been requested by a zoom event
+    bool zoom_preview;      // Whether the stars preview has been requested by a zoom event
+    bool lazy_load_started; // Whether lazy-loading for stars preview has started
 } GameEvents;
 
 typedef struct

@@ -1092,6 +1092,16 @@ void gfx_generate_gstars(Galaxy *galaxy, bool high_definition)
  */
 void gfx_generate_menu_gstars(Galaxy *galaxy, Gstar *menustars)
 {
+    // Initialize menustars
+    for (int j = 0; j < MAX_GSTARS; j++)
+    {
+        menustars[j].position.x = 0;
+        menustars[j].position.y = 0;
+        menustars[j].opacity = 0;
+        menustars[j].final_star = false;
+        menustars[j].color = (SDL_Color){0, 0, 0, 0};
+    }
+
     float radius = galaxy->radius;
     double full_size_radius = radius * GALAXY_SCALE;
     full_size_radius -= fmod(full_size_radius, GALAXY_SECTION_SIZE); // zero out any digits below 10,000

@@ -45,6 +45,7 @@ void stars_draw_planets_info_box(const Star *, const Camera *);
 void stars_draw_star_system(GameState *, const InputState *, NavigationState *, CelestialBody *, const Camera *);
 void stars_generate(GameState *, GameEvents *, NavigationState *, Bstar *bstars, Ship *);
 void stars_generate_preview(GameEvents *, NavigationState *, const Camera *, Point *, long double scale);
+void stars_initialize_star(Star *);
 void stars_update_orbital_positions(GameState *, const InputState *, NavigationState *, CelestialBody *, Ship *, const Camera *, unsigned short star_class);
 
 #endif

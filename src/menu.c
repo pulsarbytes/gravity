@@ -153,27 +153,33 @@ static void menu_draw_menu(GameState *game_state, InputState *input_state, bool 
 static void menu_populate_menu_array(MenuButton menu[])
 {
     // Start
+    memset(menu[MENU_BUTTON_START].text, 0, sizeof(menu[MENU_BUTTON_START].text));
     strcpy(menu[MENU_BUTTON_START].text, "Start");
     menu[MENU_BUTTON_START].state = NAVIGATE;
     menu[MENU_BUTTON_START].disabled = false;
 
     // Resume
+    memset(menu[MENU_BUTTON_RESUME].text, 0, sizeof(menu[MENU_BUTTON_RESUME].text));
     strcpy(menu[MENU_BUTTON_RESUME].text, "Resume");
     menu[MENU_BUTTON_RESUME].state = RESUME;
     menu[MENU_BUTTON_RESUME].disabled = true;
 
     // New
+    memset(menu[MENU_BUTTON_NEW].text, 0, sizeof(menu[MENU_BUTTON_NEW].text));
     strcpy(menu[MENU_BUTTON_NEW].text, "New Game");
     menu[MENU_BUTTON_NEW].state = NEW;
     menu[MENU_BUTTON_NEW].disabled = true;
 
     // Exit
+    memset(menu[MENU_BUTTON_EXIT].text, 0, sizeof(menu[MENU_BUTTON_EXIT].text));
     strcpy(menu[MENU_BUTTON_EXIT].text, "Exit");
     menu[MENU_BUTTON_EXIT].state = QUIT;
     menu[MENU_BUTTON_EXIT].disabled = false;
 
     for (int i = 0; i < MENU_BUTTON_COUNT; i++)
     {
+        menu[i].rect.x = 0;
+        menu[i].rect.y = 0;
         menu[i].rect.w = 300;
         menu[i].rect.h = 50;
 
@@ -181,6 +187,8 @@ static void menu_populate_menu_array(MenuButton menu[])
         SDL_Surface *text_surface = TTF_RenderText_Solid(fonts[FONT_SIZE_14], menu[i].text, colors[COLOR_WHITE_255]);
         SDL_Texture *text_texture = SDL_CreateTextureFromSurface(renderer, text_surface);
         menu[i].text_texture = text_texture;
+        menu[i].texture_rect.x = 0;
+        menu[i].texture_rect.y = 0;
         menu[i].texture_rect.w = text_surface->w;
         menu[i].texture_rect.h = text_surface->h;
 

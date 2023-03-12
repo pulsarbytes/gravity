@@ -154,6 +154,13 @@ void game_reset(GameState *game_state, InputState *input_state, GameEvents *game
     game_state->game_scale_override = 0;
     game_state->galaxy_region_size = GALAXY_REGION_SIZE;
 
+    // Initialize console entries
+    for (int i = 0; i < CONSOLE_COUNT; i++)
+    {
+        memset(game_state->console_entries[i].title, 0, sizeof(game_state->console_entries[i].title));
+        memset(game_state->console_entries[i].value, 0, sizeof(game_state->console_entries[i].value));
+    }
+
     // InputState
     input_state->mouse_position.x = 0;
     input_state->mouse_position.y = 0;
@@ -202,6 +209,7 @@ void game_reset(GameState *game_state, InputState *input_state, GameEvents *game
     game_events->is_exiting_universe = false;
     game_events->is_centering_universe = false;
     game_events->zoom_preview = false;
+    game_events->lazy_load_started = false;
 
     // Galaxy position
     // Retrieved from saved game or use default values if this is a new game
@@ -251,20 +259,22 @@ void game_reset(GameState *game_state, InputState *input_state, GameEvents *game
     nav_state->velocity.angle = 0;
 
     // Initialize stars hash table to NULL pointers
-    stars_clear_table(nav_state->stars);
-
     for (int i = 0; i < MAX_STARS; i++)
     {
         nav_state->stars[i] = NULL;
     }
 
-    // Initialize galaxies hash table to NULL pointers
-    galaxies_clear_table(nav_state->galaxies);
+    if (reset)
+        stars_clear_table(nav_state->stars);
 
+    // Initialize galaxies hash table to NULL pointers
     for (int i = 0; i < MAX_GALAXIES; i++)
     {
         nav_state->galaxies[i] = NULL;
     }
+
+    if (reset)
+        galaxies_clear_table(nav_state->galaxies);
 
     // Generate galaxies
     Point initial_position = {
@@ -317,7 +327,7 @@ void game_reset(GameState *game_state, InputState *input_state, GameEvents *game
         }
 
         // Initialize current_star
-        nav_state->current_star->class = 0;
+        stars_initialize_star(nav_state->current_star);
 
         // Allocate memory for buffer_star
         nav_state->buffer_star = (Star *)malloc(sizeof(Star));
@@ -329,7 +339,7 @@ void game_reset(GameState *game_state, InputState *input_state, GameEvents *game
         }
 
         // Initialize buffer_star
-        nav_state->buffer_star->class = 0;
+        stars_initialize_star(nav_state->buffer_star);
     }
 
     // Copy current_galaxy_copy to current_galaxy
@@ -958,7 +968,7 @@ void game_run_universe_state(GameState *game_state, InputState *input_state, Gam
 
     if (game_state->game_scale >= zoom_universe_stars - epsilon)
     {
-        if (game_events->start_stars_preview)
+        if (game_events->start_stars_preview || game_events->lazy_load_started)
         {
             // Update map_offset
             nav_state->map_offset.x = (nav_state->universe_offset.x - nav_state->current_galaxy->position.x) * GALAXY_SCALE;
@@ -981,6 +991,10 @@ void game_run_universe_state(GameState *game_state, InputState *input_state, Gam
                     int x = (nav_state->current_galaxy->position.x - camera->x + entry->star->position.x / GALAXY_SCALE) * game_state->game_scale * GALAXY_SCALE;
                     int y = (nav_state->current_galaxy->position.y - camera->y + entry->star->position.y / GALAXY_SCALE) * game_state->game_scale * GALAXY_SCALE;
                     int opacity = entry->star->class * (255 / 6);
+
+                    if (opacity < 120)
+                        opacity = 120;
+
                     SDL_SetRenderDrawColor(renderer, entry->star->color.r, entry->star->color.g, entry->star->color.b, opacity);
                     SDL_RenderDrawPoint(renderer, x, y);
 
