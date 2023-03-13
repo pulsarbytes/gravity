@@ -7,6 +7,7 @@
 
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
+#include "../lib/pcg-c-basic-0.9/pcg_basic.h"
 
 #include "../include/constants.h"
 #include "../include/enums.h"
@@ -1097,8 +1098,47 @@ void game_run_universe_state(GameState *game_state, InputState *input_state, Gam
     SDL_RenderDrawLine(renderer, (camera->w / 2) - 7, camera->h / 2, (camera->w / 2) + 7, camera->h / 2);
     SDL_RenderDrawLine(renderer, camera->w / 2, (camera->h / 2) - 7, camera->w / 2, (camera->h / 2) + 7);
 
+    // Draw star info box
+    if (game_state->game_scale >= zoom_generate_preview_stars * 10 - epsilon)
+    {
+        for (int i = 0; i < MAX_STARS; i++)
+        {
+            if (nav_state->stars[i] != NULL)
+            {
+                // Each index can have many entries, loop through all of them
+                StarEntry *entry = nav_state->stars[i];
+
+                while (entry != NULL)
+                {
+                    int x = (nav_state->current_galaxy->position.x - camera->x + entry->star->position.x / GALAXY_SCALE) * game_state->game_scale * GALAXY_SCALE;
+                    int y = (nav_state->current_galaxy->position.y - camera->y + entry->star->position.y / GALAXY_SCALE) * game_state->game_scale * GALAXY_SCALE;
+
+                    // Check if mouse is inside star cutoff
+                    double distance_star = maths_distance_between_points(input_state->mouse_position.x, input_state->mouse_position.y, x, y);
+                    double star_cutoff = entry->star->cutoff * game_state->game_scale;
+
+                    if (distance_star <= star_cutoff)
+                    {
+                        // Use a local rng
+                        pcg32_random_t rng;
+
+                        // Create rng seed by combining x,y values
+                        uint64_t seed = maths_hash_position_to_uint64(entry->star->position);
+
+                        // Seed with a fixed constant
+                        pcg32_srandom_r(&rng, seed, nav_state->initseq);
+
+                        stars_populate_body(entry->star, entry->star->position, rng, game_state->game_scale);
+                        stars_draw_info_box(entry->star, camera);
+                    }
+
+                    entry = entry->next;
+                }
+            }
+        }
+    }
+
     // Draw galaxy info box
-    // if (input_state->is_hovering_galaxy || nav_state->current_galaxy->is_selected)
     if (nav_state->current_galaxy->is_selected)
     {
         if (!nav_state->current_galaxy->initialized || nav_state->current_galaxy->initialized < nav_state->current_galaxy->total_groups)

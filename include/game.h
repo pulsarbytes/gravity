@@ -38,6 +38,7 @@ void gfx_update_gstars_position(Galaxy *, Point, const Camera *, double distance
 void gfx_zoom_star_system(CelestialBody *, long double scale);
 double maths_distance_between_points(double x1, double y1, double x2, double y2);
 double maths_get_nearest_section_line(double offset, int size);
+uint64_t maths_hash_position_to_uint64(Point);
 bool maths_points_equal(Point, Point);
 void menu_update_menu_entries(GameState *);
 void phys_update_velocity(Vector *velocity, const Ship *);
@@ -49,6 +50,7 @@ void stars_draw_star_system(GameState *, const InputState *, NavigationState *, 
 void stars_generate(GameState *, GameEvents *, NavigationState *, Bstar *bstars, Ship *);
 void stars_generate_preview(GameEvents *, NavigationState *, const Camera *, long double scale);
 void stars_initialize_star(Star *);
+void stars_populate_body(CelestialBody *, Point, pcg32_random_t rng, long double scale);
 void stars_update_orbital_positions(GameState *, const InputState *, NavigationState *, CelestialBody *, Ship *, const Camera *, unsigned short star_class);
 
 #endif

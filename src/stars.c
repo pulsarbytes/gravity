@@ -28,7 +28,6 @@ static Star *stars_create_star(const NavigationState *, Point, int preview, long
 static void stars_delete_entry(StarEntry *stars[], Point);
 static bool stars_entry_exists(StarEntry *stars[], Point);
 static int stars_planet_size_class(float width);
-static void stars_populate_body(CelestialBody *, Point, pcg32_random_t rng, long double scale);
 
 /**
  * Adds a new star entry to the hash table of stars at the given position.
@@ -1351,7 +1350,7 @@ static int stars_planet_size_class(float width)
  *
  * @return void
  */
-static void stars_populate_body(CelestialBody *body, Point position, pcg32_random_t rng, long double scale)
+void stars_populate_body(CelestialBody *body, Point position, pcg32_random_t rng, long double scale)
 {
     if (body->level == LEVEL_STAR && body->initialized == 1)
         return;

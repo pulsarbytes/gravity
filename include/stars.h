@@ -11,6 +11,7 @@ void stars_generate(GameState *, GameEvents *, NavigationState *, Bstar *bstars,
 void stars_generate_preview(GameEvents *, NavigationState *, const Camera *, long double scale);
 void stars_initialize_star(Star *);
 double stars_nearest_center_distance(Point, Galaxy *, uint64_t initseq, int galaxy_density);
+void stars_populate_body(CelestialBody *, Point, pcg32_random_t rng, long double scale);
 unsigned short stars_size_class(float distance);
 void stars_update_orbital_positions(GameState *, const InputState *, NavigationState *, CelestialBody *, Ship *, const Camera *, unsigned short star_class);
 
