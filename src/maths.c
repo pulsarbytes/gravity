@@ -271,3 +271,27 @@ bool maths_is_point_in_rectangle(Point p, Point rect[])
 
     return true;
 }
+
+/**
+ * Rounds the given number to the nearest multiple of 10 to the power of its order of magnitude.
+ *
+ * @param number The number to be rounded.
+ *
+ * @return The rounded number.
+ */
+long double maths_rounded_double(long double number)
+{
+    long double rounded_number;
+
+    if (number == 0.0)
+        rounded_number = 0.0;
+    else
+    {
+        double abs_num = fabs(number);
+        int exponent = floor(log10(abs_num));             // Get the exponent of the absolute value of the number
+        double factor = pow(10, exponent);                // Calculate the scaling factor
+        rounded_number = round(number / factor) * factor; // Round the number using the scaling factor
+    }
+
+    return rounded_number;
+}

@@ -1,7 +1,7 @@
 /*
  * Gravity - An infinite procedural 2d universe that models gravity and orbital motion.
  *
- * v1.4.1
+ * v1.4.2
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 only,
@@ -38,10 +38,8 @@ SDL_Renderer *renderer = NULL;
 SDL_Color colors[COLOR_COUNT];
 
 // External function prototypes
-void console_log_fps(ConsoleEntry entries[], unsigned int *fps, unsigned int *last_time, unsigned int *frame_count);
-void console_log_position(GameState *, NavigationState);
-void console_update_entry(ConsoleEntry entries[], int index, double value);
-void console_render(ConsoleEntry entries[], const Camera *);
+void console_measure_fps(unsigned int *fps, unsigned int *last_time, unsigned int *frame_count);
+void console_draw_fps(unsigned int fps, const Camera *);
 void events_loop(GameState *, InputState *, GameEvents *, NavigationState *, const Camera *);
 Ship game_create_ship(int radius, Point, long double scale);
 void game_reset(GameState *, InputState *, GameEvents *, NavigationState *, Bstar *bstars, Ship *, Camera *, bool reset);
@@ -53,7 +51,6 @@ void menu_create(GameState *, NavigationState, Gstar *menustars);
 void menu_run_menu_state(GameState *, InputState *, bool is_game_started, const NavigationState *, Bstar *bstars, Gstar *menustars, Camera *);
 void sdl_cleanup(SDL_Window *);
 bool sdl_initialize(SDL_Window *);
-
 bool sdl_ttf_load_fonts(SDL_Window *);
 void utils_cleanup_resources(GameState *, NavigationState *, Bstar *bstars, Ship *);
 
@@ -157,20 +154,11 @@ int main(int argc, char *argv[])
             break;
         }
 
-        // Log current position
-        console_log_position(&game_state, nav_state);
-
-        // Log game scale
-        console_update_entry(game_state.console_entries, CONSOLE_SCALE, game_state.game_scale);
-
-        // Log FPS
-        console_log_fps(game_state.console_entries, &fps, &last_time, &frame_count);
-
-        // Render console
-        if (input_state.console_on && CONSOLE_ON &&
-            (game_state.state == NAVIGATE || game_state.state == MAP || game_state.state == UNIVERSE))
+        // Draw FPS
+        if (input_state.fps_on && FPS_ON)
         {
-            console_render(game_state.console_entries, &camera);
+            console_measure_fps(&fps, &last_time, &frame_count);
+            console_draw_fps(fps, &camera);
         }
 
         // Switch buffers, display back buffer

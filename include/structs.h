@@ -192,7 +192,7 @@ typedef struct
     bool stop_on;
     bool zoom_in;
     bool zoom_out;
-    bool console_on;
+    bool fps_on;
     bool orbits_on;
     int selected_button_index;
     bool is_hovering_galaxy;
@@ -208,6 +208,7 @@ typedef struct
     bool has_exited_galaxy;
     bool found_galaxy;
     bool generate_bstars;
+    bool is_centering_navigate;
     bool switch_to_map;   // Enter map from Universe via zoom
     bool is_entering_map; // Enter Map via `M`
     bool is_exiting_map;  // Exit Map via `N` or `U`

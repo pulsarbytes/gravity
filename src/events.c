@@ -478,9 +478,9 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
                 else if (game_state->state == MAP || game_state->state == UNIVERSE)
                     input_state->camera_on = true;
                 break;
-            case SDL_SCANCODE_K:
-                // Toggle console
-                input_state->console_on = !input_state->console_on;
+            case SDL_SCANCODE_F:
+                // Toggle FPS
+                input_state->fps_on = !input_state->fps_on;
                 break;
             case SDL_SCANCODE_M:
                 // Enter Map
@@ -590,6 +590,8 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
                 break;
             case SDL_SCANCODE_SPACE:
                 // Center Map / Center Universe
+                if (game_state->state == NAVIGATE)
+                    game_events->is_centering_navigate = true;
                 if (game_state->state == MAP)
                     game_events->is_centering_map = true;
                 else if (game_state->state == UNIVERSE)

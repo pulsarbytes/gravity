@@ -52,6 +52,7 @@ make
 |            | `Left`  | Rotate left         |
 |            | `[`     | Zoom out            |
 |            | `]`     | Zoom in             |
+|            | `Space` | Reset zoom scale    |
 | Map        |         |                     |
 |            | `M`     | Enter Map mode      |
 |            | `O`     | Show orbits         |
@@ -73,16 +74,8 @@ make
 |            | `]`     | Zoom in             |
 |            | `Space` | Reset Universe      |
 |            | `N`     | Exit Universe mode  |
-| `K`        |         | Toggle console      |
+| `F`        |         | Toggle FPS          |
 | `Esc`      |         | Show menu / Pause   |
-
-## Console contents
-
--   `1st line` Frames per second
--   `2nd line` X offset
--   `3rd line` Y offset
--   `4th line` Velocity magnitude
--   `5th line` Game scale
 
 ## Licence
 

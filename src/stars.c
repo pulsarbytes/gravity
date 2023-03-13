@@ -333,31 +333,37 @@ void stars_draw_info_box(const Star *star, const Camera *camera)
     InfoBoxEntry entries[STAR_INFO_COUNT];
 
     char star_name[128];
+    memset(star_name, 0, sizeof(star_name));
     strcpy(star_name, star->name);
     sprintf(entries[STAR_INFO_NAME].text, "%s", star_name);
     entries[STAR_INFO_NAME].font_size = FONT_SIZE_22;
 
     char position_x_text[32];
+    memset(position_x_text, 0, sizeof(position_x_text));
     utils_add_thousand_separators((int)star->position.x, position_x_text, sizeof(position_x_text));
     sprintf(entries[STAR_INFO_X].text, "Position X: %*s%s", 2, "", position_x_text);
     entries[STAR_INFO_X].font_size = FONT_SIZE_15;
 
     char position_y_text[32];
+    memset(position_y_text, 0, sizeof(position_y_text));
     utils_add_thousand_separators((int)star->position.y, position_y_text, sizeof(position_y_text));
     sprintf(entries[STAR_INFO_Y].text, "Position Y: %*s%s", 2, "", position_y_text);
     entries[STAR_INFO_Y].font_size = FONT_SIZE_15;
 
     char class_text[32];
+    memset(class_text, 0, sizeof(class_text));
     sprintf(class_text, "%d", star->class);
     sprintf(entries[STAR_INFO_CLASS].text, "Class: %*s%s", 7, "", class_text);
     entries[STAR_INFO_CLASS].font_size = FONT_SIZE_15;
 
     char radius_text[32];
+    memset(radius_text, 0, sizeof(radius_text));
     utils_add_thousand_separators((int)star->radius, radius_text, sizeof(radius_text));
     sprintf(entries[STAR_INFO_RADIUS].text, "Radius: %*s%s", 6, "", radius_text);
     entries[STAR_INFO_RADIUS].font_size = FONT_SIZE_15;
 
     char planets_text[32];
+    memset(planets_text, 0, sizeof(planets_text));
     sprintf(planets_text, "%d", star->num_planets);
     sprintf(entries[STAR_INFO_PLANETS].text, "Planets: %*s%s", 5, "", planets_text);
     entries[STAR_INFO_PLANETS].font_size = FONT_SIZE_15;
@@ -973,12 +979,11 @@ void stars_generate(GameState *game_state, GameEvents *game_events, NavigationSt
  *
  * @param nav_state A pointer to the current NavigationState struct.
  * @param camera A pointer to the current Camera struct.
- * @param cross_point A pointer to a Point struct representing the current position of the cross point.
  * @param scale A long double representing the current scale of the galaxy.
  *
  * @return void
  */
-void stars_generate_preview(GameEvents *game_events, NavigationState *nav_state, const Camera *camera, Point *cross_point, long double scale)
+void stars_generate_preview(GameEvents *game_events, NavigationState *nav_state, const Camera *camera, long double scale)
 {
     // Check how many sections fit in camera
     double section_size_scaled = GALAXY_SECTION_SIZE * scale;
@@ -1052,19 +1057,12 @@ void stars_generate_preview(GameEvents *game_events, NavigationState *nav_state,
     double bx = maths_get_nearest_section_line(nav_state->map_offset.x, section_size);
     double by = maths_get_nearest_section_line(nav_state->map_offset.y, section_size);
 
-    // Check whether nearest section lines have changed
-    if (!game_events->lazy_load_started)
-    {
-        if ((int)bx == (int)cross_point->x && (int)by == (int)cross_point->y)
-            return;
-    }
-
     // Keep track of new lines
-    if ((int)bx != (int)cross_point->x)
-        cross_point->x = (int)bx;
+    if ((int)bx != (int)nav_state->cross_line.x)
+        nav_state->cross_line.x = (int)bx;
 
-    if ((int)by != (int)cross_point->y)
-        cross_point->y = (int)by;
+    if ((int)by != (int)nav_state->cross_line.y)
+        nav_state->cross_line.y = (int)by;
 
     // half_sections may lose precision due to int conversion.
     int half_sections_x = (int)(sections_in_camera_x / 2);

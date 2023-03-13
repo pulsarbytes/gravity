@@ -38,6 +38,11 @@ void gfx_create_default_colors(void)
     colors[COLOR_CYAN_70].b = 255;
     colors[COLOR_CYAN_70].a = 70;
 
+    colors[COLOR_CYAN_150].r = 0;
+    colors[COLOR_CYAN_150].g = 255;
+    colors[COLOR_CYAN_150].b = 255;
+    colors[COLOR_CYAN_150].a = 150;
+
     colors[COLOR_GAINSBORO_255].r = 220;
     colors[COLOR_GAINSBORO_255].g = 220;
     colors[COLOR_GAINSBORO_255].b = 220;
@@ -68,6 +73,11 @@ void gfx_create_default_colors(void)
     colors[COLOR_LIGHT_RED_255].b = 128;
     colors[COLOR_LIGHT_RED_255].a = 255;
 
+    colors[COLOR_LIME_GREEN_200].r = 50;
+    colors[COLOR_LIME_GREEN_200].g = 205;
+    colors[COLOR_LIME_GREEN_200].b = 50;
+    colors[COLOR_LIME_GREEN_200].a = 200;
+
     colors[COLOR_MAGENTA_40].r = 255;
     colors[COLOR_MAGENTA_40].g = 0;
     colors[COLOR_MAGENTA_40].b = 255;
@@ -97,6 +107,11 @@ void gfx_create_default_colors(void)
     colors[COLOR_WHITE_100].g = 255;
     colors[COLOR_WHITE_100].b = 255;
     colors[COLOR_WHITE_100].a = 100;
+
+    colors[COLOR_WHITE_140].r = 255;
+    colors[COLOR_WHITE_140].g = 255;
+    colors[COLOR_WHITE_140].b = 255;
+    colors[COLOR_WHITE_140].a = 140;
 
     colors[COLOR_WHITE_180].r = 255;
     colors[COLOR_WHITE_180].g = 255;

@@ -12,6 +12,7 @@ uint64_t maths_hash_position_to_uint64_2(Point);
 bool maths_is_point_in_circle(Point, Point, int radius);
 bool maths_is_point_in_rectangle(Point, Point rect[]);
 bool maths_points_equal(Point, Point);
+long double maths_rounded_double(long double number);
 
 // External function prototypes
 bool gfx_is_relative_position_in_camera(const Camera *, int x, int y);

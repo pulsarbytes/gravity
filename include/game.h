@@ -10,7 +10,8 @@ void game_run_navigate_state(GameState *, InputState *, GameEvents *, Navigation
 void game_run_universe_state(GameState *, InputState *, GameEvents *, NavigationState *, Ship *, Camera *);
 
 // External function prototypes
-void console_update_entry(ConsoleEntry entries[], int index, double value);
+void console_draw_ship_console(const NavigationState *, const Ship *, const Camera *);
+void console_draw_position_console(const GameState *, const NavigationState *, const Camera *, Point);
 void galaxies_clear_table(GalaxyEntry *galaxies[]);
 void galaxies_draw_galaxy(const InputState *, NavigationState *, Galaxy *, const Camera *, int state, long double scale);
 void galaxies_generate(GameEvents *, NavigationState *, Point);
@@ -44,7 +45,7 @@ void stars_draw_info_box(const Star *, const Camera *);
 void stars_draw_planets_info_box(const Star *, const Camera *);
 void stars_draw_star_system(GameState *, const InputState *, NavigationState *, CelestialBody *, const Camera *);
 void stars_generate(GameState *, GameEvents *, NavigationState *, Bstar *bstars, Ship *);
-void stars_generate_preview(GameEvents *, NavigationState *, const Camera *, Point *, long double scale);
+void stars_generate_preview(GameEvents *, NavigationState *, const Camera *, long double scale);
 void stars_initialize_star(Star *);
 void stars_update_orbital_positions(GameState *, const InputState *, NavigationState *, CelestialBody *, Ship *, const Camera *, unsigned short star_class);
 

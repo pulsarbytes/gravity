@@ -62,7 +62,7 @@ static void menu_create_logo(MenuButton *logo)
     logo->rect.y = 0;
 
     // Create a texture from the text
-    SDL_Surface *logo_surface = TTF_RenderText_Solid(fonts[FONT_SIZE_36], logo->text, colors[COLOR_WHITE_255]);
+    SDL_Surface *logo_surface = TTF_RenderText_Solid(fonts[FONT_SIZE_32], logo->text, colors[COLOR_WHITE_255]);
     SDL_Texture *logo_texture = SDL_CreateTextureFromSurface(renderer, logo_surface);
     logo->text_texture = logo_texture;
 

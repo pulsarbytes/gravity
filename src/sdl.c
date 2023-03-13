@@ -118,6 +118,19 @@ bool sdl_ttf_load_fonts(SDL_Window *window)
         return false;
     }
 
+    // FONT_SIZE_12
+    fonts[FONT_SIZE_12] = TTF_OpenFont("../assets/fonts/consola.ttf", 12);
+
+    if (fonts[FONT_SIZE_12] == NULL)
+    {
+        SDL_Log("Could not load font: %s\n", SDL_GetError());
+        TTF_Quit();
+        SDL_DestroyRenderer(renderer);
+        SDL_DestroyWindow(window);
+        SDL_Quit();
+        return false;
+    }
+
     // FONT_SIZE_14
     fonts[FONT_SIZE_14] = TTF_OpenFont("../assets/fonts/consola.ttf", 14);
 
@@ -157,10 +170,10 @@ bool sdl_ttf_load_fonts(SDL_Window *window)
         return false;
     }
 
-    // FONT_SIZE_36
-    fonts[FONT_SIZE_36] = TTF_OpenFont("../assets/fonts/consola.ttf", 36);
+    // FONT_SIZE_32
+    fonts[FONT_SIZE_32] = TTF_OpenFont("../assets/fonts/consola.ttf", 32);
 
-    if (fonts[FONT_SIZE_36] == NULL)
+    if (fonts[FONT_SIZE_32] == NULL)
     {
         SDL_Log("Could not load font: %s\n", SDL_GetError());
         TTF_Quit();
