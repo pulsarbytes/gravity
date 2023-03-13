@@ -22,15 +22,6 @@ typedef struct
     SDL_Rect texture_rect;
 } InfoBoxEntry;
 
-// Struct for a console entry
-typedef struct
-{
-    char title[32];
-    char value[16];
-    SDL_Texture *text_texture;
-    SDL_Rect texture_rect;
-} ConsoleEntry;
-
 typedef struct
 {
     double x;
@@ -251,7 +242,6 @@ typedef struct
     int galaxy_region_size;
     MenuButton menu[MENU_BUTTON_COUNT];
     MenuButton logo;
-    ConsoleEntry console_entries[CONSOLE_COUNT];
 } GameState;
 
 #endif /* STRUCTS_H */

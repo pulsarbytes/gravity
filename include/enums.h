@@ -65,13 +65,6 @@ enum
 
 enum
 {
-    CONSOLE_FPS,
-    CONSOLE_SCALE,
-    CONSOLE_COUNT
-};
-
-enum
-{
     GALAXY_CLASS_1 = 1,
     GALAXY_CLASS_2,
     GALAXY_CLASS_3,

@@ -68,10 +68,10 @@
 #define ZOOM_MAP_SWITCH 0.005                // Default: 0.005
 #define ZOOM_MAP_MIN ZOOM_MAP_SWITCH - 0.001 // Default: ZOOM_MAP_SWITCH - 0.001
 
-#define ZOOM_UNIVERSE 0.01          // Universe scale. Default: 0.01
-#define ZOOM_UNIVERSE_MIN 0.01      // Universe scale. Default: 0.01
-#define ZOOM_UNIVERSE_STEP 0.001    // Default: 0.001
-#define ZOOM_UNIVERSE_STARS 0.00001 // Generate more stars over this limit. Default: 0.00001
+#define ZOOM_UNIVERSE 0.01                  // Universe scale. Default: 0.01
+#define ZOOM_UNIVERSE_MIN 0.01              // Universe scale. Default: 0.01
+#define ZOOM_UNIVERSE_STEP 0.001            // Default: 0.001
+#define ZOOM_GENERATE_PREVIEW_STARS 0.00001 // Generate more stars over this limit. Default: 0.00001
 
 // Universe
 #define UNIVERSE_REGION_SIZE 40     // Sections per axis. Even number; Default: 40

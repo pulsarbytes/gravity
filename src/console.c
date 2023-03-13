@@ -23,41 +23,17 @@ extern SDL_Color colors[];
 static void console_draw_velocity_vector(const Ship *, Point, const Camera *);
 
 /**
- * Measures the current frames per second (FPS).
- *
- * @param fps A pointer to the current FPS value.
- * @param last_time A pointer to the last time the FPS was updated.
- * @param frame_count A pointer to the current frame count.
- *
- * @return void
- */
-void console_measure_fps(unsigned int *fps, unsigned int *last_time, unsigned int *frame_count)
-{
-    unsigned int current_time = SDL_GetTicks();
-    unsigned int time_diff = current_time - *last_time;
-
-    // Only update FPS once per second
-    if (time_diff >= 1000)
-    {
-        *fps = *frame_count;
-        *frame_count = 0;
-        *last_time = current_time;
-    }
-    else
-        *frame_count += 1;
-}
-
-/**
  * Draws the current frames per second (FPS) on the screen.
  *
  * @param fps An integer representing the current FPS value.
+ * @param camera A pointer to the Camera struct containing the current camera state.
  *
  * @return void
  */
 
 void console_draw_fps(unsigned int fps, const Camera *camera)
 {
-    char fps_text[8];
+    char fps_text[16];
     memset(fps_text, 0, sizeof(fps_text));
     sprintf(fps_text, "%d", fps);
 
@@ -65,12 +41,12 @@ void console_draw_fps(unsigned int fps, const Camera *camera)
     SDL_Surface *fps_surface = TTF_RenderText_Solid(fonts[FONT_SIZE_22], fps_text, colors[COLOR_CYAN_150]);
     SDL_Texture *fps_texture = SDL_CreateTextureFromSurface(renderer, fps_surface);
     SDL_Rect fps_texture_rect;
-    SDL_FreeSurface(fps_surface);
     fps_texture_rect.x = 30;
     fps_texture_rect.y = camera->h - 40;
     fps_texture_rect.w = fps_surface->w;
     fps_texture_rect.h = fps_surface->h;
     SDL_RenderCopy(renderer, fps_texture, NULL, &fps_texture_rect);
+    SDL_FreeSurface(fps_surface);
 
     // Destroy texture
     SDL_DestroyTexture(fps_texture);
@@ -78,11 +54,54 @@ void console_draw_fps(unsigned int fps, const Camera *camera)
 }
 
 /**
+ * Draws a console displaying information about current galaxy.
+ *
+ * @param galaxy A pointer to the current galaxy.
+ * @param camera A pointer to the Camera struct containing the current camera state.
+ *
+ * @return void
+ */
+void console_draw_galaxy_console(const Galaxy *galaxy, const Camera *camera)
+{
+    // Draw background box
+    SDL_SetRenderDrawColor(renderer, 12, 12, 12, 200);
+    int box_width = 370;
+    int box_height = 70;
+    int padding = 20;
+    int inner_padding = 40;
+
+    SDL_Rect box_rect;
+    box_rect.x = camera->w - (box_width + padding);
+    box_rect.y = camera->h - (box_height + padding);
+    box_rect.w = box_width;
+    box_rect.h = box_height;
+
+    SDL_RenderFillRect(renderer, &box_rect);
+
+    // Galaxy name
+    char galaxy_name[128];
+    memset(galaxy_name, 0, sizeof(galaxy_name));
+    sprintf(galaxy_name, "%s", galaxy->name);
+    SDL_Surface *galaxy_name_surface = TTF_RenderText_Solid(fonts[FONT_SIZE_22], galaxy_name, colors[COLOR_WHITE_100]);
+    SDL_Texture *galaxy_name_texture = SDL_CreateTextureFromSurface(renderer, galaxy_name_surface);
+    SDL_Rect galaxy_name_texture_rect;
+    galaxy_name_texture_rect.w = galaxy_name_surface->w;
+    galaxy_name_texture_rect.h = galaxy_name_surface->h;
+    galaxy_name_texture_rect.x = camera->w - (box_width + padding) + inner_padding;
+    galaxy_name_texture_rect.y = camera->h - padding - (box_height / 2) - (galaxy_name_texture_rect.h / 2) + 1;
+    SDL_RenderCopy(renderer, galaxy_name_texture, NULL, &galaxy_name_texture_rect);
+    SDL_FreeSurface(galaxy_name_surface);
+    SDL_DestroyTexture(galaxy_name_texture);
+    galaxy_name_texture = NULL;
+}
+
+/**
  * Draws a console displaying the ship's velocity vector and position.
  *
- * @param nav_state A pointer to the NavigationState struct containing the ship's velocity.
- * @param ship A pointer to the Ship struct containing the ship's current state.
+ * @param game_state A pointer to the GameState struct.
+ * @param nav_state A pointer to the NavigationState struct.
  * @param camera A pointer to the Camera struct containing the current camera state.
+ * @param offset A Point struct representing the current position.
  *
  * @return void
  */
@@ -97,7 +116,7 @@ void console_draw_position_console(const GameState *game_state, const Navigation
 
     SDL_Rect box_rect;
     box_rect.x = (camera->w / 2) - (box_width / 2);
-    box_rect.y = camera->h - padding - box_height;
+    box_rect.y = camera->h - (box_height + padding);
     box_rect.w = box_width;
     box_rect.h = box_height;
 
@@ -107,7 +126,7 @@ void console_draw_position_console(const GameState *game_state, const Navigation
     SDL_SetRenderDrawColor(renderer, 255, 255, 255, 20);
     int section_width = 100;
     int separator_1_x = (camera->w / 2) - (section_width / 2);
-    int separator_y1 = camera->h - padding - box_height;
+    int separator_y1 = camera->h - (box_height + padding);
     int separator_y2 = separator_y1 + box_height;
 
     SDL_RenderDrawLine(renderer, separator_1_x, separator_y1, separator_1_x, separator_y2);
@@ -240,7 +259,7 @@ void console_draw_ship_console(const NavigationState *nav_state, const Ship *shi
     int section_width = 100;
     int separator_1_x = (camera->w / 2) - (section_width / 2);
     int separator_2_x = (camera->w / 2) + (section_width / 2);
-    int separator_y1 = camera->h - padding - box_height;
+    int separator_y1 = camera->h - (box_height + padding);
     int separator_y2 = separator_y1 + box_height;
 
     SDL_RenderDrawLine(renderer, separator_1_x, separator_y1, separator_1_x, separator_y2);
@@ -248,7 +267,7 @@ void console_draw_ship_console(const NavigationState *nav_state, const Ship *shi
 
     // Velocity vector
     Point center = {.x = (camera->w / 2) - section_width,
-                    .y = camera->h - padding - box_height / 2};
+                    .y = camera->h - (box_height / 2) - padding};
     console_draw_velocity_vector(ship, center, camera);
 
     // Speed
@@ -328,6 +347,53 @@ void console_draw_ship_console(const NavigationState *nav_state, const Ship *shi
 }
 
 /**
+ * Draws a console displaying information about current star.
+ *
+ * @param star A pointer to the current star.
+ * @param camera A pointer to the Camera struct containing the current camera state.
+ *
+ * @return void
+ */
+void console_draw_star_console(const Star *star, const Camera *camera)
+{
+    // Draw background box
+    SDL_SetRenderDrawColor(renderer, 12, 12, 12, 200);
+    int box_width = 370;
+    int box_height = 70;
+    int padding = 20;
+    int inner_padding = 40;
+
+    SDL_Rect box_rect;
+    box_rect.x = camera->w - (box_width + padding);
+    box_rect.y = camera->h - (box_height + padding);
+    box_rect.w = box_width;
+    box_rect.h = box_height;
+
+    SDL_RenderFillRect(renderer, &box_rect);
+
+    // Star name
+    char star_name[128];
+    memset(star_name, 0, sizeof(star_name));
+    sprintf(star_name, "%s", star->name);
+    SDL_Surface *star_name_surface = TTF_RenderText_Solid(fonts[FONT_SIZE_22], star_name, colors[COLOR_WHITE_100]);
+    SDL_Texture *star_name_texture = SDL_CreateTextureFromSurface(renderer, star_name_surface);
+    SDL_Rect star_name_texture_rect;
+    star_name_texture_rect.w = star_name_surface->w;
+    star_name_texture_rect.h = star_name_surface->h;
+    star_name_texture_rect.x = camera->w - (box_width + padding) + 1.5 * padding + inner_padding;
+    star_name_texture_rect.y = camera->h - padding - (box_height / 2) - (star_name_texture_rect.h / 2) + 1;
+    SDL_RenderCopy(renderer, star_name_texture, NULL, &star_name_texture_rect);
+    SDL_FreeSurface(star_name_surface);
+    SDL_DestroyTexture(star_name_texture);
+    star_name_texture = NULL;
+
+    // Star circle
+    int x_star = camera->w - (box_width + padding) + inner_padding + 5;
+    int y_star = star_name_texture_rect.y - 1 + padding / 2;
+    gfx_draw_fill_circle(renderer, x_star, y_star, 8, star->color);
+}
+
+/**
  * Draws a velocity vector on the ship console.
  *
  * @param ship A pointer to a Ship struct representing the ship whose velocity vector will be drawn.
@@ -374,4 +440,29 @@ static void console_draw_velocity_vector(const Ship *ship, Point center, const C
 
     // Draw circle around vector
     gfx_draw_circle(renderer, camera, center.x, center.y, 20, colors[COLOR_CYAN_70]);
+}
+
+/**
+ * Measures the current frames per second (FPS).
+ *
+ * @param fps A pointer to the current FPS value.
+ * @param last_time A pointer to the last time the FPS was updated.
+ * @param frame_count A pointer to the current frame count.
+ *
+ * @return void
+ */
+void console_measure_fps(unsigned int *fps, unsigned int *last_time, unsigned int *frame_count)
+{
+    unsigned int current_time = SDL_GetTicks();
+    unsigned int time_diff = current_time - *last_time;
+
+    // Only update FPS once per second
+    if (time_diff >= 1000)
+    {
+        *fps = *frame_count;
+        *frame_count = 0;
+        *last_time = current_time;
+    }
+    else
+        *frame_count += 1;
 }

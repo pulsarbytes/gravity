@@ -38,8 +38,8 @@ SDL_Renderer *renderer = NULL;
 SDL_Color colors[COLOR_COUNT];
 
 // External function prototypes
-void console_measure_fps(unsigned int *fps, unsigned int *last_time, unsigned int *frame_count);
 void console_draw_fps(unsigned int fps, const Camera *);
+void console_measure_fps(unsigned int *fps, unsigned int *last_time, unsigned int *frame_count);
 void events_loop(GameState *, InputState *, GameEvents *, NavigationState *, const Camera *);
 Ship game_create_ship(int radius, Point, long double scale);
 void game_reset(GameState *, InputState *, GameEvents *, NavigationState *, Bstar *bstars, Ship *, Camera *, bool reset);
