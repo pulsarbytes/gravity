@@ -84,7 +84,13 @@ bool sdl_initialize(SDL_Window *window)
         SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN);
 
     // Create a 2D rendering context for the window
-    Uint32 render_flags = SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC;
+    Uint32 render_flags;
+
+    if (VSYNC_ON)
+        render_flags = SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC;
+    else
+        render_flags = SDL_RENDERER_ACCELERATED;
+
     renderer = SDL_CreateRenderer(window, -1, render_flags);
 
     if (renderer == NULL)

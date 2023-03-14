@@ -69,8 +69,8 @@ void gfx_create_default_colors(void)
     colors[COLOR_LIGHT_ORANGE_255].a = 255;
 
     colors[COLOR_LIGHT_RED_255].r = 255;
-    colors[COLOR_LIGHT_RED_255].g = 128;
-    colors[COLOR_LIGHT_RED_255].b = 128;
+    colors[COLOR_LIGHT_RED_255].g = 165;
+    colors[COLOR_LIGHT_RED_255].b = 165;
     colors[COLOR_LIGHT_RED_255].a = 255;
 
     colors[COLOR_LIME_GREEN_200].r = 50;
