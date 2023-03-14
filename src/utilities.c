@@ -72,7 +72,7 @@ void utils_cleanup_resources(GameState *game_state, NavigationState *nav_state, 
     galaxies_clear_table(nav_state->galaxies);
 
     // Clean up stars
-    stars_clear_table(nav_state->stars);
+    stars_clear_table(nav_state->stars, NULL);
 
     // Clean up ship
     SDL_DestroyTexture(ship->projection->texture);

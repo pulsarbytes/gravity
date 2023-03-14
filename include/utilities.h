@@ -7,6 +7,6 @@ void utils_cleanup_resources(GameState *, NavigationState *, Bstar *bstars, Ship
 
 // External function prototypes
 void galaxies_clear_table(GalaxyEntry *galaxies[]);
-void stars_clear_table(StarEntry *stars[]);
+void stars_clear_table(StarEntry *stars[], Star *);
 
 #endif

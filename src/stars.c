@@ -80,13 +80,14 @@ static void stars_cleanup_planets(CelestialBody *body)
 }
 
 /**
- * Clears the hash table of stars.
+ * Clears the hash table of stars, except for the buffer_star.
  *
  * @param stars An array of StarEntry pointers.
+ * @param buffer_star A pointer to the Star of the current ship position.
  *
  * @return void
  */
-void stars_clear_table(StarEntry *stars[])
+void stars_clear_table(StarEntry *stars[], Star *buffer_star)
 {
     // Loop through hash table
     for (int s = 0; s < MAX_STARS; s++)
@@ -97,7 +98,10 @@ void stars_clear_table(StarEntry *stars[])
         {
             Point position = {.x = entry->x, .y = entry->y};
             StarEntry *next_entry = entry->next;
-            stars_delete_entry(stars, position);
+
+            if (buffer_star == NULL || strcmp(buffer_star->name, entry->star->name) != 0)
+                stars_delete_entry(stars, position);
+
             entry = next_entry;
         }
     }
@@ -271,16 +275,17 @@ static void stars_delete_entry(StarEntry *stars[], Point position)
 }
 
 /**
- * Delete all stars outside a given region.
+ * Delete all stars outside a given region, except for the buffer_star.
  *
  * @param stars An array of pointers to StarEntry structures.
+ * @param buffer_star A pointer to the Star of the current ship position.
  * @param bx The x coordinate of the center of the region.
  * @param by The y coordinate of the center of the region.
  * @param region_size The size of the region (in number of sections).
  *
  * @return void
  */
-void stars_delete_outside_region(StarEntry *stars[], double bx, double by, int region_size)
+void stars_delete_outside_region(StarEntry *stars[], const Star *buffer_star, double bx, double by, int region_size)
 {
     for (int s = 0; s < MAX_STARS; s++)
     {
@@ -288,15 +293,21 @@ void stars_delete_outside_region(StarEntry *stars[], double bx, double by, int r
 
         while (entry != NULL)
         {
-            Point position = {.x = entry->x, .y = entry->y};
+            // Skip buffer star
+            bool is_buffer_star = strcmp(buffer_star->name, entry->star->name) == 0;
 
-            // Get distance from center of region
-            double distance = maths_distance_between_points(position.x, position.y, bx, by);
-            double region_radius = sqrt((double)2 * ((region_size + 1) / 2) * GALAXY_SECTION_SIZE * ((region_size + 1) / 2) * GALAXY_SECTION_SIZE);
+            if (!is_buffer_star)
+            {
+                Point position = {.x = entry->x, .y = entry->y};
 
-            // If star outside region, delete it
-            if (distance >= region_radius)
-                stars_delete_entry(stars, position);
+                // Get distance from center of region
+                double distance = maths_distance_between_points(position.x, position.y, bx, by);
+                double region_radius = sqrt((double)2 * ((region_size + 1) / 2) * GALAXY_SECTION_SIZE * ((region_size + 1) / 2) * GALAXY_SECTION_SIZE);
+
+                // If star outside region, delete it
+                if (distance >= region_radius)
+                    stars_delete_entry(stars, position);
+            }
 
             entry = entry->next;
         }
@@ -870,6 +881,9 @@ void stars_generate(GameState *game_state, GameEvents *game_events, NavigationSt
                 // Update buffer_galaxy
                 memcpy(nav_state->buffer_galaxy, nav_state->current_galaxy, sizeof(Galaxy));
 
+                // Delete stars from previous galaxy
+                stars_clear_table(nav_state->stars, NULL);
+
                 // Create new background stars
                 game_events->generate_bstars = true;
             }
@@ -891,10 +905,10 @@ void stars_generate(GameState *game_state, GameEvents *game_events, NavigationSt
                 double dest_ship_position_y = src_ship_distance_y * GALAXY_SCALE;
                 ship->position.x = dest_ship_position_x;
                 ship->position.y = dest_ship_position_y;
-            }
 
-            // Delete stars from previous galaxy
-            stars_clear_table(nav_state->stars);
+                // Delete stars from previous galaxy
+                stars_clear_table(nav_state->stars, nav_state->buffer_star);
+            }
 
             return;
         }
@@ -964,7 +978,7 @@ void stars_generate(GameState *game_state, GameEvents *game_events, NavigationSt
     }
 
     // Delete stars that end up outside the region
-    stars_delete_outside_region(nav_state->stars, bx, by, game_state->galaxy_region_size);
+    stars_delete_outside_region(nav_state->stars, nav_state->buffer_star, bx, by, game_state->galaxy_region_size);
 
     // First star generation complete
     game_events->start_stars_generation = false;
@@ -1177,7 +1191,7 @@ void stars_generate_preview(GameEvents *game_events, NavigationState *nav_state,
 
                 // Delete stars that end up outside the region
                 int region_size = sections_in_camera_x;
-                stars_delete_outside_region(nav_state->stars, bx, by, region_size);
+                stars_delete_outside_region(nav_state->stars, nav_state->buffer_star, bx, by, region_size);
 
                 return;
             }
@@ -1196,7 +1210,7 @@ void stars_generate_preview(GameEvents *game_events, NavigationState *nav_state,
 
     // Delete stars that end up outside the region
     int region_size = sections_in_camera_x;
-    stars_delete_outside_region(nav_state->stars, bx, by, region_size);
+    stars_delete_outside_region(nav_state->stars, nav_state->buffer_star, bx, by, region_size);
 }
 
 /**

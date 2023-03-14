@@ -260,7 +260,7 @@ void game_reset(GameState *game_state, InputState *input_state, GameEvents *game
     }
 
     if (reset)
-        stars_clear_table(nav_state->stars);
+        stars_clear_table(nav_state->stars, NULL);
 
     // Initialize galaxies hash table to NULL pointers
     for (int i = 0; i < MAX_GALAXIES; i++)
@@ -370,7 +370,7 @@ void game_run_map_state(GameState *game_state, InputState *input_state, GameEven
 
     if (game_events->is_entering_map || game_events->is_centering_map)
     {
-        stars_clear_table(nav_state->stars);
+        stars_clear_table(nav_state->stars, nav_state->buffer_star);
         game_events->start_stars_generation = true;
 
         if (game_events->is_entering_map)
@@ -458,7 +458,7 @@ void game_run_map_state(GameState *game_state, InputState *input_state, GameEven
                 double bx = maths_get_nearest_section_line(nav_state->map_offset.x, GALAXY_SECTION_SIZE);
                 double by = maths_get_nearest_section_line(nav_state->map_offset.y, GALAXY_SECTION_SIZE);
 
-                stars_delete_outside_region(nav_state->stars, bx, by, game_state->galaxy_region_size);
+                stars_delete_outside_region(nav_state->stars, nav_state->buffer_star, bx, by, game_state->galaxy_region_size);
             }
 
             game_events->is_centering_map = false;
@@ -606,7 +606,7 @@ void game_run_navigate_state(GameState *game_state, InputState *input_state, Gam
         // Reset stars and galaxy to current position
         if (!maths_points_equal(nav_state->current_galaxy->position, nav_state->buffer_galaxy->position))
         {
-            stars_clear_table(nav_state->stars);
+            stars_clear_table(nav_state->stars, nav_state->buffer_star);
             memcpy(nav_state->current_galaxy, nav_state->buffer_galaxy, sizeof(Galaxy));
 
             // Reset galaxy_offset
@@ -628,7 +628,7 @@ void game_run_navigate_state(GameState *game_state, InputState *input_state, Gam
         double bx = maths_get_nearest_section_line(ship->position.x, GALAXY_SECTION_SIZE);
         double by = maths_get_nearest_section_line(ship->position.y, GALAXY_SECTION_SIZE);
 
-        stars_delete_outside_region(nav_state->stars, bx, by, game_state->galaxy_region_size);
+        stars_delete_outside_region(nav_state->stars, nav_state->buffer_star, bx, by, game_state->galaxy_region_size);
 
         // Reset saved game_scale
         if (game_state->save_scale)
@@ -905,7 +905,7 @@ void game_run_universe_state(GameState *game_state, InputState *input_state, Gam
     {
         // Reset stars
         if (!maths_points_equal(nav_state->current_galaxy->position, nav_state->buffer_galaxy->position))
-            stars_clear_table(nav_state->stars);
+            stars_clear_table(nav_state->stars, nav_state->buffer_star);
 
         // Reset galaxy_offset
         nav_state->galaxy_offset.current_x = nav_state->galaxy_offset.buffer_x;
@@ -922,7 +922,7 @@ void game_run_universe_state(GameState *game_state, InputState *input_state, Gam
         double bx = maths_get_nearest_section_line(ship->position.x, GALAXY_SECTION_SIZE);
         double by = maths_get_nearest_section_line(ship->position.y, GALAXY_SECTION_SIZE);
 
-        stars_delete_outside_region(nav_state->stars, bx, by, game_state->galaxy_region_size);
+        stars_delete_outside_region(nav_state->stars, nav_state->buffer_star, bx, by, game_state->galaxy_region_size);
     }
 
     if (game_events->is_entering_universe || game_events->is_centering_universe)
@@ -939,7 +939,7 @@ void game_run_universe_state(GameState *game_state, InputState *input_state, Gam
         }
 
         if (game_events->is_centering_universe)
-            stars_clear_table(nav_state->stars);
+            stars_clear_table(nav_state->stars, nav_state->buffer_star);
 
         nav_state->current_galaxy->is_selected = true;
 
@@ -1403,7 +1403,7 @@ static void game_zoom_map(GameState *game_state, InputState *input_state, GameEv
                     double bx = maths_get_nearest_section_line(nav_state->map_offset.x, GALAXY_SECTION_SIZE);
                     double by = maths_get_nearest_section_line(nav_state->map_offset.y, GALAXY_SECTION_SIZE);
 
-                    stars_delete_outside_region(nav_state->stars, bx, by, game_state->galaxy_region_size);
+                    stars_delete_outside_region(nav_state->stars, nav_state->buffer_star, bx, by, game_state->galaxy_region_size);
                 }
             }
 
@@ -1533,7 +1533,7 @@ static void game_zoom_universe(GameState *game_state, InputState *input_state, G
                 game_events->is_entering_map = true;
                 game_change_state(game_state, game_events, MAP);
 
-                stars_clear_table(nav_state->stars);
+                stars_clear_table(nav_state->stars, nav_state->buffer_star);
 
                 // Update map_offset
                 nav_state->map_offset.x = (nav_state->universe_offset.x - nav_state->current_galaxy->position.x) * GALAXY_SCALE;
@@ -1572,7 +1572,7 @@ static void game_zoom_universe(GameState *game_state, InputState *input_state, G
         else if (game_state->game_scale_override)
             game_state->game_scale = game_state->game_scale_override;
 
-        stars_clear_table(nav_state->stars);
+        stars_clear_table(nav_state->stars, nav_state->buffer_star);
 
         game_events->zoom_preview = true;
         input_state->zoom_out = false;

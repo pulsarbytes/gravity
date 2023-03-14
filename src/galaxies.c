@@ -247,7 +247,7 @@ void galaxies_draw_galaxy(const InputState *input_state, NavigationState *nav_st
         // Reset stars and update current_galaxy
         if (strcmp(nav_state->current_galaxy->name, galaxy->name) != 0)
         {
-            stars_clear_table(nav_state->stars);
+            stars_clear_table(nav_state->stars, nav_state->buffer_star);
             memcpy(nav_state->current_galaxy, galaxy, sizeof(Galaxy));
         }
 
@@ -565,10 +565,10 @@ void galaxies_generate(GameEvents *game_events, NavigationState *nav_state, Poin
         {
             Point position = {.x = nav_state->galaxies[s]->x, .y = nav_state->galaxies[s]->y};
 
-            // Skip current galaxy, otherwise we lose track of where we are
+            // Skip buffer_galaxy, otherwise we lose track of where we are
             if (!game_events->start_galaxies_generation)
             {
-                if (maths_points_equal(position, nav_state->current_galaxy->position))
+                if (maths_points_equal(position, nav_state->buffer_galaxy->position))
                     continue;
             }
 

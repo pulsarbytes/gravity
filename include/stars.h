@@ -2,8 +2,8 @@
 #define STARS_H
 
 // Function prototypes
-void stars_clear_table(StarEntry *stars[]);
-void stars_delete_outside_region(StarEntry *stars[], double bx, double by, int region_size);
+void stars_clear_table(StarEntry *stars[], Star *);
+void stars_delete_outside_region(StarEntry *stars[], const Star *, double bx, double by, int region_size);
 void stars_draw_info_box(const Star *, const Camera *);
 void stars_draw_planets_info_box(const Star *, const Camera *);
 void stars_draw_star_system(GameState *, const InputState *, NavigationState *, CelestialBody *, const Camera *);
