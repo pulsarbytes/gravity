@@ -66,8 +66,13 @@ void utils_add_thousand_separators(int num, char *result, size_t result_size)
  *
  * @return void
  */
-void utils_cleanup_resources(GameState *game_state, NavigationState *nav_state, Bstar *bstars, Ship *ship)
+void utils_cleanup_resources(GameState *game_state, InputState *input_state, NavigationState *nav_state, Bstar *bstars, Ship *ship)
 {
+    // Free cursors
+    SDL_FreeCursor(input_state->default_cursor);
+    SDL_FreeCursor(input_state->pointing_cursor);
+    SDL_FreeCursor(input_state->drag_cursor);
+
     // Clean up galaxies
     galaxies_clear_table(nav_state->galaxies);
 

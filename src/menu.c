@@ -21,6 +21,10 @@ extern SDL_Color colors[];
 static void menu_create_logo(MenuButton *logo);
 static void menu_draw_menu(GameState *, InputState *, bool is_game_started);
 static void menu_populate_menu_array(MenuButton menu[]);
+static void menu_toggle_menu_hover(GameState *game_state, InputState *input_state);
+
+// External function prototypes
+bool maths_is_point_in_rectangle(Point, Point rect[]);
 
 /**
  * Creates the main menu by populating the menu array, creating the logo, generating and placing menu stars.
@@ -117,13 +121,9 @@ static void menu_draw_menu(GameState *game_state, InputState *input_state, bool 
             continue;
 
         if (i == input_state->selected_button_index)
-        {
             SDL_SetRenderDrawColor(renderer, 255, 255, 255, 40);
-        }
         else
-        {
             SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
-        }
 
         // Set the position of the button
         game_state->menu[i].rect.x = 50;
@@ -197,6 +197,47 @@ static void menu_populate_menu_array(MenuButton menu[])
 }
 
 /**
+ * Checks if the mouse is over the current menu button and changes mouse cursor.
+ *
+ * @param game_state A pointer to the current GameState.
+ * @param input_state A pointer to the current InputState.
+ *
+ * @return void
+ */
+static void menu_toggle_menu_hover(GameState *game_state, InputState *input_state)
+{
+    for (int i = 0; i < MENU_BUTTON_COUNT; i++)
+    {
+        Point rect[4];
+
+        int x1 = game_state->menu[i].rect.x;
+        int y1 = game_state->menu[i].rect.y;
+        int x2 = x1 + game_state->menu[i].rect.w;
+        int y2 = y1 + game_state->menu[i].rect.h;
+
+        rect[0].x = x1;
+        rect[0].y = y2;
+
+        rect[1].x = x2;
+        rect[1].y = y2;
+
+        rect[2].x = x2;
+        rect[2].y = y1;
+
+        rect[3].x = x1;
+        rect[3].y = y1;
+
+        if (maths_is_point_in_rectangle(input_state->mouse_position, rect))
+        {
+            SDL_SetCursor(input_state->pointing_cursor);
+            return;
+        }
+        else
+            SDL_SetCursor(input_state->default_cursor);
+    }
+}
+
+/**
  * Runs the menu state by updating and rendering the background stars, logo, menu, galaxy, and speed lines.
  *
  * @param game_state A pointer to the current game state.
@@ -229,6 +270,9 @@ void menu_run_menu_state(GameState *game_state, InputState *input_state, bool is
     // Draw speed lines
     Speed lines_speed = {.vx = 100, .vy = 0};
     gfx_draw_speed_lines(1500, camera, lines_speed);
+
+    // Check if mouse is over menu buttons
+    menu_toggle_menu_hover(game_state, input_state);
 }
 
 /**

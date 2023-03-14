@@ -38,6 +38,7 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
         case SDL_MOUSEBUTTONDOWN:
             // Reset is_mouse_dragging
             input_state->is_mouse_dragging = false;
+            SDL_SetCursor(input_state->default_cursor);
 
             // Record the mouse click position
             if (game_state->state == UNIVERSE || game_state->state == MAP)
@@ -327,7 +328,7 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
                     if (game_state->state == UNIVERSE)
                     {
                         // Deselect galaxy
-                        if (!input_state->is_hovering_galaxy && !input_state->clicked_inside_galaxy)
+                        if (!input_state->is_hovering_galaxy && !input_state->clicked_inside_galaxy && !input_state->clicked_inside_star)
                             nav_state->current_galaxy->is_selected = false;
 
                         // Set galaxy as selected
@@ -359,6 +360,9 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
                     input_state->up_on = false;
                 }
             }
+
+            SDL_SetCursor(input_state->default_cursor);
+            input_state->is_mouse_dragging = false;
             break;
         case SDL_MOUSEMOTION:
             if (game_state->state == MENU)
@@ -375,6 +379,7 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
                 if (event.motion.state & SDL_BUTTON_LMASK)
                 {
                     input_state->is_mouse_dragging = true;
+                    SDL_SetCursor(input_state->drag_cursor);
                     input_state->click_count = 0;
                     input_state->clicked_inside_galaxy = false;
                     input_state->clicked_inside_star = false;

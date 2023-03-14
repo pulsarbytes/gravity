@@ -5,6 +5,7 @@
 #include <stdbool.h>
 
 #include <SDL2/SDL.h>
+#include <SDL2/SDL_image.h>
 #include <SDL2/SDL_ttf.h>
 #include <SDL2/SDL2_gfxPrimitives.h>
 
@@ -18,7 +19,7 @@ extern SDL_DisplayMode display_mode;
 extern SDL_Renderer *renderer;
 
 /**
- * Cleans up SDL and TTF resources by closing all open fonts, quitting TTF,
+ * Cleans up SDL and TTF resources by closing all open fonts, quitting IMG and TTF,
  * destroying the renderer and window, and quitting SDL.
  *
  * @param window A pointer to the SDL_Window to be destroyed.
@@ -32,6 +33,7 @@ void sdl_cleanup(SDL_Window *window)
         TTF_CloseFont(fonts[i]);
     }
 
+    IMG_Quit();
     TTF_Quit();
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
@@ -57,6 +59,7 @@ bool sdl_initialize(SDL_Window *window)
     if (SDL_GetDesktopDisplayMode(0, &display_mode))
     {
         SDL_Log("Could not get desktop display mode: %s\n", SDL_GetError());
+        SDL_Quit();
         return false;
     }
 

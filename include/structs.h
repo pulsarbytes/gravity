@@ -165,6 +165,9 @@ typedef struct
 
 typedef struct
 {
+    SDL_Cursor *default_cursor;
+    SDL_Cursor *pointing_cursor;
+    SDL_Cursor *drag_cursor;
     Point mouse_position;
     Point mouse_down_position;
     Uint32 last_click_time;

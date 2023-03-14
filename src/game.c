@@ -156,6 +156,9 @@ void game_reset(GameState *game_state, InputState *input_state, GameEvents *game
     game_state->galaxy_region_size = GALAXY_REGION_SIZE;
 
     // InputState
+    input_state->default_cursor = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_ARROW);
+    input_state->pointing_cursor = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_HAND);
+    input_state->drag_cursor = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZEALL);
     input_state->mouse_position.x = 0;
     input_state->mouse_position.y = 0;
     input_state->mouse_down_position.x = 0;
@@ -526,6 +529,15 @@ void game_run_map_state(GameState *game_state, InputState *input_state, GameEven
     // Check if mouse is over current star
     gfx_toggle_star_hover(input_state, nav_state, camera, game_state->game_scale, MAP);
 
+    // Change mouse cursor
+    if (!input_state->is_mouse_dragging)
+    {
+        if (input_state->is_hovering_star)
+            SDL_SetCursor(input_state->pointing_cursor);
+        else
+            SDL_SetCursor(input_state->default_cursor);
+    }
+
     // Draw ship projection
     ship->projection->rect.x = (ship->position.x - nav_state->map_offset.x) * game_state->game_scale + (camera->w / 2 - ship->projection->radius);
     ship->projection->rect.y = (ship->position.y - nav_state->map_offset.y) * game_state->game_scale + (camera->h / 2 - ship->projection->radius);
@@ -557,13 +569,11 @@ void game_run_map_state(GameState *game_state, InputState *input_state, GameEven
     if (nav_state->current_star->is_selected &&
         gfx_is_object_in_camera(camera, nav_state->current_star->position.x, nav_state->current_star->position.y, nav_state->current_star->cutoff, game_state->game_scale))
     {
-        // Draw planets info box
-        // if (nav_state->current_star->is_selected || input_state->is_hovering_star)
-        stars_draw_planets_info_box(nav_state->current_star, camera);
-
         // Draw star info box
-        // if (nav_state->current_star->class && (input_state->is_hovering_star || nav_state->current_star->is_selected))
         stars_draw_info_box(nav_state->current_star, camera);
+
+        // Draw planets info box
+        stars_draw_planets_info_box(nav_state->current_star, camera);
     }
 
     console_draw_position_console(game_state, nav_state, camera, nav_state->map_offset);
@@ -594,9 +604,11 @@ void game_run_navigate_state(GameState *game_state, InputState *input_state, Gam
 {
     const double epsilon = ZOOM_EPSILON;
 
+    SDL_SetCursor(input_state->default_cursor);
+
     if (game_events->is_centering_navigate)
     {
-        game_state->game_scale = ZOOM_NAVIGATE;
+        game_state->game_scale = ZOOM_NAVIGATE + ZOOM_STEP;
         game_events->is_centering_navigate = false;
         input_state->zoom_out = true;
     }
@@ -1150,10 +1162,21 @@ void game_run_universe_state(GameState *game_state, InputState *input_state, Gam
                 }
             }
         }
-    }
 
-    // Check if mouse is over current star
-    gfx_toggle_star_hover(input_state, nav_state, camera, game_state->game_scale, UNIVERSE);
+        // Check if mouse is over current star
+        gfx_toggle_star_hover(input_state, nav_state, camera, game_state->game_scale, UNIVERSE);
+    }
+    else
+        input_state->is_hovering_star = false;
+
+    // Change mouse cursor
+    if (!input_state->is_mouse_dragging)
+    {
+        if (input_state->is_hovering_star)
+            SDL_SetCursor(input_state->pointing_cursor);
+        else
+            SDL_SetCursor(input_state->default_cursor);
+    }
 
     // Draw galaxy info box
     if (nav_state->current_galaxy->is_selected)

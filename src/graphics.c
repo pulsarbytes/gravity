@@ -1389,9 +1389,13 @@ void gfx_toggle_galaxy_hover(InputState *input_state, const NavigationState *nav
     double distance = maths_distance_between_points(current_x, current_y, input_state->mouse_position.x, input_state->mouse_position.y);
 
     if (distance > current_cutoff)
+    {
         input_state->is_hovering_galaxy = false;
+    }
     else
+    {
         input_state->is_hovering_galaxy = true;
+    }
 }
 
 /**

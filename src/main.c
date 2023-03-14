@@ -52,7 +52,7 @@ void menu_run_menu_state(GameState *, InputState *, bool is_game_started, const 
 void sdl_cleanup(SDL_Window *);
 bool sdl_initialize(SDL_Window *);
 bool sdl_ttf_load_fonts(SDL_Window *);
-void utils_cleanup_resources(GameState *, NavigationState *, Bstar *bstars, Ship *);
+void utils_cleanup_resources(GameState *, InputState *, NavigationState *, Bstar *bstars, Ship *);
 
 int main(int argc, char *argv[])
 {
@@ -76,6 +76,7 @@ int main(int argc, char *argv[])
     if (!sdl_ttf_load_fonts(window))
     {
         fprintf(stderr, "Error: could not initialize SDL_ttf and load fonts.\n");
+        sdl_cleanup(window);
         return 1;
     }
 
@@ -172,7 +173,7 @@ int main(int argc, char *argv[])
             SDL_Delay((1000 / FPS) - (end_time - start_time));
     }
 
-    utils_cleanup_resources(&game_state, &nav_state, bstars, &ship);
+    utils_cleanup_resources(&game_state, &input_state, &nav_state, bstars, &ship);
 
     // Close SDL
     sdl_cleanup(window);
