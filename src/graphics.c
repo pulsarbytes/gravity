@@ -28,15 +28,15 @@ static int gfx_update_projection_opacity(double distance, int region_size, int s
  */
 void gfx_create_default_colors(void)
 {
-    colors[COLOR_CYAN_40].r = 0;
-    colors[COLOR_CYAN_40].g = 255;
-    colors[COLOR_CYAN_40].b = 255;
-    colors[COLOR_CYAN_40].a = 40;
-
     colors[COLOR_CYAN_70].r = 0;
     colors[COLOR_CYAN_70].g = 255;
     colors[COLOR_CYAN_70].b = 255;
     colors[COLOR_CYAN_70].a = 70;
+
+    colors[COLOR_CYAN_100].r = 0;
+    colors[COLOR_CYAN_100].g = 255;
+    colors[COLOR_CYAN_100].b = 255;
+    colors[COLOR_CYAN_100].a = 100;
 
     colors[COLOR_CYAN_150].r = 0;
     colors[COLOR_CYAN_150].g = 255;
@@ -78,15 +78,20 @@ void gfx_create_default_colors(void)
     colors[COLOR_LIME_GREEN_200].b = 50;
     colors[COLOR_LIME_GREEN_200].a = 200;
 
-    colors[COLOR_MAGENTA_40].r = 255;
-    colors[COLOR_MAGENTA_40].g = 0;
-    colors[COLOR_MAGENTA_40].b = 255;
-    colors[COLOR_MAGENTA_40].a = 40;
-
     colors[COLOR_MAGENTA_70].r = 255;
     colors[COLOR_MAGENTA_70].g = 0;
     colors[COLOR_MAGENTA_70].b = 255;
     colors[COLOR_MAGENTA_70].a = 70;
+
+    colors[COLOR_MAGENTA_100].r = 255;
+    colors[COLOR_MAGENTA_100].g = 0;
+    colors[COLOR_MAGENTA_100].b = 255;
+    colors[COLOR_MAGENTA_100].a = 100;
+
+    colors[COLOR_MAGENTA_120].r = 255;
+    colors[COLOR_MAGENTA_120].g = 0;
+    colors[COLOR_MAGENTA_120].b = 255;
+    colors[COLOR_MAGENTA_120].a = 120;
 
     colors[COLOR_ORANGE_32].r = 255;
     colors[COLOR_ORANGE_32].g = 165;
@@ -1399,12 +1404,23 @@ void gfx_toggle_galaxy_hover(InputState *input_state, const NavigationState *nav
  *
  * @return void
  */
-void gfx_toggle_star_hover(InputState *input_state, const NavigationState *nav_state, const Camera *camera, long double scale)
+void gfx_toggle_star_hover(InputState *input_state, const NavigationState *nav_state, const Camera *camera, long double scale, int state)
 {
     // Get relative position of current star in game_scale
     int current_cutoff = nav_state->current_star->cutoff * scale;
-    int current_x = (nav_state->current_star->position.x - camera->x) * scale;
-    int current_y = (nav_state->current_star->position.y - camera->y) * scale;
+    int current_x = 0;
+    int current_y = 0;
+
+    if (state == MAP)
+    {
+        current_x = (nav_state->current_star->position.x - camera->x) * scale;
+        current_y = (nav_state->current_star->position.y - camera->y) * scale;
+    }
+    else if (state == UNIVERSE)
+    {
+        current_x = (nav_state->current_galaxy->position.x - camera->x + nav_state->current_star->position.x / GALAXY_SCALE) * scale * GALAXY_SCALE;
+        current_y = (nav_state->current_galaxy->position.y - camera->y + nav_state->current_star->position.y / GALAXY_SCALE) * scale * GALAXY_SCALE;
+    }
 
     // Get current star distance from mouse position
     double distance = maths_distance_between_points(current_x, current_y, input_state->mouse_position.x, input_state->mouse_position.y);
@@ -1412,7 +1428,12 @@ void gfx_toggle_star_hover(InputState *input_state, const NavigationState *nav_s
     if (distance > current_cutoff)
         input_state->is_hovering_star = false;
     else
+    {
         input_state->is_hovering_star = true;
+
+        if (state == UNIVERSE)
+            input_state->is_hovering_galaxy = false;
+    }
 }
 
 /**

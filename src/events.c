@@ -49,10 +49,14 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
             // Left click down
             if (event.button.button == SDL_BUTTON_LEFT)
             {
-                if (game_state->state == UNIVERSE && input_state->is_hovering_galaxy)
-                    input_state->clicked_inside_galaxy = true;
-
-                if (game_state->state == MAP && input_state->is_hovering_star)
+                if (game_state->state == UNIVERSE)
+                {
+                    if (input_state->is_hovering_star)
+                        input_state->clicked_inside_star = true;
+                    else if (input_state->is_hovering_galaxy)
+                        input_state->clicked_inside_galaxy = true;
+                }
+                else if (game_state->state == MAP && input_state->is_hovering_star)
                     input_state->clicked_inside_star = true;
 
                 Uint32 current_time = SDL_GetTicks();
@@ -60,75 +64,113 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
                 // Detect double-clicks (500 milliseconds)
                 if (current_time - input_state->last_click_time < DOUBLE_CLICK_INTERVAL)
                 {
-                    if (game_state->state == UNIVERSE && input_state->is_hovering_galaxy)
-                        input_state->click_count++;
-
-                    if (game_state->state == MAP && input_state->is_hovering_star)
+                    if (game_state->state == UNIVERSE)
+                    {
+                        if (input_state->is_hovering_star || input_state->is_hovering_galaxy)
+                            input_state->click_count++;
+                    }
+                    else if (game_state->state == MAP && input_state->is_hovering_star)
                         input_state->click_count++;
 
                     if (input_state->click_count == 2)
                     {
-                        // Center galaxy
                         if (game_state->state == UNIVERSE)
                         {
+                            // Center galaxy
                             if (input_state->is_hovering_galaxy)
                             {
-                                // Convert current galaxy center to relative position (game_scale)
-                                double x = (nav_state->current_galaxy->position.x - camera->x) * game_state->game_scale * GALAXY_SCALE;
-                                double y = (nav_state->current_galaxy->position.y - camera->y) * game_state->game_scale * GALAXY_SCALE;
+                                nav_state->universe_offset.x = nav_state->current_galaxy->position.x;
+                                nav_state->universe_offset.y = nav_state->current_galaxy->position.y;
 
-                                // Calculate the difference between the camera center and the galaxy center
-                                int delta_x = (camera->w / 2) - (int)x;
-                                int delta_y = (camera->h / 2) - (int)y;
+                                input_state->is_mouse_double_clicked = true;
 
-                                // Center galaxy
-                                if (abs(delta_x) > 0)
-                                    nav_state->universe_offset.x -= delta_x / (game_state->game_scale * GALAXY_SCALE);
+                                // Adjust game_scale to new galaxy
+                                double new_scale;
 
-                                if (abs(delta_y) > 0)
-                                    nav_state->universe_offset.y -= delta_y / (game_state->game_scale * GALAXY_SCALE);
-
-                                if (abs(delta_x) > 0 || abs(delta_y) > 0)
+                                switch (nav_state->current_galaxy->class)
                                 {
-                                    input_state->is_mouse_double_clicked = true;
-
-                                    // Adjust game_scale to new galaxy
-                                    double new_scale;
-
-                                    switch (nav_state->current_galaxy->class)
-                                    {
-                                    case 1:
-                                        new_scale = ZOOM_UNIVERSE * 10;
-                                        break;
-                                    case 2:
-                                        new_scale = ZOOM_UNIVERSE * 5;
-                                        break;
-                                    case 3:
-                                        new_scale = ZOOM_UNIVERSE * 3;
-                                        break;
-                                    case 4:
-                                    case 5:
-                                    case 6:
-                                        new_scale = ZOOM_UNIVERSE * 2;
-                                        break;
-                                    default:
-                                        new_scale = ZOOM_UNIVERSE * 2;
-                                        break;
-                                    }
-
-                                    if (game_state->game_scale > (new_scale / GALAXY_SCALE) - epsilon)
-                                    {
-                                        input_state->zoom_out = true;
-                                        input_state->zoom_in = false;
-                                    }
-                                    else
-                                    {
-                                        input_state->zoom_in = true;
-                                        input_state->zoom_out = false;
-                                    }
-
-                                    game_state->game_scale_override = new_scale / GALAXY_SCALE;
+                                case 1:
+                                    new_scale = ZOOM_UNIVERSE * 10;
+                                    break;
+                                case 2:
+                                    new_scale = ZOOM_UNIVERSE * 5;
+                                    break;
+                                case 3:
+                                    new_scale = ZOOM_UNIVERSE * 3;
+                                    break;
+                                case 4:
+                                case 5:
+                                case 6:
+                                    new_scale = ZOOM_UNIVERSE * 2;
+                                    break;
+                                default:
+                                    new_scale = ZOOM_UNIVERSE * 2;
+                                    break;
                                 }
+
+                                if (game_state->game_scale > (new_scale / GALAXY_SCALE) - epsilon)
+                                {
+                                    input_state->zoom_out = true;
+                                    input_state->zoom_in = false;
+                                }
+                                else
+                                {
+                                    input_state->zoom_in = true;
+                                    input_state->zoom_out = false;
+                                }
+
+                                game_state->game_scale_override = new_scale / GALAXY_SCALE;
+                            }
+                            // Center star
+                            else if (input_state->is_hovering_star)
+                            {
+                                nav_state->map_offset.x = nav_state->current_star->position.x;
+                                nav_state->map_offset.y = nav_state->current_star->position.y;
+
+                                // Adjust game_scale to new star
+                                double new_scale;
+
+                                switch (nav_state->current_star->class)
+                                {
+                                case 1:
+                                    new_scale = ZOOM_MAP * 9;
+                                    break;
+                                case 2:
+                                    new_scale = ZOOM_MAP * 5;
+                                    break;
+                                case 3:
+                                    new_scale = ZOOM_MAP * 3;
+                                    break;
+                                case 4:
+                                    new_scale = ZOOM_MAP * 2;
+                                    break;
+                                case 5:
+                                    new_scale = ZOOM_MAP * 2;
+                                    break;
+                                case 6:
+                                    new_scale = ZOOM_MAP * 2;
+                                    break;
+                                default:
+                                    new_scale = ZOOM_MAP * 1;
+                                    break;
+                                }
+
+                                if (game_state->game_scale > new_scale - epsilon)
+                                {
+                                    input_state->zoom_in = false;
+                                    input_state->zoom_out = true;
+                                }
+                                else
+                                {
+                                    input_state->zoom_in = true;
+                                    input_state->zoom_out = false;
+                                }
+
+                                game_state->game_scale_override = new_scale;
+
+                                game_events->switch_to_map = true;
+                                game_events->is_entering_map = true;
+                                game_change_state(game_state, game_events, MAP);
                             }
                         }
                         // Center star
@@ -136,64 +178,49 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
                         {
                             if (input_state->is_hovering_star)
                             {
-                                // Convert current star center to relative position (game_scale)
-                                double x = (nav_state->current_star->position.x - camera->x) * game_state->game_scale;
-                                double y = (nav_state->current_star->position.y - camera->y) * game_state->game_scale;
+                                nav_state->map_offset.x = nav_state->current_star->position.x;
+                                nav_state->map_offset.y = nav_state->current_star->position.y;
 
-                                // Calculate the difference between the camera center and the star center
-                                int delta_x = (camera->w / 2) - (int)x;
-                                int delta_y = (camera->h / 2) - (int)y;
+                                // Adjust game_scale to new star
+                                double new_scale;
 
-                                // Center star
-                                if (abs(delta_x) > 0)
-                                    nav_state->map_offset.x -= delta_x / game_state->game_scale;
-
-                                if (abs(delta_y) > 0)
-                                    nav_state->map_offset.y -= delta_y / game_state->game_scale;
-
-                                if (abs(delta_x) > 0 || abs(delta_y) > 0)
+                                switch (nav_state->current_star->class)
                                 {
-                                    // Adjust game_scale to new star
-                                    double new_scale;
-
-                                    switch (nav_state->current_star->class)
-                                    {
-                                    case 1:
-                                        new_scale = ZOOM_MAP * 9;
-                                        break;
-                                    case 2:
-                                        new_scale = ZOOM_MAP * 5;
-                                        break;
-                                    case 3:
-                                        new_scale = ZOOM_MAP * 3;
-                                        break;
-                                    case 4:
-                                        new_scale = ZOOM_MAP * 2;
-                                        break;
-                                    case 5:
-                                        new_scale = ZOOM_MAP * 2;
-                                        break;
-                                    case 6:
-                                        new_scale = ZOOM_MAP * 2;
-                                        break;
-                                    default:
-                                        new_scale = ZOOM_MAP * 1;
-                                        break;
-                                    }
-
-                                    if (game_state->game_scale > new_scale - epsilon)
-                                    {
-                                        input_state->zoom_in = false;
-                                        input_state->zoom_out = true;
-                                    }
-                                    else
-                                    {
-                                        input_state->zoom_in = true;
-                                        input_state->zoom_out = false;
-                                    }
-
-                                    game_state->game_scale_override = new_scale;
+                                case 1:
+                                    new_scale = ZOOM_MAP * 9;
+                                    break;
+                                case 2:
+                                    new_scale = ZOOM_MAP * 5;
+                                    break;
+                                case 3:
+                                    new_scale = ZOOM_MAP * 3;
+                                    break;
+                                case 4:
+                                    new_scale = ZOOM_MAP * 2;
+                                    break;
+                                case 5:
+                                    new_scale = ZOOM_MAP * 2;
+                                    break;
+                                case 6:
+                                    new_scale = ZOOM_MAP * 2;
+                                    break;
+                                default:
+                                    new_scale = ZOOM_MAP * 1;
+                                    break;
                                 }
+
+                                if (game_state->game_scale > new_scale - epsilon)
+                                {
+                                    input_state->zoom_in = false;
+                                    input_state->zoom_out = true;
+                                }
+                                else
+                                {
+                                    input_state->zoom_in = true;
+                                    input_state->zoom_out = false;
+                                }
+
+                                game_state->game_scale_override = new_scale;
                             }
                         }
 
@@ -204,21 +231,19 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
                 {
                     if (game_state->state == UNIVERSE)
                     {
-                        if (input_state->is_hovering_galaxy)
+                        if (input_state->is_hovering_star || input_state->is_hovering_galaxy)
                             input_state->click_count = 1;
                         else
                             input_state->click_count = 0;
                     }
-
-                    if (game_state->state == MAP)
+                    else if (game_state->state == MAP)
                     {
                         if (input_state->is_hovering_star)
                             input_state->click_count = 1;
                         else
                             input_state->click_count = 0;
                     }
-
-                    if (game_state->state == MENU)
+                    else if (game_state->state == MENU)
                     {
                         // Select menu button
                         input_state->mouse_position.x = event.button.x;

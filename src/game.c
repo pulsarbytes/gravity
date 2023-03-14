@@ -406,19 +406,19 @@ void game_run_map_state(GameState *game_state, InputState *input_state, GameEven
                 nav_state->galaxy_offset.current_x = nav_state->galaxy_offset.buffer_x;
                 nav_state->galaxy_offset.current_y = nav_state->galaxy_offset.buffer_y;
             }
-        }
 
-        // Reset current_star
-        if (maths_points_equal(nav_state->current_galaxy->position, nav_state->buffer_galaxy->position))
-        {
-            if (nav_state->current_star != NULL && nav_state->buffer_star != NULL)
+            // Reset current_star
+            if (maths_points_equal(nav_state->current_galaxy->position, nav_state->buffer_galaxy->position))
             {
-                if (strcmp(nav_state->current_star->name, nav_state->buffer_star->name) != 0)
-                    memcpy(nav_state->current_star, nav_state->buffer_star, sizeof(Star));
+                if (nav_state->current_star != NULL && nav_state->buffer_star != NULL)
+                {
+                    if (strcmp(nav_state->current_star->name, nav_state->buffer_star->name) != 0)
+                        memcpy(nav_state->current_star, nav_state->buffer_star, sizeof(Star));
 
-                // Select current star
-                if (!nav_state->current_star->is_selected)
-                    nav_state->current_star->is_selected = true;
+                    // Select current star
+                    if (!nav_state->current_star->is_selected)
+                        nav_state->current_star->is_selected = true;
+                }
             }
         }
 
@@ -524,7 +524,7 @@ void game_run_map_state(GameState *game_state, InputState *input_state, GameEven
     }
 
     // Check if mouse is over current star
-    gfx_toggle_star_hover(input_state, nav_state, camera, game_state->game_scale);
+    gfx_toggle_star_hover(input_state, nav_state, camera, game_state->game_scale, MAP);
 
     // Draw ship projection
     ship->projection->rect.x = (ship->position.x - nav_state->map_offset.x) * game_state->game_scale + (camera->w / 2 - ship->projection->radius);
@@ -1130,6 +1130,20 @@ void game_run_universe_state(GameState *game_state, InputState *input_state, Gam
 
                         stars_populate_body(entry->star, entry->star->position, rng, game_state->game_scale);
                         stars_draw_info_box(entry->star, camera);
+
+                        // Draw star cutoff circle
+                        gfx_draw_circle(renderer, camera, x, y, star_cutoff, colors[COLOR_MAGENTA_120]);
+
+                        // Set star as current_star
+                        if (nav_state->current_star != NULL)
+                        {
+                            if (strcmp(nav_state->current_star->name, entry->star->name) != 0)
+                                memcpy(nav_state->current_star, entry->star, sizeof(Star));
+
+                            // Select current star
+                            if (!nav_state->current_star->is_selected)
+                                nav_state->current_star->is_selected = true;
+                        }
                     }
 
                     entry = entry->next;
@@ -1137,6 +1151,9 @@ void game_run_universe_state(GameState *game_state, InputState *input_state, Gam
             }
         }
     }
+
+    // Check if mouse is over current star
+    gfx_toggle_star_hover(input_state, nav_state, camera, game_state->game_scale, UNIVERSE);
 
     // Draw galaxy info box
     if (nav_state->current_galaxy->is_selected)

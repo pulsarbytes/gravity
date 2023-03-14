@@ -21,7 +21,7 @@ void gfx_project_body_on_edge(const GameState *, const NavigationState *, Celest
 void gfx_project_galaxy_on_edge(int state, const NavigationState *, Galaxy *, const Camera *, long double scale);
 void gfx_project_ship_on_edge(int state, const InputState *, const NavigationState *, Ship *, const Camera *, long double scale);
 void gfx_toggle_galaxy_hover(InputState *, const NavigationState *, const Camera *, long double scale);
-void gfx_toggle_star_hover(InputState *, const NavigationState *, const Camera *, long double scale);
+void gfx_toggle_star_hover(InputState *, const NavigationState *, const Camera *, long double scale, int state);
 void gfx_update_bstars_position(int state, bool camera_on, const NavigationState *, Bstar *bstars, const Camera *, Speed, double distance);
 void gfx_update_camera(Camera *, Point, long double scale);
 void gfx_update_gstars_position(Galaxy *, Point, const Camera *, double distance, double limit);

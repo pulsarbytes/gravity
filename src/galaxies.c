@@ -255,13 +255,11 @@ void galaxies_draw_galaxy(const InputState *input_state, NavigationState *nav_st
         unsigned short color_code;
 
         if (galaxy_is_selected)
-            color_code = COLOR_CYAN_40;
+            color_code = COLOR_CYAN_70;
         else
-            color_code = COLOR_MAGENTA_40;
+            color_code = COLOR_MAGENTA_70;
 
-        gfx_draw_circle_approximation(renderer, camera, x, y, cutoff - 1, colors[color_code]);
-        gfx_draw_circle_approximation(renderer, camera, x, y, cutoff - 2, colors[color_code]);
-        gfx_draw_circle_approximation(renderer, camera, x, y, cutoff - 3, colors[color_code]);
+        gfx_draw_circle_approximation(renderer, camera, x, y, cutoff, colors[color_code]);
 
         // Generate gstars
         if (!galaxy->initialized || galaxy->initialized < galaxy->total_groups)

@@ -654,14 +654,12 @@ void stars_draw_star_system(GameState *game_state, const InputState *input_state
                     unsigned short color_code;
 
                     if (star_is_selected)
-                        color_code = COLOR_CYAN_40;
+                        color_code = COLOR_CYAN_100;
                     else
-                        color_code = COLOR_MAGENTA_40;
+                        color_code = COLOR_MAGENTA_100;
 
                     // Draw cutoff area circles
-                    gfx_draw_circle(renderer, camera, x, y, radius - 1, colors[color_code]);
-                    gfx_draw_circle(renderer, camera, x, y, radius - 2, colors[color_code]);
-                    gfx_draw_circle(renderer, camera, x, y, radius - 3, colors[color_code]);
+                    gfx_draw_circle(renderer, camera, x, y, radius, colors[color_code]);
                 }
             }
         }
