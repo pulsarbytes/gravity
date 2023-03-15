@@ -208,6 +208,9 @@ static void menu_toggle_menu_hover(GameState *game_state, InputState *input_stat
 {
     for (int i = 0; i < MENU_BUTTON_COUNT; i++)
     {
+        if (game_state->menu[i].disabled)
+            continue;
+
         Point rect[4];
 
         int x1 = game_state->menu[i].rect.x;

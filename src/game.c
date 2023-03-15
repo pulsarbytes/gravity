@@ -757,16 +757,16 @@ void game_run_navigate_state(GameState *game_state, InputState *input_state, Gam
     {
         if (nav_state->velocity.magnitude >= GALAXY_SPEED_LIMIT)
         {
-            ship->vx = ceil(GALAXY_SPEED_LIMIT * ship->vx / nav_state->velocity.magnitude);
-            ship->vy = ceil(GALAXY_SPEED_LIMIT * ship->vy / nav_state->velocity.magnitude);
+            ship->vx = GALAXY_SPEED_LIMIT * ship->vx / nav_state->velocity.magnitude;
+            ship->vy = GALAXY_SPEED_LIMIT * ship->vy / nav_state->velocity.magnitude;
         }
     }
     else
     {
         if (nav_state->velocity.magnitude >= UNIVERSE_SPEED_LIMIT)
         {
-            ship->vx = ceil(UNIVERSE_SPEED_LIMIT * ship->vx / nav_state->velocity.magnitude);
-            ship->vy = ceil(UNIVERSE_SPEED_LIMIT * ship->vy / nav_state->velocity.magnitude);
+            ship->vx = UNIVERSE_SPEED_LIMIT * ship->vx / nav_state->velocity.magnitude;
+            ship->vy = UNIVERSE_SPEED_LIMIT * ship->vy / nav_state->velocity.magnitude;
         }
     }
 

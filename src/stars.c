@@ -26,7 +26,7 @@ static void stars_cleanup_planets(CelestialBody *);
 static Star *stars_create_star(const NavigationState *, Point, int preview, long double scale);
 static void stars_delete_entry(StarEntry *stars[], Point);
 static bool stars_entry_exists(StarEntry *stars[], Point);
-static int stars_planet_size_class(float width);
+static int stars_planet_size_class(float radius);
 
 /**
  * Adds a new star entry to the hash table of stars at the given position.
@@ -127,43 +127,43 @@ static Star *stars_create_star(const NavigationState *nav_state, Point position,
     // Use a local rng
     pcg32_random_t rng;
 
-    switch (class)
-    {
-    case STAR_CLASS_1:
-        radius = abs(pcg32_random_r(&rng)) % STAR_CLASS_1_RADIUS_MAX + STAR_CLASS_1_RADIUS_MIN;
-        color_code = COLOR_LIGHT_RED_255;
-        break;
-    case STAR_CLASS_2:
-        radius = abs(pcg32_random_r(&rng)) % STAR_CLASS_2_RADIUS_MAX + STAR_CLASS_2_RADIUS_MIN;
-        color_code = COLOR_LIGHT_ORANGE_255;
-        break;
-    case STAR_CLASS_3:
-        radius = abs(pcg32_random_r(&rng)) % STAR_CLASS_3_RADIUS_MAX + STAR_CLASS_3_RADIUS_MIN;
-        color_code = COLOR_PALE_YELLOW_255;
-        break;
-    case STAR_CLASS_4:
-        radius = abs(pcg32_random_r(&rng)) % STAR_CLASS_4_RADIUS_MAX + STAR_CLASS_4_RADIUS_MIN;
-        color_code = COLOR_LIGHT_GREEN_255;
-        break;
-    case STAR_CLASS_5:
-        radius = abs(pcg32_random_r(&rng)) % STAR_CLASS_5_RADIUS_MAX + STAR_CLASS_5_RADIUS_MIN;
-        color_code = COLOR_LIGHT_BLUE_255;
-        break;
-    case STAR_CLASS_6:
-        radius = abs(pcg32_random_r(&rng)) % STAR_CLASS_6_RADIUS_MAX + STAR_CLASS_6_RADIUS_MIN;
-        color_code = COLOR_LAVENDER_255;
-        break;
-    default:
-        radius = abs(pcg32_random_r(&rng)) % STAR_CLASS_1_RADIUS_MAX + STAR_CLASS_1_RADIUS_MIN;
-        color_code = COLOR_LIGHT_RED_255;
-        break;
-    }
-
     // Create rng seed by combining x,y values
     uint64_t seed = maths_hash_position_to_uint64(position);
 
     // Seed with a fixed constant
     pcg32_srandom_r(&rng, seed, nav_state->initseq);
+
+    switch (class)
+    {
+    case STAR_1:
+        radius = abs(pcg32_random_r(&rng)) % STAR_1_RADIUS_MAX + STAR_1_RADIUS_MIN;
+        color_code = COLOR_STAR_1;
+        break;
+    case STAR_2:
+        radius = abs(pcg32_random_r(&rng)) % STAR_2_RADIUS_MAX + STAR_2_RADIUS_MIN;
+        color_code = COLOR_STAR_2;
+        break;
+    case STAR_3:
+        radius = abs(pcg32_random_r(&rng)) % STAR_3_RADIUS_MAX + STAR_3_RADIUS_MIN;
+        color_code = COLOR_STAR_3;
+        break;
+    case STAR_4:
+        radius = abs(pcg32_random_r(&rng)) % STAR_4_RADIUS_MAX + STAR_4_RADIUS_MIN;
+        color_code = COLOR_STAR_4;
+        break;
+    case STAR_5:
+        radius = abs(pcg32_random_r(&rng)) % STAR_5_RADIUS_MAX + STAR_5_RADIUS_MIN;
+        color_code = COLOR_STAR_5;
+        break;
+    case STAR_6:
+        radius = abs(pcg32_random_r(&rng)) % STAR_6_RADIUS_MAX + STAR_6_RADIUS_MIN;
+        color_code = COLOR_STAR_6;
+        break;
+    default:
+        radius = abs(pcg32_random_r(&rng)) % STAR_1_RADIUS_MAX + STAR_1_RADIUS_MIN;
+        color_code = COLOR_STAR_1;
+        break;
+    }
 
     // Allocate memory for Star
     Star *star = (Star *)malloc(sizeof(Star));
@@ -190,7 +190,7 @@ static Star *stars_create_star(const NavigationState *nav_state, Point position,
     star->vy = 0.0;
     star->dx = 0.0;
     star->dy = 0.0;
-    star->projection = (SDL_Rect){0, 0, 0, 0};
+    star->projection = (SDL_Point){0, 0};
     star->color = colors[color_code];
 
     star->num_planets = 0;
@@ -445,23 +445,23 @@ void stars_draw_planets_info_box(const Star *star, const Camera *camera)
 
     switch (star->class)
     {
-    case STAR_CLASS_1:
+    case STAR_1:
         planets_scaling_factor = 4;
         break;
-    case STAR_CLASS_2:
+    case STAR_2:
         planets_scaling_factor = 4;
         break;
-    case STAR_CLASS_3:
+    case STAR_3:
         planets_scaling_factor = 6;
         break;
-    case STAR_CLASS_4:
+    case STAR_4:
         planets_scaling_factor = 6;
         break;
-    case STAR_CLASS_5:
-        planets_scaling_factor = 12;
+    case STAR_5:
+        planets_scaling_factor = 6;
         break;
-    case STAR_CLASS_6:
-        planets_scaling_factor = 12;
+    case STAR_6:
+        planets_scaling_factor = 8;
         break;
     default:
         planets_scaling_factor = 4;
@@ -1208,7 +1208,7 @@ void stars_initialize_star(Star *star)
     star->vy = 0;
     star->dx = 0;
     star->dy = 0;
-    star->projection = (SDL_Rect){0, 0, 0, 0};
+    star->projection = (SDL_Point){0, 0};
     star->color = (SDL_Color){0, 0, 0, 0};
     star->num_planets = 0;
 
@@ -1300,28 +1300,28 @@ double stars_nearest_center_distance(Point position, Galaxy *current_galaxy, uin
 }
 
 /**
- * Determines the planet size class based on its width.
+ * Determines the planet size class based on its radius.
  *
- * @param width The width of the planet.
+ * @param radius The width of the planet radius.
  *
  * @return An integer representing the planet size class (from 1 to 6).
  */
-static int stars_planet_size_class(float width)
+static int stars_planet_size_class(float radius)
 {
-    if (width < GALAXY_SECTION_SIZE / 20) // < 500
-        return PLANET_CLASS_1;
-    else if (width < GALAXY_SECTION_SIZE / 10) // < 1000
-        return PLANET_CLASS_2;
-    else if (width < GALAXY_SECTION_SIZE / 6.67) // < 1500
-        return PLANET_CLASS_3;
-    else if (width < GALAXY_SECTION_SIZE / 5) // < 2000
-        return PLANET_CLASS_4;
-    else if (width < 6 * GALAXY_SECTION_SIZE / 4) // < 2500
-        return PLANET_CLASS_5;
-    else if (width >= 6 * GALAXY_SECTION_SIZE) // >= 2500
-        return PLANET_CLASS_6;
+    if (radius <= TERRESTRIAL_RADIUS_MAX)
+        return PLANET_1;
+    else if (radius <= EARTH_RADIUS_MAX)
+        return PLANET_2;
+    else if (radius <= SUBNEPTUNE_RADIUS_MAX)
+        return PLANET_3;
+    else if (radius <= NEPTUNE_RADIUS_MAX)
+        return PLANET_4;
+    else if (radius <= ICE_GIANT_RADIUS_MAX)
+        return PLANET_5;
+    else if (radius > ICE_GIANT_RADIUS_MAX)
+        return PLANET_6;
     else
-        return PLANET_CLASS_1;
+        return PLANET_1;
 }
 
 /**
@@ -1349,46 +1349,46 @@ void stars_populate_body(CelestialBody *body, Point position, pcg32_random_t rng
 
     if (body->level == LEVEL_STAR)
     {
-        int orbit_range_min = STAR_CLASS_1_ORBIT_MIN;
-        int orbit_range_max = STAR_CLASS_1_ORBIT_MAX;
-        float radius_max = STAR_CLASS_1_PLANET_RADIUS_MAX;
+        int orbit_range_min = STAR_1_PLANET_ORBIT_MIN;
+        int orbit_range_max = STAR_1_PLANET_ORBIT_MAX;
+        float radius_max = STAR_1_PLANET_RADIUS_MAX;
 
         switch (body->class)
         {
-        case STAR_CLASS_1:
-            orbit_range_min = STAR_CLASS_1_ORBIT_MIN;
-            orbit_range_max = STAR_CLASS_1_ORBIT_MAX;
-            radius_max = STAR_CLASS_1_PLANET_RADIUS_MAX;
+        case STAR_1:
+            orbit_range_min = STAR_1_PLANET_ORBIT_MIN;
+            orbit_range_max = STAR_1_PLANET_ORBIT_MAX;
+            radius_max = STAR_1_PLANET_RADIUS_MAX;
             break;
-        case STAR_CLASS_2:
-            orbit_range_min = STAR_CLASS_2_ORBIT_MIN;
-            orbit_range_max = STAR_CLASS_2_ORBIT_MAX;
-            radius_max = STAR_CLASS_2_PLANET_RADIUS_MAX;
+        case STAR_2:
+            orbit_range_min = STAR_2_PLANET_ORBIT_MIN;
+            orbit_range_max = STAR_2_PLANET_ORBIT_MAX;
+            radius_max = STAR_2_PLANET_RADIUS_MAX;
             break;
-        case STAR_CLASS_3:
-            orbit_range_min = STAR_CLASS_3_ORBIT_MIN;
-            orbit_range_max = STAR_CLASS_3_ORBIT_MAX;
-            radius_max = STAR_CLASS_3_PLANET_RADIUS_MAX;
+        case STAR_3:
+            orbit_range_min = STAR_3_PLANET_ORBIT_MIN;
+            orbit_range_max = STAR_3_PLANET_ORBIT_MAX;
+            radius_max = STAR_3_PLANET_RADIUS_MAX;
             break;
-        case STAR_CLASS_4:
-            orbit_range_min = STAR_CLASS_4_ORBIT_MIN;
-            orbit_range_max = STAR_CLASS_4_ORBIT_MAX;
-            radius_max = STAR_CLASS_4_PLANET_RADIUS_MAX;
+        case STAR_4:
+            orbit_range_min = STAR_4_PLANET_ORBIT_MIN;
+            orbit_range_max = STAR_4_PLANET_ORBIT_MAX;
+            radius_max = STAR_4_PLANET_RADIUS_MAX;
             break;
-        case STAR_CLASS_5:
-            orbit_range_min = STAR_CLASS_5_ORBIT_MIN;
-            orbit_range_max = STAR_CLASS_5_ORBIT_MAX;
-            radius_max = STAR_CLASS_5_PLANET_RADIUS_MAX;
+        case STAR_5:
+            orbit_range_min = STAR_5_PLANET_ORBIT_MIN;
+            orbit_range_max = STAR_5_PLANET_ORBIT_MAX;
+            radius_max = STAR_5_PLANET_RADIUS_MAX;
             break;
-        case STAR_CLASS_6:
-            orbit_range_min = STAR_CLASS_6_ORBIT_MIN;
-            orbit_range_max = STAR_CLASS_6_ORBIT_MAX;
-            radius_max = STAR_CLASS_6_PLANET_RADIUS_MAX;
+        case STAR_6:
+            orbit_range_min = STAR_6_PLANET_ORBIT_MIN;
+            orbit_range_max = STAR_6_PLANET_ORBIT_MAX;
+            radius_max = STAR_6_PLANET_RADIUS_MAX;
             break;
         default:
-            orbit_range_min = STAR_CLASS_1_ORBIT_MIN;
-            orbit_range_max = STAR_CLASS_1_ORBIT_MAX;
-            radius_max = STAR_CLASS_1_PLANET_RADIUS_MAX;
+            orbit_range_min = STAR_1_PLANET_ORBIT_MIN;
+            orbit_range_max = STAR_1_PLANET_ORBIT_MAX;
+            radius_max = STAR_1_PLANET_RADIUS_MAX;
             break;
         }
 
@@ -1415,7 +1415,18 @@ void stars_populate_body(CelestialBody *body, Point position, pcg32_random_t rng
             }
 
             previous_orbit = orbit_width;
-            float radius = fmod(orbit_width, radius_max) + PLANET_RADIUS_MIN;
+            float radius = 0.0;
+
+            // For 1st orbit, allow up to EARTH_RADIUS_MAX
+            if (i == 0)
+            {
+                radius = fmod(orbit_width, EARTH_RADIUS_MAX - PLANET_RADIUS_MIN) + PLANET_RADIUS_MIN;
+            }
+            // For 2nd orbit, allow up to SUBNEPTUNE_RADIUS_MAX
+            else if (i == 1)
+                radius = fmod(orbit_width, SUBNEPTUNE_RADIUS_MAX - PLANET_RADIUS_MIN) + PLANET_RADIUS_MIN;
+            else
+                radius = fmod(orbit_width, radius_max - PLANET_RADIUS_MIN) + PLANET_RADIUS_MIN;
 
             // Add planet
             if (width + orbit_width + 2 * radius < body->cutoff - 2 * body->radius)
@@ -1434,7 +1445,7 @@ void stars_populate_body(CelestialBody *body, Point position, pcg32_random_t rng
                 memset(planet->name, 0, sizeof(planet->name));
                 strcpy(planet->name, body->name);                               // Copy star name to planet name
                 sprintf(planet->name + strlen(planet->name), "-%s-%d", "P", i); // Append to planet name
-                planet->class = stars_planet_size_class(orbit_width);
+                planet->class = stars_planet_size_class(radius);
                 planet->radius = radius;
                 planet->cutoff = orbit_width / 2;
                 planet->orbit_radius = orbit_width;
@@ -1451,8 +1462,36 @@ void stars_populate_body(CelestialBody *body, Point position, pcg32_random_t rng
                 planet->vy = vy;
                 planet->dx = 0.0;
                 planet->dy = 0.0;
-                planet->projection = (SDL_Rect){0, 0, 0, 0};
-                planet->color = colors[COLOR_SKY_BLUE_255];
+                planet->projection = (SDL_Point){0, 0};
+
+                unsigned short color_code;
+
+                switch (planet->class)
+                {
+                case PLANET_1:
+                    color_code = COLOR_PLANET_1;
+                    break;
+                case PLANET_2:
+                    color_code = COLOR_PLANET_2;
+                    break;
+                case PLANET_3:
+                    color_code = COLOR_PLANET_3;
+                    break;
+                case PLANET_4:
+                    color_code = COLOR_PLANET_4;
+                    break;
+                case PLANET_5:
+                    color_code = COLOR_PLANET_5;
+                    break;
+                case PLANET_6:
+                    color_code = COLOR_PLANET_6;
+                    break;
+                default:
+                    color_code = COLOR_PLANET_1;
+                    break;
+                }
+
+                planet->color = colors[color_code];
                 planet->num_planets = 0;
 
                 for (int i = 0; i < MAX_MOONS; i++)
@@ -1481,59 +1520,59 @@ void stars_populate_body(CelestialBody *body, Point position, pcg32_random_t rng
     // Moons
     else if (body->level == LEVEL_PLANET)
     {
-        int orbit_range_min = PLANET_CLASS_1_ORBIT_MIN;
-        int orbit_range_max = PLANET_CLASS_1_ORBIT_MAX;
-        float radius_max = PLANET_CLASS_1_MOON_RADIUS_MAX;
+        int orbit_range_min = PLANET_1_ORBIT_MIN;
+        int orbit_range_max = PLANET_1_ORBIT_MAX;
+        float radius_max = PLANET_1_MOON_RADIUS_MAX;
         float planet_cutoff_limit;
 
         switch (body->class)
         {
-        case PLANET_CLASS_1:
-            orbit_range_min = PLANET_CLASS_1_ORBIT_MIN;
-            orbit_range_max = PLANET_CLASS_1_ORBIT_MAX;
-            radius_max = PLANET_CLASS_1_MOON_RADIUS_MAX;
+        case PLANET_1:
+            orbit_range_min = PLANET_1_ORBIT_MIN;
+            orbit_range_max = PLANET_1_ORBIT_MAX;
+            radius_max = PLANET_1_MOON_RADIUS_MAX;
             planet_cutoff_limit = body->cutoff / 2;
             max_planets = (int)body->cutoff % (max_planets - 4); // 0 - <max - 4>
             break;
-        case PLANET_CLASS_2:
-            orbit_range_min = PLANET_CLASS_2_ORBIT_MIN;
-            orbit_range_max = PLANET_CLASS_2_ORBIT_MAX;
-            radius_max = PLANET_CLASS_2_MOON_RADIUS_MAX;
+        case PLANET_2:
+            orbit_range_min = PLANET_2_ORBIT_MIN;
+            orbit_range_max = PLANET_2_ORBIT_MAX;
+            radius_max = PLANET_2_MOON_RADIUS_MAX;
             planet_cutoff_limit = body->cutoff / 2;
             max_planets = (int)body->cutoff % (max_planets - 3); // 0 - <max - 3>
             break;
-        case PLANET_CLASS_3:
-            orbit_range_min = PLANET_CLASS_3_ORBIT_MIN;
-            orbit_range_max = PLANET_CLASS_3_ORBIT_MAX;
-            radius_max = PLANET_CLASS_3_MOON_RADIUS_MAX;
+        case PLANET_3:
+            orbit_range_min = PLANET_3_ORBIT_MIN;
+            orbit_range_max = PLANET_3_ORBIT_MAX;
+            radius_max = PLANET_3_MOON_RADIUS_MAX;
             planet_cutoff_limit = body->cutoff / 2;
             max_planets = (int)body->cutoff % (max_planets - 2); // 0 - <max - 2>
             break;
-        case PLANET_CLASS_4:
-            orbit_range_min = PLANET_CLASS_4_ORBIT_MIN;
-            orbit_range_max = PLANET_CLASS_4_ORBIT_MAX;
-            radius_max = PLANET_CLASS_4_MOON_RADIUS_MAX;
+        case PLANET_4:
+            orbit_range_min = PLANET_4_ORBIT_MIN;
+            orbit_range_max = PLANET_4_ORBIT_MAX;
+            radius_max = PLANET_4_MOON_RADIUS_MAX;
             planet_cutoff_limit = body->cutoff / 2;
             max_planets = (int)body->cutoff % (max_planets - 2); // 0 - <max - 2>
             break;
-        case PLANET_CLASS_5:
-            orbit_range_min = PLANET_CLASS_5_ORBIT_MIN;
-            orbit_range_max = PLANET_CLASS_5_ORBIT_MAX;
-            radius_max = PLANET_CLASS_5_MOON_RADIUS_MAX;
+        case PLANET_5:
+            orbit_range_min = PLANET_5_ORBIT_MIN;
+            orbit_range_max = PLANET_5_ORBIT_MAX;
+            radius_max = PLANET_5_MOON_RADIUS_MAX;
             planet_cutoff_limit = body->cutoff / 3;
             max_planets = (int)body->cutoff % (max_planets - 1); // 0 - <max - 1>
             break;
-        case PLANET_CLASS_6:
-            orbit_range_min = PLANET_CLASS_6_ORBIT_MIN;
-            orbit_range_max = PLANET_CLASS_6_ORBIT_MAX;
-            radius_max = PLANET_CLASS_6_MOON_RADIUS_MAX;
+        case PLANET_6:
+            orbit_range_min = PLANET_6_ORBIT_MIN;
+            orbit_range_max = PLANET_6_ORBIT_MAX;
+            radius_max = PLANET_6_MOON_RADIUS_MAX;
             planet_cutoff_limit = body->cutoff / 3;
             max_planets = (int)body->cutoff % max_planets; // 0 - <max>
             break;
         default:
-            orbit_range_min = PLANET_CLASS_1_ORBIT_MIN;
-            orbit_range_max = PLANET_CLASS_1_ORBIT_MAX;
-            radius_max = PLANET_CLASS_1_MOON_RADIUS_MAX;
+            orbit_range_min = PLANET_1_ORBIT_MIN;
+            orbit_range_max = PLANET_1_ORBIT_MAX;
+            radius_max = PLANET_1_MOON_RADIUS_MAX;
             planet_cutoff_limit = body->cutoff / 2;
             max_planets = (int)body->cutoff % (max_planets - 4); // 0 - <max - 4>
             break;
@@ -1577,7 +1616,7 @@ void stars_populate_body(CelestialBody *body, Point position, pcg32_random_t rng
                 memset(moon->name, 0, sizeof(moon->name));
                 strcpy(moon->name, body->name);                             // Copy planet name to moon name
                 sprintf(moon->name + strlen(moon->name), "-%s-%d", "M", i); // Append to moon name
-                moon->class = 0;
+                moon->class = 1;
                 moon->radius = radius;
                 moon->cutoff = orbit_width;
                 moon->orbit_radius = orbit_width;
@@ -1594,8 +1633,14 @@ void stars_populate_body(CelestialBody *body, Point position, pcg32_random_t rng
                 moon->vy = vy;
                 moon->dx = 0.0;
                 moon->dy = 0.0;
-                moon->projection = (SDL_Rect){0, 0, 0, 0};
-                moon->color = colors[COLOR_GAINSBORO_255];
+                moon->projection = (SDL_Point){0, 0};
+
+                const int moon_colors[] = {COLOR_MOON_1, COLOR_MOON_2, COLOR_MOON_3};
+                int num_colors = sizeof(moon_colors) / sizeof(moon_colors[0]);
+                int index = abs(pcg32_random_r(&rng)) % num_colors;
+                unsigned short color_code = moon_colors[index];
+                moon->color = colors[color_code];
+
                 moon->num_planets = 0;
 
                 for (int i = 0; i < MAX_MOONS; i++)
@@ -1621,29 +1666,29 @@ void stars_populate_body(CelestialBody *body, Point position, pcg32_random_t rng
  * Determine the size class of a star based on its distance.
  *
  * This function takes in a float value `distance` which represents the distance
- * of a star from the center of the galaxy and returns an integer representing
+ * of a star to the nearest star and returns an integer representing
  * the star's size class.
  *
- * @param distance A float value representing the distance of the star from the center.
+ * @param distance A float value representing the distance of the star to the nearest star.
  *
  * @return An integer representing the star's size class.
  */
 unsigned short stars_size_class(float distance)
 {
     if (distance < 2 * GALAXY_SECTION_SIZE)
-        return STAR_CLASS_1;
+        return STAR_1;
     else if (distance < 3 * GALAXY_SECTION_SIZE)
-        return STAR_CLASS_2;
+        return STAR_2;
     else if (distance < 4 * GALAXY_SECTION_SIZE)
-        return STAR_CLASS_3;
+        return STAR_3;
     else if (distance < 5 * GALAXY_SECTION_SIZE)
-        return STAR_CLASS_4;
+        return STAR_4;
     else if (distance < 6 * GALAXY_SECTION_SIZE)
-        return STAR_CLASS_5;
+        return STAR_5;
     else if (distance >= 6 * GALAXY_SECTION_SIZE)
-        return STAR_CLASS_6;
+        return STAR_6;
     else
-        return STAR_CLASS_1;
+        return STAR_1;
 }
 
 /**

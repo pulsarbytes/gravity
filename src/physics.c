@@ -126,12 +126,12 @@ void phys_apply_gravity_to_ship(GameState *game_state, bool thrust_on, Navigatio
         ship->vy += g_body * delta_y / distance;
 
         // Enforce star speed limit
-        game_state->speed_limit = BASE_SPEED_LIMIT * star_class;
+        game_state->speed_limit = BASE_SPEED_LIMIT + (star_class - 1) * (GALAXY_SPEED_LIMIT - BASE_SPEED_LIMIT) / 6;
 
         if (nav_state->velocity.magnitude >= game_state->speed_limit)
         {
-            ship->vx = ceil(game_state->speed_limit * ship->vx / nav_state->velocity.magnitude);
-            ship->vy = ceil(game_state->speed_limit * ship->vy / nav_state->velocity.magnitude);
+            ship->vx = game_state->speed_limit * ship->vx / nav_state->velocity.magnitude;
+            ship->vy = game_state->speed_limit * ship->vy / nav_state->velocity.magnitude;
 
             // Update velocity
             phys_update_velocity(&nav_state->velocity, ship);

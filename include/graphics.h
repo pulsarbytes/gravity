@@ -7,6 +7,7 @@ void gfx_draw_circle(SDL_Renderer *, const Camera *, int xc, int yc, int radius,
 void gfx_draw_circle_approximation(SDL_Renderer *, const Camera *, int x, int y, int r, SDL_Color);
 void gfx_draw_galaxy_cloud(Galaxy *, const Camera *, int gstars_count, bool high_definition, long double scale);
 void gfx_draw_fill_circle(SDL_Renderer *, int xc, int yc, int radius, SDL_Color);
+void gfx_draw_fill_diamond(SDL_Renderer *, int x, int y, int size, SDL_Color);
 void gfx_draw_menu_galaxy_cloud(const Camera *, Gstar *menustars);
 void gfx_draw_screen_frame(Camera *);
 void gfx_draw_section_lines(Camera *, int state, SDL_Color color, long double scale);

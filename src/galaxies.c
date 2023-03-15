@@ -108,26 +108,26 @@ static Galaxy *galaxies_create_galaxy(Point position)
 
     switch (class)
     {
-    case GALAXY_CLASS_1:
-        radius = abs(pcg32_random_r(&rng)) % GALAXY_CLASS_1_RADIUS_MAX + GALAXY_CLASS_1_RADIUS_MIN;
+    case GALAXY_1:
+        radius = abs(pcg32_random_r(&rng)) % GALAXY_1_RADIUS_MAX + GALAXY_1_RADIUS_MIN;
         break;
-    case GALAXY_CLASS_2:
-        radius = abs(pcg32_random_r(&rng)) % GALAXY_CLASS_2_RADIUS_MAX + GALAXY_CLASS_2_RADIUS_MIN;
+    case GALAXY_2:
+        radius = abs(pcg32_random_r(&rng)) % GALAXY_2_RADIUS_MAX + GALAXY_2_RADIUS_MIN;
         break;
-    case GALAXY_CLASS_3:
-        radius = abs(pcg32_random_r(&rng)) % GALAXY_CLASS_3_RADIUS_MAX + GALAXY_CLASS_3_RADIUS_MIN;
+    case GALAXY_3:
+        radius = abs(pcg32_random_r(&rng)) % GALAXY_3_RADIUS_MAX + GALAXY_3_RADIUS_MIN;
         break;
-    case GALAXY_CLASS_4:
-        radius = abs(pcg32_random_r(&rng)) % GALAXY_CLASS_4_RADIUS_MAX + GALAXY_CLASS_4_RADIUS_MIN;
+    case GALAXY_4:
+        radius = abs(pcg32_random_r(&rng)) % GALAXY_4_RADIUS_MAX + GALAXY_4_RADIUS_MIN;
         break;
-    case GALAXY_CLASS_5:
-        radius = abs(pcg32_random_r(&rng)) % GALAXY_CLASS_5_RADIUS_MAX + GALAXY_CLASS_5_RADIUS_MIN;
+    case GALAXY_5:
+        radius = abs(pcg32_random_r(&rng)) % GALAXY_5_RADIUS_MAX + GALAXY_5_RADIUS_MIN;
         break;
-    case GALAXY_CLASS_6:
-        radius = abs(pcg32_random_r(&rng)) % GALAXY_CLASS_6_RADIUS_MAX + GALAXY_CLASS_6_RADIUS_MIN;
+    case GALAXY_6:
+        radius = abs(pcg32_random_r(&rng)) % GALAXY_6_RADIUS_MAX + GALAXY_6_RADIUS_MIN;
         break;
     default:
-        radius = abs(pcg32_random_r(&rng)) % GALAXY_CLASS_1_RADIUS_MAX + GALAXY_CLASS_1_RADIUS_MIN;
+        radius = abs(pcg32_random_r(&rng)) % GALAXY_1_RADIUS_MAX + GALAXY_1_RADIUS_MIN;
         break;
     }
 
@@ -159,7 +159,7 @@ static Galaxy *galaxies_create_galaxy(Point position)
     galaxy->is_selected = false;
     galaxy->position.x = position.x;
     galaxy->position.y = position.y;
-    galaxy->projection = (SDL_Rect){0, 0, 0, 0};
+    galaxy->projection = (SDL_Point){0, 0};
     galaxy->color = colors[COLOR_WHITE_255];
 
     for (int i = 0; i < MAX_GSTARS; i++)
@@ -734,22 +734,22 @@ Galaxy *galaxies_nearest_circumference(const NavigationState *nav_state, Point p
  *
  * @param distance The distance between the galaxy and the player position.
  *
- * @return The size class of the galaxy (GALAXY_CLASS_1 to GALAXY_CLASS_6).
+ * @return The size class of the galaxy (GALAXY_1 to GALAXY_6).
  */
 static unsigned short galaxies_size_class(float distance)
 {
     if (distance < 3 * UNIVERSE_SECTION_SIZE)
-        return GALAXY_CLASS_1;
+        return GALAXY_1;
     else if (distance < 4 * UNIVERSE_SECTION_SIZE)
-        return GALAXY_CLASS_2;
+        return GALAXY_2;
     else if (distance < 5 * UNIVERSE_SECTION_SIZE)
-        return GALAXY_CLASS_3;
+        return GALAXY_3;
     else if (distance < 6 * UNIVERSE_SECTION_SIZE)
-        return GALAXY_CLASS_4;
+        return GALAXY_4;
     else if (distance < 7 * UNIVERSE_SECTION_SIZE)
-        return GALAXY_CLASS_5;
+        return GALAXY_5;
     else if (distance >= 7 * UNIVERSE_SECTION_SIZE)
-        return GALAXY_CLASS_6;
+        return GALAXY_6;
     else
-        return GALAXY_CLASS_1;
+        return GALAXY_1;
 }

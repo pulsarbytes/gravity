@@ -64,7 +64,7 @@ typedef struct CelestialBody
     float vy;
     float dx;
     float dy;
-    SDL_Rect projection;
+    SDL_Point projection; // Top-left point of the projection
     SDL_Color color;
     unsigned short num_planets;
     struct CelestialBody *planets[MAX_PLANETS_MOONS];
@@ -110,7 +110,7 @@ typedef struct
     float cutoff;
     bool is_selected; // Whether the galaxy is selected in Universe
     Point position;
-    SDL_Rect projection;
+    SDL_Point projection; // Top-left point of the projection
     SDL_Color color;
     Gstar gstars[MAX_GSTARS];
     Gstar gstars_hd[MAX_GSTARS];

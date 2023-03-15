@@ -4,6 +4,7 @@
 
 #include <math.h>
 #include <stdbool.h>
+#include <limits.h>
 
 #include <SDL2/SDL.h>
 #include "../lib/pcg-c-basic-0.9/pcg_basic.h"
@@ -43,41 +44,6 @@ void gfx_create_default_colors(void)
     colors[COLOR_CYAN_150].b = 255;
     colors[COLOR_CYAN_150].a = 150;
 
-    colors[COLOR_GAINSBORO_255].r = 220;
-    colors[COLOR_GAINSBORO_255].g = 220;
-    colors[COLOR_GAINSBORO_255].b = 220;
-    colors[COLOR_GAINSBORO_255].a = 255;
-
-    colors[COLOR_LAVENDER_255].r = 224;
-    colors[COLOR_LAVENDER_255].g = 176;
-    colors[COLOR_LAVENDER_255].b = 255;
-    colors[COLOR_LAVENDER_255].a = 255;
-
-    colors[COLOR_LIGHT_BLUE_255].r = 192;
-    colors[COLOR_LIGHT_BLUE_255].g = 192;
-    colors[COLOR_LIGHT_BLUE_255].b = 255;
-    colors[COLOR_LIGHT_BLUE_255].a = 255;
-
-    colors[COLOR_LIGHT_GREEN_255].r = 192;
-    colors[COLOR_LIGHT_GREEN_255].g = 255;
-    colors[COLOR_LIGHT_GREEN_255].b = 192;
-    colors[COLOR_LIGHT_GREEN_255].a = 255;
-
-    colors[COLOR_LIGHT_ORANGE_255].r = 255;
-    colors[COLOR_LIGHT_ORANGE_255].g = 192;
-    colors[COLOR_LIGHT_ORANGE_255].b = 128;
-    colors[COLOR_LIGHT_ORANGE_255].a = 255;
-
-    colors[COLOR_LIGHT_RED_255].r = 255;
-    colors[COLOR_LIGHT_RED_255].g = 165;
-    colors[COLOR_LIGHT_RED_255].b = 165;
-    colors[COLOR_LIGHT_RED_255].a = 255;
-
-    colors[COLOR_LIME_GREEN_200].r = 50;
-    colors[COLOR_LIME_GREEN_200].g = 205;
-    colors[COLOR_LIME_GREEN_200].b = 50;
-    colors[COLOR_LIME_GREEN_200].a = 200;
-
     colors[COLOR_MAGENTA_70].r = 255;
     colors[COLOR_MAGENTA_70].g = 0;
     colors[COLOR_MAGENTA_70].b = 255;
@@ -97,16 +63,6 @@ void gfx_create_default_colors(void)
     colors[COLOR_ORANGE_32].g = 165;
     colors[COLOR_ORANGE_32].b = 0;
     colors[COLOR_ORANGE_32].a = 32;
-
-    colors[COLOR_PALE_YELLOW_255].r = 255;
-    colors[COLOR_PALE_YELLOW_255].g = 255;
-    colors[COLOR_PALE_YELLOW_255].b = 192;
-    colors[COLOR_PALE_YELLOW_255].a = 255;
-
-    colors[COLOR_SKY_BLUE_255].r = 135;
-    colors[COLOR_SKY_BLUE_255].g = 206;
-    colors[COLOR_SKY_BLUE_255].b = 235;
-    colors[COLOR_SKY_BLUE_255].a = 255;
 
     colors[COLOR_WHITE_100].r = 255;
     colors[COLOR_WHITE_100].g = 255;
@@ -128,10 +84,90 @@ void gfx_create_default_colors(void)
     colors[COLOR_WHITE_255].b = 255;
     colors[COLOR_WHITE_255].a = 255;
 
-    colors[COLOR_YELLOW_255].r = 255;
-    colors[COLOR_YELLOW_255].g = 255;
-    colors[COLOR_YELLOW_255].b = 0;
-    colors[COLOR_YELLOW_255].a = 255;
+    // Stars
+    colors[COLOR_STAR_1].r = 255;
+    colors[COLOR_STAR_1].g = 165;
+    colors[COLOR_STAR_1].b = 165;
+    colors[COLOR_STAR_1].a = 255;
+
+    colors[COLOR_STAR_2].r = 255;
+    colors[COLOR_STAR_2].g = 192;
+    colors[COLOR_STAR_2].b = 128;
+    colors[COLOR_STAR_2].a = 255;
+
+    colors[COLOR_STAR_3].r = 255;
+    colors[COLOR_STAR_3].g = 255;
+    colors[COLOR_STAR_3].b = 192;
+    colors[COLOR_STAR_3].a = 255;
+
+    colors[COLOR_STAR_4].r = 192;
+    colors[COLOR_STAR_4].g = 255;
+    colors[COLOR_STAR_4].b = 192;
+    colors[COLOR_STAR_4].a = 255;
+
+    colors[COLOR_STAR_5].r = 192;
+    colors[COLOR_STAR_5].g = 192;
+    colors[COLOR_STAR_5].b = 255;
+    colors[COLOR_STAR_5].a = 255;
+
+    colors[COLOR_STAR_6].r = 224;
+    colors[COLOR_STAR_6].g = 176;
+    colors[COLOR_STAR_6].b = 255;
+    colors[COLOR_STAR_6].a = 255;
+
+    // Terrestrial planet
+    colors[COLOR_PLANET_1].r = 150;
+    colors[COLOR_PLANET_1].g = 150;
+    colors[COLOR_PLANET_1].b = 150;
+    colors[COLOR_PLANET_1].a = 255;
+
+    // Earth, Super-Earth
+    colors[COLOR_PLANET_2].r = 93;
+    colors[COLOR_PLANET_2].g = 148;
+    colors[COLOR_PLANET_2].b = 217;
+    colors[COLOR_PLANET_2].a = 255;
+
+    // Sub-Neptune
+    colors[COLOR_PLANET_3].r = 221;
+    colors[COLOR_PLANET_3].g = 188;
+    colors[COLOR_PLANET_3].b = 157;
+    colors[COLOR_PLANET_3].a = 255;
+
+    // Neptune-like
+    colors[COLOR_PLANET_4].r = 127;
+    colors[COLOR_PLANET_4].g = 193;
+    colors[COLOR_PLANET_4].b = 189;
+    colors[COLOR_PLANET_4].a = 255;
+
+    // Ice giant
+    colors[COLOR_PLANET_5].r = 217;
+    colors[COLOR_PLANET_5].g = 195;
+    colors[COLOR_PLANET_5].b = 236;
+    colors[COLOR_PLANET_5].a = 255;
+
+    // Gas giant
+    colors[COLOR_PLANET_6].r = 237;
+    colors[COLOR_PLANET_6].g = 179;
+    colors[COLOR_PLANET_6].b = 136;
+    colors[COLOR_PLANET_6].a = 255;
+
+    // Rocky moon
+    colors[COLOR_MOON_1].r = 150;
+    colors[COLOR_MOON_1].g = 150;
+    colors[COLOR_MOON_1].b = 150;
+    colors[COLOR_MOON_1].a = 255;
+
+    // Icy moon
+    colors[COLOR_MOON_2].r = 179;
+    colors[COLOR_MOON_2].g = 229;
+    colors[COLOR_MOON_2].b = 252;
+    colors[COLOR_MOON_2].a = 255;
+
+    // Volcanic moon
+    colors[COLOR_MOON_3].r = 255;
+    colors[COLOR_MOON_3].g = 176;
+    colors[COLOR_MOON_3].b = 140;
+    colors[COLOR_MOON_3].a = 255;
 }
 
 /**
@@ -246,6 +282,77 @@ void gfx_draw_circle_approximation(SDL_Renderer *renderer, const Camera *camera,
             SDL_RenderDrawLine(renderer, x1, y1, x3, y3);
             SDL_RenderDrawLine(renderer, x3, y3, x4, y4);
             SDL_RenderDrawLine(renderer, x4, y4, x2, y2);
+        }
+    }
+}
+
+/**
+ * Draws a diamond shape on the given SDL renderer with the specified parameters.
+ *
+ * @param renderer The renderer to draw the diamond on.
+ * @param x The x-coordinate of the center point of the diamond.
+ * @param y The y-coordinate of the center point of the diamond.
+ * @param size The size of the diamond (the distance from the center point to each corner).
+ * @param color The color of the diamond.
+ *
+ * @return void
+ */
+void gfx_draw_fill_diamond(SDL_Renderer *renderer, int x, int y, int size, SDL_Color color)
+{
+    // Calculate the corner points of the diamond
+    SDL_Point points[5];
+    points[0].x = x;
+    points[0].y = y - size;
+    points[1].x = x + size;
+    points[1].y = y;
+    points[2].x = x;
+    points[2].y = y + size;
+    points[3].x = x - size;
+    points[3].y = y;
+    points[4].x = x;
+    points[4].y = y - size;
+
+    // Draw the outline of the diamond
+    SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a);
+    SDL_RenderDrawLines(renderer, points, 5);
+
+    // Fill the diamond with color using scanlines
+    int min_y = y - size;
+    int max_y = y + size;
+
+    for (int y = min_y; y <= max_y; y++)
+    {
+        int x_left = x;
+        int x_right = x;
+
+        // Find the intersection points of the scanline with the edges of the diamond
+        for (int i = 0; i < 4; i++)
+        {
+            SDL_Point p1 = points[i];
+            SDL_Point p2 = points[i + 1];
+
+            if ((p1.y <= y && p2.y > y) || (p2.y <= y && p1.y > y))
+            {
+                double slope = (double)(p2.x - p1.x) / (p2.y - p1.y);
+                int x_int = (int)(p1.x + slope * (y - p1.y));
+
+                if (x_int < x_left)
+                {
+                    x_left = x_int;
+                }
+
+                if (x_int > x_right)
+                {
+                    x_right = x_int;
+                }
+            }
+        }
+
+        // Draw the scanline segment
+        if (x_left <= x_right)
+        {
+            SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a);
+            SDL_RenderDrawLine(renderer, x_left, y, x_right, y);
         }
     }
 }
@@ -628,7 +735,7 @@ void gfx_draw_speed_lines(float velocity, const Camera *camera, Speed speed)
     const int line_distance = 120;
     const int base_speed = BASE_SPEED_LIMIT;
     const float max_speed = 2.5 * base_speed;
-    const int speed_limit = 6 * BASE_SPEED_LIMIT;
+    const int speed_limit = 5 * BASE_SPEED_LIMIT;
     const float opacity_exponent = 1.5;
 
     // Calculate opacity based on velocity
@@ -1048,26 +1155,26 @@ void gfx_generate_gstars(Galaxy *galaxy, bool high_definition)
 
                 switch (class)
                 {
-                case STAR_CLASS_1:
-                    color_code = COLOR_LIGHT_RED_255;
+                case STAR_1:
+                    color_code = COLOR_STAR_1;
                     break;
-                case STAR_CLASS_2:
-                    color_code = COLOR_LIGHT_ORANGE_255;
+                case STAR_2:
+                    color_code = COLOR_STAR_2;
                     break;
-                case STAR_CLASS_3:
-                    color_code = COLOR_PALE_YELLOW_255;
+                case STAR_3:
+                    color_code = COLOR_STAR_3;
                     break;
-                case STAR_CLASS_4:
-                    color_code = COLOR_LIGHT_GREEN_255;
+                case STAR_4:
+                    color_code = COLOR_STAR_4;
                     break;
-                case STAR_CLASS_5:
-                    color_code = COLOR_LIGHT_BLUE_255;
+                case STAR_5:
+                    color_code = COLOR_STAR_5;
                     break;
-                case STAR_CLASS_6:
-                    color_code = COLOR_LAVENDER_255;
+                case STAR_6:
+                    color_code = COLOR_STAR_6;
                     break;
                 default:
-                    color_code = COLOR_LIGHT_RED_255;
+                    color_code = COLOR_STAR_1;
                     break;
                 }
 
@@ -1199,26 +1306,26 @@ void gfx_generate_menu_gstars(Galaxy *galaxy, Gstar *menustars)
 
                 switch (class)
                 {
-                case STAR_CLASS_1:
-                    color_code = COLOR_LIGHT_RED_255;
+                case STAR_1:
+                    color_code = COLOR_STAR_1;
                     break;
-                case STAR_CLASS_2:
-                    color_code = COLOR_LIGHT_ORANGE_255;
+                case STAR_2:
+                    color_code = COLOR_STAR_2;
                     break;
-                case STAR_CLASS_3:
-                    color_code = COLOR_PALE_YELLOW_255;
+                case STAR_3:
+                    color_code = COLOR_STAR_3;
                     break;
-                case STAR_CLASS_4:
-                    color_code = COLOR_LIGHT_GREEN_255;
+                case STAR_4:
+                    color_code = COLOR_STAR_4;
                     break;
-                case STAR_CLASS_5:
-                    color_code = COLOR_LIGHT_BLUE_255;
+                case STAR_5:
+                    color_code = COLOR_STAR_5;
                     break;
-                case STAR_CLASS_6:
-                    color_code = COLOR_LAVENDER_255;
+                case STAR_6:
+                    color_code = COLOR_STAR_6;
                     break;
                 default:
-                    color_code = COLOR_LIGHT_RED_255;
+                    color_code = COLOR_STAR_1;
                     break;
                 }
 
@@ -1276,31 +1383,34 @@ void gfx_project_body_on_edge(const GameState *game_state, const NavigationState
 {
     gfx_update_projection_position(nav_state, body, ENTITY_CELESTIALBODY, camera, game_state->state, game_state->game_scale);
 
-    body->projection.w = 2 * PROJECTION_RADIUS;
-    body->projection.h = 2 * PROJECTION_RADIUS;
-
     double x = camera->x + (camera->w / 2) / game_state->game_scale;
     double y = camera->y + (camera->h / 2) / game_state->game_scale;
     double distance = maths_distance_between_points(x, y, body->position.x, body->position.y);
-    int opacity = colors[COLOR_YELLOW_255].a;
-    SDL_Color color;
 
     if (body->level == LEVEL_STAR)
     {
+        SDL_Color color = body->color;
+        int opacity;
+
         if (game_state->state == NAVIGATE)
             opacity = gfx_update_projection_opacity(distance, GALAXY_REGION_SIZE, GALAXY_SECTION_SIZE);
         else if (game_state->state == MAP)
             opacity = gfx_update_projection_opacity(distance, game_state->galaxy_region_size, GALAXY_SECTION_SIZE);
 
-        color.r = colors[COLOR_YELLOW_255].r;
-        color.g = colors[COLOR_YELLOW_255].g;
-        color.b = colors[COLOR_YELLOW_255].b;
+        color.a = opacity;
+
+        int center_x = body->projection.x + PROJECTION_RADIUS;
+        int center_y = body->projection.y + PROJECTION_RADIUS;
+
+        gfx_draw_fill_diamond(renderer, center_x, center_y, PROJECTION_RADIUS - 1, color);
     }
     else
-        color = body->color;
+    {
+        int center_x = body->projection.x + PROJECTION_RADIUS;
+        int center_y = body->projection.y + PROJECTION_RADIUS;
 
-    SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, opacity);
-    SDL_RenderFillRect(renderer, &body->projection);
+        gfx_draw_fill_circle(renderer, center_x, center_y, PROJECTION_RADIUS - 2, body->color);
+    }
 }
 
 /**
@@ -1323,9 +1433,6 @@ void gfx_project_galaxy_on_edge(int state, const NavigationState *nav_state, Gal
 
     gfx_update_projection_position(nav_state, galaxy, ENTITY_GALAXY, camera, state, scale);
 
-    galaxy->projection.w = 2 * PROJECTION_RADIUS;
-    galaxy->projection.h = 2 * PROJECTION_RADIUS;
-
     double x = camera->x + (camera->w / 2) / scale;
     double y = camera->y + (camera->h / 2) / scale;
     double delta_x = fabs(x - galaxy->position.x * scaling_factor) / scaling_factor;
@@ -1333,8 +1440,13 @@ void gfx_project_galaxy_on_edge(int state, const NavigationState *nav_state, Gal
     double distance = sqrt(pow(delta_x, 2) + pow(delta_y, 2));
     int opacity = gfx_update_projection_opacity(distance, UNIVERSE_REGION_SIZE, UNIVERSE_SECTION_SIZE);
 
-    SDL_SetRenderDrawColor(renderer, galaxy->color.r, galaxy->color.g, galaxy->color.b, opacity);
-    SDL_RenderFillRect(renderer, &galaxy->projection);
+    SDL_Color color = galaxy->color;
+    color.a = opacity;
+
+    int center_x = galaxy->projection.x + PROJECTION_RADIUS;
+    int center_y = galaxy->projection.y + PROJECTION_RADIUS;
+
+    gfx_draw_fill_diamond(renderer, center_x, center_y, PROJECTION_RADIUS - 1, color);
 }
 
 /**
