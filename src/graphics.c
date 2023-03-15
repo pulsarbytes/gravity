@@ -1939,32 +1939,3 @@ static void gfx_update_projection_position(const NavigationState *nav_state, voi
         }
     }
 }
-
-/**
- * Zooms in or out a CelestialBody and its children in a star system. The function updates the position
- * and size of a CelestialBody rectangle, given a zoom scale. It also recursively zooms in or out its
- * children CelestialBodies.
- *
- * @param body A pointer to the CelestialBody to zoom.
- * @param scale The zoom scale to apply to the body and its children.
- *
- * @return: void
- */
-void gfx_zoom_star_system(CelestialBody *body, long double scale)
-{
-    body->rect.x = (body->position.x - body->radius) * scale;
-    body->rect.y = (body->position.y - body->radius) * scale;
-    body->rect.w = 2 * body->radius * scale;
-    body->rect.h = 2 * body->radius * scale;
-
-    // Zoom children
-    if (body->level <= LEVEL_PLANET && body->planets != NULL && body->planets[0] != NULL)
-    {
-        int max_planets = (body->level == LEVEL_STAR) ? MAX_PLANETS : MAX_MOONS;
-
-        for (int i = 0; i < max_planets && body->planets[i] != NULL; i++)
-        {
-            gfx_zoom_star_system(body->planets[i], scale);
-        }
-    }
-}

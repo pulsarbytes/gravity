@@ -425,22 +425,6 @@ void game_run_map_state(GameState *game_state, InputState *input_state, GameEven
             }
         }
 
-        // Zoom in
-        for (int s = 0; s < MAX_STARS; s++)
-        {
-            if (nav_state->stars[s] != NULL)
-            {
-                // Each index can have many entries, loop through all of them
-                StarEntry *entry = nav_state->stars[s];
-
-                while (entry != NULL)
-                {
-                    gfx_zoom_star_system(entry->star, game_state->game_scale);
-                    entry = entry->next;
-                }
-            }
-        }
-
         gfx_update_camera(camera, nav_state->map_offset, game_state->game_scale);
 
         if (game_events->is_centering_map)
@@ -652,22 +636,6 @@ void game_run_navigate_state(GameState *game_state, InputState *input_state, Gam
 
         if (input_state->camera_on)
             gfx_update_camera(camera, ship->position, game_state->game_scale);
-
-        // Zoom in
-        for (int s = 0; s < MAX_STARS; s++)
-        {
-            if (nav_state->stars[s] != NULL)
-            {
-                // Each index can have many entries, loop through all of them
-                StarEntry *entry = nav_state->stars[s];
-
-                while (entry != NULL)
-                {
-                    gfx_zoom_star_system(entry->star, game_state->game_scale);
-                    entry = entry->next;
-                }
-            }
-        }
     }
 
     // Select current star
@@ -681,22 +649,6 @@ void game_run_navigate_state(GameState *game_state, InputState *input_state, Gam
         {
             // Reset scale
             game_state->game_scale += ZOOM_STEP;
-
-            // Zoom in
-            for (int s = 0; s < MAX_STARS; s++)
-            {
-                if (nav_state->stars[s] != NULL)
-                {
-                    // Each index can have many entries, loop through all of them
-                    StarEntry *entry = nav_state->stars[s];
-
-                    while (entry != NULL)
-                    {
-                        gfx_zoom_star_system(entry->star, game_state->game_scale);
-                        entry = entry->next;
-                    }
-                }
-            }
         }
 
         input_state->zoom_in = false;
@@ -709,22 +661,6 @@ void game_run_navigate_state(GameState *game_state, InputState *input_state, Gam
         {
             // Reset scale
             game_state->game_scale -= ZOOM_STEP;
-
-            // Zoom out
-            for (int s = 0; s < MAX_STARS; s++)
-            {
-                if (nav_state->stars[s] != NULL)
-                {
-                    // Each index can have many entries, loop through all of them
-                    StarEntry *entry = nav_state->stars[s];
-
-                    while (entry != NULL)
-                    {
-                        gfx_zoom_star_system(entry->star, game_state->game_scale);
-                        entry = entry->next;
-                    }
-                }
-            }
         }
 
         input_state->zoom_out = false;
@@ -1429,22 +1365,6 @@ static void game_zoom_map(GameState *game_state, InputState *input_state, GameEv
                     stars_delete_outside_region(nav_state->stars, nav_state->buffer_star, bx, by, game_state->galaxy_region_size);
                 }
             }
-
-            // Zoom in
-            for (int s = 0; s < MAX_STARS; s++)
-            {
-                if (nav_state->stars[s] != NULL)
-                {
-                    // Each index can have many entries, loop through all of them
-                    StarEntry *entry = nav_state->stars[s];
-
-                    while (entry != NULL)
-                    {
-                        gfx_zoom_star_system(entry->star, game_state->game_scale);
-                        entry = entry->next;
-                    }
-                }
-            }
         }
         else if (game_state->game_scale_override)
             game_state->game_scale = game_state->game_scale_override;
@@ -1487,22 +1407,6 @@ static void game_zoom_map(GameState *game_state, InputState *input_state, GameEv
                 // Update universe_offset
                 nav_state->universe_offset.x = nav_state->current_galaxy->position.x + nav_state->map_offset.x / GALAXY_SCALE;
                 nav_state->universe_offset.y = nav_state->current_galaxy->position.y + nav_state->map_offset.y / GALAXY_SCALE;
-            }
-
-            // Zoom out
-            for (int s = 0; s < MAX_STARS; s++)
-            {
-                if (nav_state->stars[s] != NULL)
-                {
-                    // Each index can have many entries, loop through all of them
-                    StarEntry *entry = nav_state->stars[s];
-
-                    while (entry != NULL)
-                    {
-                        gfx_zoom_star_system(entry->star, game_state->game_scale);
-                        entry = entry->next;
-                    }
-                }
             }
         }
         else if (game_state->game_scale_override)

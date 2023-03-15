@@ -8,7 +8,6 @@
 
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_ttf.h>
-#include <SDL2/SDL_image.h>
 #include "../lib/pcg-c-basic-0.9/pcg_basic.h"
 
 #include "../include/constants.h"
@@ -74,9 +73,6 @@ static void stars_cleanup_planets(CelestialBody *body)
     {
         stars_cleanup_planets(body->planets[i]);
     }
-
-    SDL_DestroyTexture(body->texture);
-    body->texture = NULL;
 }
 
 /**
@@ -125,17 +121,11 @@ static Star *stars_create_star(const NavigationState *nav_state, Point position,
     // Get star class
     unsigned short class = stars_size_class(distance);
 
-    // Use a local rng
-    pcg32_random_t rng;
-
-    // Create rng seed by combining x,y values
-    uint64_t seed = maths_hash_position_to_uint64(position);
-
-    // Seed with a fixed constant
-    pcg32_srandom_r(&rng, seed, nav_state->initseq);
-
     float radius;
     unsigned short color_code;
+
+    // Use a local rng
+    pcg32_random_t rng;
 
     switch (class)
     {
@@ -169,6 +159,12 @@ static Star *stars_create_star(const NavigationState *nav_state, Point position,
         break;
     }
 
+    // Create rng seed by combining x,y values
+    uint64_t seed = maths_hash_position_to_uint64(position);
+
+    // Seed with a fixed constant
+    pcg32_srandom_r(&rng, seed, nav_state->initseq);
+
     // Allocate memory for Star
     Star *star = (Star *)malloc(sizeof(Star));
 
@@ -184,7 +180,6 @@ static Star *stars_create_star(const NavigationState *nav_state, Point position,
     star->initialized = 0;
     memset(star->name, 0, sizeof(star->name));
     sprintf(star->name, "%s-%lu", "S", position_hash);
-    star->image = "../assets/images/sol.png";
     star->class = class;
     star->radius = radius;
     star->cutoff = GALAXY_SECTION_SIZE * class / 2;
@@ -195,24 +190,9 @@ static Star *stars_create_star(const NavigationState *nav_state, Point position,
     star->vy = 0.0;
     star->dx = 0.0;
     star->dy = 0.0;
-
-    if (preview)
-    {
-        star->texture = NULL;
-    }
-    else
-    {
-        SDL_Surface *surface = IMG_Load(star->image);
-        star->texture = SDL_CreateTextureFromSurface(renderer, surface);
-        SDL_FreeSurface(surface);
-    }
-
-    star->rect.x = (star->position.x - star->radius) * scale;
-    star->rect.y = (star->position.y - star->radius) * scale;
-    star->rect.w = 2 * star->radius * scale;
-    star->rect.h = 2 * star->radius * scale;
     star->projection = (SDL_Rect){0, 0, 0, 0};
     star->color = colors[color_code];
+
     star->num_planets = 0;
 
     for (int i = 0; i < MAX_PLANETS; i++)
@@ -251,11 +231,6 @@ static void stars_delete_entry(StarEntry *stars[], Point position)
             if (entry->star != NULL && entry->star->planets[0] != NULL)
                 stars_cleanup_planets(entry->star);
 
-            // Clean up star
-            if (entry->star->texture != NULL)
-                SDL_DestroyTexture(entry->star->texture);
-
-            entry->star->texture = NULL;
             free(entry->star);
             entry->star = NULL;
 
@@ -721,10 +696,10 @@ void stars_draw_star_system(GameState *game_state, const InputState *input_state
     // Draw body
     if (gfx_is_object_in_camera(camera, body->position.x, body->position.y, body->radius, game_state->game_scale))
     {
-        body->rect.x = (int)(body->position.x - body->radius - camera->x) * game_state->game_scale;
-        body->rect.y = (int)(body->position.y - body->radius - camera->y) * game_state->game_scale;
+        int center_x = (body->position.x - camera->x) * game_state->game_scale;
+        int center_y = (body->position.y - camera->y) * game_state->game_scale;
 
-        SDL_RenderCopy(renderer, body->texture, NULL, &body->rect);
+        gfx_draw_fill_circle(renderer, center_x, center_y, body->radius * game_state->game_scale, body->color);
     }
     // Draw body projection
     else if (PROJECT_BODIES_ON)
@@ -1224,7 +1199,6 @@ void stars_initialize_star(Star *star)
 {
     star->initialized = 0;
     memset(star->name, 0, sizeof(star->name));
-    star->image = NULL;
     star->class = 0;
     star->radius = 0;
     star->cutoff = 0;
@@ -1234,8 +1208,6 @@ void stars_initialize_star(Star *star)
     star->vy = 0;
     star->dx = 0;
     star->dy = 0;
-    star->texture = NULL;
-    star->rect = (SDL_Rect){0, 0, 0, 0};
     star->projection = (SDL_Rect){0, 0, 0, 0};
     star->color = (SDL_Color){0, 0, 0, 0};
     star->num_planets = 0;
@@ -1462,7 +1434,6 @@ void stars_populate_body(CelestialBody *body, Point position, pcg32_random_t rng
                 memset(planet->name, 0, sizeof(planet->name));
                 strcpy(planet->name, body->name);                               // Copy star name to planet name
                 sprintf(planet->name + strlen(planet->name), "-%s-%d", "P", i); // Append to planet name
-                planet->image = "../assets/images/earth.png";
                 planet->class = stars_planet_size_class(orbit_width);
                 planet->radius = radius;
                 planet->cutoff = orbit_width / 2;
@@ -1480,13 +1451,6 @@ void stars_populate_body(CelestialBody *body, Point position, pcg32_random_t rng
                 planet->vy = vy;
                 planet->dx = 0.0;
                 planet->dy = 0.0;
-                SDL_Surface *surface = IMG_Load(planet->image);
-                planet->texture = SDL_CreateTextureFromSurface(renderer, surface);
-                SDL_FreeSurface(surface);
-                planet->rect.x = (planet->position.x - planet->radius) * scale;
-                planet->rect.y = (planet->position.y - planet->radius) * scale;
-                planet->rect.w = 2 * planet->radius * scale;
-                planet->rect.h = 2 * planet->radius * scale;
                 planet->projection = (SDL_Rect){0, 0, 0, 0};
                 planet->color = colors[COLOR_SKY_BLUE_255];
                 planet->num_planets = 0;
@@ -1613,7 +1577,6 @@ void stars_populate_body(CelestialBody *body, Point position, pcg32_random_t rng
                 memset(moon->name, 0, sizeof(moon->name));
                 strcpy(moon->name, body->name);                             // Copy planet name to moon name
                 sprintf(moon->name + strlen(moon->name), "-%s-%d", "M", i); // Append to moon name
-                moon->image = "../assets/images/moon.png";
                 moon->class = 0;
                 moon->radius = radius;
                 moon->cutoff = orbit_width;
@@ -1631,13 +1594,6 @@ void stars_populate_body(CelestialBody *body, Point position, pcg32_random_t rng
                 moon->vy = vy;
                 moon->dx = 0.0;
                 moon->dy = 0.0;
-                SDL_Surface *surface = IMG_Load(moon->image);
-                moon->texture = SDL_CreateTextureFromSurface(renderer, surface);
-                SDL_FreeSurface(surface);
-                moon->rect.x = (moon->position.x - moon->radius) * scale;
-                moon->rect.y = (moon->position.y - moon->radius) * scale;
-                moon->rect.w = 2 * moon->radius * scale;
-                moon->rect.h = 2 * moon->radius * scale;
                 moon->projection = (SDL_Rect){0, 0, 0, 0};
                 moon->color = colors[COLOR_GAINSBORO_255];
                 moon->num_planets = 0;

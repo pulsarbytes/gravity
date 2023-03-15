@@ -36,7 +36,6 @@ void gfx_toggle_star_hover(InputState *, const NavigationState *, const Camera *
 void gfx_update_bstars_position(int state, bool camera_on, const NavigationState *, Bstar *bstars, const Camera *, Speed speed, double distance);
 void gfx_update_camera(Camera *, Point, long double scale);
 void gfx_update_gstars_position(Galaxy *, Point, const Camera *, double distance, double limit);
-void gfx_zoom_star_system(CelestialBody *, long double scale);
 double maths_distance_between_points(double x1, double y1, double x2, double y2);
 double maths_get_nearest_section_line(double offset, int size);
 uint64_t maths_hash_position_to_uint64(Point);

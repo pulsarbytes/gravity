@@ -55,7 +55,6 @@ typedef struct CelestialBody
 {
     int initialized;
     char name[MAX_OBJECT_NAME];
-    char *image;
     unsigned short class;
     float radius;
     float cutoff;
@@ -65,8 +64,6 @@ typedef struct CelestialBody
     float vy;
     float dx;
     float dy;
-    SDL_Texture *texture;
-    SDL_Rect rect;
     SDL_Rect projection;
     SDL_Color color;
     unsigned short num_planets;

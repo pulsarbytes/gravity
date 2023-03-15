@@ -324,14 +324,14 @@ void galaxies_draw_galaxy(const InputState *input_state, NavigationState *nav_st
 void galaxies_draw_info_box(const Galaxy *galaxy, const Camera *camera)
 {
     // Draw background box
-    SDL_SetRenderDrawColor(renderer, 12, 12, 12, 230);
+    SDL_SetRenderDrawColor(renderer, 12, 12, 12, 200);
     int width = 370;
     int height = 310;
     int padding = 20;
 
     SDL_Rect info_box_rect;
     info_box_rect.x = camera->w - (width + padding);
-    info_box_rect.y = padding;
+    info_box_rect.y = camera->h - (height + padding);
     info_box_rect.w = width;
     info_box_rect.h = height;
 
@@ -398,7 +398,7 @@ void galaxies_draw_info_box(const Galaxy *galaxy, const Camera *camera)
     entries[GALAXY_INFO_NAME].rect.w = width;
     entries[GALAXY_INFO_NAME].rect.h = name_height;
     entries[GALAXY_INFO_NAME].rect.x = camera->w - (width + padding);
-    entries[GALAXY_INFO_NAME].rect.y = padding;
+    entries[GALAXY_INFO_NAME].rect.y = camera->h - (height + padding);
 
     SDL_RenderFillRect(renderer, &entries[GALAXY_INFO_NAME].rect);
 
@@ -411,7 +411,7 @@ void galaxies_draw_info_box(const Galaxy *galaxy, const Camera *camera)
     entries[GALAXY_INFO_TYPE].rect.w = width;
     entries[GALAXY_INFO_TYPE].rect.h = entry_height;
     entries[GALAXY_INFO_TYPE].rect.x = camera->w - (width + padding);
-    entries[GALAXY_INFO_TYPE].rect.y = padding + name_height;
+    entries[GALAXY_INFO_TYPE].rect.y = camera->h - (height + padding) + name_height;
 
     SDL_RenderFillRect(renderer, &entries[GALAXY_INFO_TYPE].rect);
 
@@ -426,7 +426,7 @@ void galaxies_draw_info_box(const Galaxy *galaxy, const Camera *camera)
         entries[i].rect.w = width;
         entries[i].rect.h = entry_height;
         entries[i].rect.x = camera->w - (width + padding);
-        entries[i].rect.y = padding + name_height + (i - 1) * entry_height;
+        entries[i].rect.y = camera->h - (height + padding) + name_height + (i - 1) * entry_height;
 
         SDL_RenderFillRect(renderer, &entries[i].rect);
 
