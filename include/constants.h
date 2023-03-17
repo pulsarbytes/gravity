@@ -51,6 +51,8 @@
 #define UNIVERSE_SPEED_MAX 15     // Zoom in. Default: 15
 #define UNIVERSE_SPEED_MIN 4      // Zoom out. Default: 4
 #define MOUSE_SCROLL_DISTANCE 20  // Distance from the edge of the screen where scrolling starts. Default: 20
+#define MAX_CONTROLS_GROUPS 4
+#define MAX_CONTROLS_ENTRIES 12
 
 // Menu
 #define MENU_GALAXY_CLOUD_DENSITY 300  // Default: 300 (max 500)

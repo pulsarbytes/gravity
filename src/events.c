@@ -38,7 +38,6 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
         case SDL_MOUSEBUTTONDOWN:
             // Reset is_mouse_dragging
             input_state->is_mouse_dragging = false;
-            SDL_SetCursor(input_state->default_cursor);
 
             // Record the mouse click position
             if (game_state->state == UNIVERSE || game_state->state == MAP)
@@ -244,7 +243,7 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
                         else
                             input_state->click_count = 0;
                     }
-                    else if (game_state->state == MENU)
+                    else if (game_state->state == MENU || game_state->state == CONTROLS)
                     {
                         // Select menu button
                         input_state->mouse_position.x = event.button.x;
@@ -361,11 +360,12 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
                 }
             }
 
-            SDL_SetCursor(input_state->default_cursor);
+            SDL_SetCursor(input_state->previous_cursor);
+            input_state->previous_cursor = NULL;
             input_state->is_mouse_dragging = false;
             break;
         case SDL_MOUSEMOTION:
-            if (game_state->state == MENU)
+            if (game_state->state == MENU || game_state->state == CONTROLS)
             {
                 input_state->mouse_position.x = event.motion.x;
                 input_state->mouse_position.y = event.motion.y;
@@ -379,6 +379,8 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
                 if (event.motion.state & SDL_BUTTON_LMASK)
                 {
                     input_state->is_mouse_dragging = true;
+
+                    input_state->previous_cursor = SDL_GetCursor();
                     SDL_SetCursor(input_state->drag_cursor);
                     input_state->click_count = 0;
                     input_state->clicked_inside_galaxy = false;
@@ -413,14 +415,6 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
             }
             break;
         case SDL_MOUSEWHEEL:
-            // Wait until previous zoom has ended
-            if (input_state->zoom_in || input_state->zoom_out)
-                return;
-
-            // Don't continue below min zoom
-            if (event.wheel.y < 0 && game_state->game_scale <= (ZOOM_UNIVERSE_MIN / GALAXY_SCALE) + epsilon)
-                return;
-
             // Get the current mouse position
             int mouse_x, mouse_y;
             SDL_GetMouseState(&mouse_x, &mouse_y);
@@ -428,72 +422,106 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
             double zoom_universe_step = ZOOM_UNIVERSE_STEP;
             double zoom_step = ZOOM_STEP;
 
+            if (game_state->state == UNIVERSE || game_state->state == MAP)
+            {
+                // Wait until previous zoom has ended
+                if (input_state->zoom_in || input_state->zoom_out)
+                    return;
+
+                // Don't continue below min zoom
+                if (event.wheel.y < 0 && game_state->game_scale <= (ZOOM_UNIVERSE_MIN / GALAXY_SCALE) + epsilon)
+                    return;
+            }
+
             // Handle mouse wheel
             if (event.wheel.y > 0)
             {
-                // Zoom in
-                input_state->zoom_in = true;
-                input_state->zoom_out = false;
+                if (game_state->state == UNIVERSE || game_state->state == MAP)
+                {
+                    // Zoom in
+                    input_state->zoom_in = true;
+                    input_state->zoom_out = false;
 
-                if (game_state->state == UNIVERSE)
-                {
-                    if (game_state->game_scale >= 0.001 - epsilon)
-                        zoom_universe_step = ZOOM_UNIVERSE_STEP;
-                    else if (game_state->game_scale >= 0.0001 - epsilon)
-                        zoom_universe_step = ZOOM_UNIVERSE_STEP / 10;
-                    else if (game_state->game_scale >= 0.00001 - epsilon)
-                        zoom_universe_step = ZOOM_UNIVERSE_STEP / 100;
-                    else if (game_state->game_scale > 0)
-                        zoom_universe_step = ZOOM_UNIVERSE_STEP / 1000;
+                    if (game_state->state == UNIVERSE)
+                    {
+                        if (game_state->game_scale >= 0.001 - epsilon)
+                            zoom_universe_step = ZOOM_UNIVERSE_STEP;
+                        else if (game_state->game_scale >= 0.0001 - epsilon)
+                            zoom_universe_step = ZOOM_UNIVERSE_STEP / 10;
+                        else if (game_state->game_scale >= 0.00001 - epsilon)
+                            zoom_universe_step = ZOOM_UNIVERSE_STEP / 100;
+                        else if (game_state->game_scale > 0)
+                            zoom_universe_step = ZOOM_UNIVERSE_STEP / 1000;
+                    }
+                    else if (game_state->state == MAP)
+                    {
+                        if (game_state->game_scale <= ZOOM_MAP_REGION_SWITCH - epsilon)
+                            zoom_step = zoom_step / 10;
+                    }
                 }
-                else if (game_state->state == MAP)
+                else if (game_state->state == CONTROLS)
                 {
-                    if (game_state->game_scale <= ZOOM_MAP_REGION_SWITCH - epsilon)
-                        zoom_step = zoom_step / 10;
+                    if (game_state->table_top_row > 0)
+                    {
+                        game_state->table_top_row--;
+                    }
                 }
             }
             else if (event.wheel.y < 0)
             {
-                // Zoom out
-                input_state->zoom_in = false;
-                input_state->zoom_out = true;
+                if (game_state->state == UNIVERSE || game_state->state == MAP)
+                {
+                    // Zoom out
+                    input_state->zoom_in = false;
+                    input_state->zoom_out = true;
 
+                    if (game_state->state == UNIVERSE)
+                    {
+                        if (game_state->game_scale <= 0.00001 + epsilon)
+                            zoom_universe_step = -(ZOOM_UNIVERSE_STEP / 1000);
+                        else if (game_state->game_scale <= 0.0001 + epsilon)
+                            zoom_universe_step = -(ZOOM_UNIVERSE_STEP / 100);
+                        else if (game_state->game_scale <= 0.001 + epsilon)
+                            zoom_universe_step = -(ZOOM_UNIVERSE_STEP / 10);
+                        else
+                            zoom_universe_step = -ZOOM_UNIVERSE_STEP;
+                    }
+                    else if (game_state->state == MAP)
+                    {
+                        if (game_state->game_scale <= ZOOM_MAP_REGION_SWITCH + epsilon)
+                            zoom_step = -(zoom_step / 10);
+                        else
+                            zoom_step = -ZOOM_STEP;
+                    }
+                }
+                else if (game_state->state == CONTROLS)
+                {
+                    if (game_state->table_top_row + game_state->table_num_rows_displayed < game_state->table_num_rows)
+                    {
+                        game_state->table_top_row++;
+                    }
+                }
+            }
+
+            if (game_state->state == UNIVERSE || game_state->state == MAP)
+            {
+                // Set position so that zoom is centered around mouse position
                 if (game_state->state == UNIVERSE)
                 {
-                    if (game_state->game_scale <= 0.00001 + epsilon)
-                        zoom_universe_step = -(ZOOM_UNIVERSE_STEP / 1000);
-                    else if (game_state->game_scale <= 0.0001 + epsilon)
-                        zoom_universe_step = -(ZOOM_UNIVERSE_STEP / 100);
-                    else if (game_state->game_scale <= 0.001 + epsilon)
-                        zoom_universe_step = -(ZOOM_UNIVERSE_STEP / 10);
-                    else
-                        zoom_universe_step = -ZOOM_UNIVERSE_STEP;
+                    nav_state->universe_offset.x += ((mouse_x - camera->w / 2)) / (game_state->game_scale * GALAXY_SCALE) -
+                                                    ((mouse_x - camera->w / 2)) / (((game_state->game_scale) + zoom_universe_step) * GALAXY_SCALE);
+                    nav_state->universe_offset.y += ((mouse_y - camera->h / 2)) / (game_state->game_scale * GALAXY_SCALE) -
+                                                    ((mouse_y - camera->h / 2)) / (((game_state->game_scale) + zoom_universe_step) * GALAXY_SCALE);
                 }
                 else if (game_state->state == MAP)
                 {
-                    if (game_state->game_scale <= ZOOM_MAP_REGION_SWITCH + epsilon)
-                        zoom_step = -(zoom_step / 10);
-                    else
-                        zoom_step = -ZOOM_STEP;
-                }
-            }
-
-            // Set position so that zoom is centered around mouse position
-            if (game_state->state == UNIVERSE)
-            {
-                nav_state->universe_offset.x += ((mouse_x - camera->w / 2)) / (game_state->game_scale * GALAXY_SCALE) -
-                                                ((mouse_x - camera->w / 2)) / (((game_state->game_scale) + zoom_universe_step) * GALAXY_SCALE);
-                nav_state->universe_offset.y += ((mouse_y - camera->h / 2)) / (game_state->game_scale * GALAXY_SCALE) -
-                                                ((mouse_y - camera->h / 2)) / (((game_state->game_scale) + zoom_universe_step) * GALAXY_SCALE);
-            }
-            else if (game_state->state == MAP)
-            {
-                if (game_state->game_scale + zoom_step <= ZOOM_MAX + epsilon)
-                {
-                    nav_state->map_offset.x += ((mouse_x - camera->w / 2)) / (game_state->game_scale) -
-                                               ((mouse_x - camera->w / 2)) / (((game_state->game_scale) + zoom_step));
-                    nav_state->map_offset.y += ((mouse_y - camera->h / 2)) / (game_state->game_scale) -
-                                               ((mouse_y - camera->h / 2)) / (((game_state->game_scale) + zoom_step));
+                    if (game_state->game_scale + zoom_step <= ZOOM_MAX + epsilon)
+                    {
+                        nav_state->map_offset.x += ((mouse_x - camera->w / 2)) / (game_state->game_scale) -
+                                                   ((mouse_x - camera->w / 2)) / (((game_state->game_scale) + zoom_step));
+                        nav_state->map_offset.y += ((mouse_y - camera->h / 2)) / (game_state->game_scale) -
+                                                   ((mouse_y - camera->h / 2)) / (((game_state->game_scale) + zoom_step));
+                    }
                 }
             }
 
@@ -578,6 +606,13 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
                         input_state->selected_button_index = (input_state->selected_button_index + MENU_BUTTON_COUNT - 1) % MENU_BUTTON_COUNT;
                     } while (game_state->menu[input_state->selected_button_index].disabled);
                 }
+                else if (game_state->state == CONTROLS)
+                {
+                    if (game_state->table_top_row > 0)
+                    {
+                        game_state->table_top_row--;
+                    }
+                }
                 // Scroll up / Thrust
                 else
                 {
@@ -599,6 +634,13 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
                         input_state->selected_button_index = (input_state->selected_button_index + 1) % MENU_BUTTON_COUNT;
                     } while (game_state->menu[input_state->selected_button_index].disabled);
                 }
+                else if (game_state->state == CONTROLS)
+                {
+                    if (game_state->table_top_row + game_state->table_num_rows_displayed < game_state->table_num_rows)
+                    {
+                        game_state->table_top_row++;
+                    }
+                }
                 // Scroll down / Reverse
                 else
                 {
@@ -610,7 +652,7 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
                 break;
             case SDL_SCANCODE_RETURN:
                 // Select menu button
-                if (game_state->state == MENU)
+                if (game_state->state == MENU || game_state->state == CONTROLS)
                 {
                     if (game_state->menu[input_state->selected_button_index].state == RESUME)
                         game_change_state(game_state, game_events, save_state);

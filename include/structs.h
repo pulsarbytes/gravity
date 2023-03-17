@@ -1,6 +1,20 @@
 #ifndef STRUCTS_H
 #define STRUCTS_H
 
+// Structs for the controls table
+typedef struct
+{
+    char key[32];
+    char description[64];
+} ControlsEntry;
+
+typedef struct
+{
+    char title[32];
+    ControlsEntry controls[MAX_CONTROLS_ENTRIES];
+    int num_controls;
+} ControlsGroup;
+
 // Struct for a menu button
 typedef struct
 {
@@ -165,6 +179,7 @@ typedef struct
     SDL_Cursor *default_cursor;
     SDL_Cursor *pointing_cursor;
     SDL_Cursor *drag_cursor;
+    SDL_Cursor *previous_cursor;
     Point mouse_position;
     Point mouse_down_position;
     Uint32 last_click_time;
@@ -242,6 +257,10 @@ typedef struct
     int galaxy_region_size;
     MenuButton menu[MENU_BUTTON_COUNT];
     MenuButton logo;
+    ControlsGroup controls_groups[MAX_CONTROLS_GROUPS];
+    int table_top_row;
+    int table_num_rows_displayed;
+    unsigned short table_num_rows;
 } GameState;
 
 #endif /* STRUCTS_H */

@@ -40,42 +40,47 @@ make
 
 ## Keyboard controls
 
-| Mode       | Key     | Action              |
-| ---------- | ------- | ------------------- |
-| Navigation |         |                     |
-|            | `C`     | Toggle camera       |
-|            | `O`     | Show orbits         |
-|            | `S`     | Stop ship           |
-|            | `Up`    | Thrust              |
-|            | `Down`  | Reverse thrust      |
-|            | `Right` | Rotate right        |
-|            | `Left`  | Rotate left         |
-|            | `[`     | Zoom out            |
-|            | `]`     | Zoom in             |
-|            | `Space` | Reset zoom scale    |
-| Map        |         |                     |
-|            | `M`     | Enter Map mode      |
-|            | `O`     | Show orbits         |
-|            | `Up`    | Scroll up           |
-|            | `Down`  | Scroll down         |
-|            | `Right` | Scroll right        |
-|            | `Left`  | Scroll left         |
-|            | `[`     | Zoom out            |
-|            | `]`     | Zoom in             |
-|            | `Space` | Reset Map           |
-|            | `N`     | Exit Map mode       |
-| Universe   |         |                     |
-|            | `U`     | Enter Universe mode |
-|            | `Up`    | Scroll up           |
-|            | `Down`  | Scroll down         |
-|            | `Right` | Scroll right        |
-|            | `Left`  | Scroll left         |
-|            | `[`     | Zoom out            |
-|            | `]`     | Zoom in             |
-|            | `Space` | Reset Universe      |
-|            | `N`     | Exit Universe mode  |
-| `F`        |         | Toggle FPS          |
-| `Esc`      |         | Show menu / Pause   |
+| Mode       | Key                              | Action              |
+| ---------- | -------------------------------- | ------------------- |
+| Navigation |                                  |                     |
+|            | `Up`                             | Thrust              |
+|            | `Down`                           | Reverse thrust      |
+|            | `Right`                          | Rotate right        |
+|            | `Left`                           | Rotate left         |
+|            | `C`                              | Toggle camera       |
+|            | `M`                              | Enter Map mode      |
+|            | `O`                              | Show orbits         |
+|            | `S`                              | Stop ship           |
+|            | `U`                              | Enter Universe mode |
+|            | `[ / Mouse Wheel Backward`       | Zoom out            |
+|            | `] / Mouse Wheel Forward`        | Zoom in             |
+|            | `Space`                          | Reset zoom scale    |
+| Map        |                                  |                     |
+|            | `Up`                             | Scroll up           |
+|            | `Down`                           | Scroll down         |
+|            | `Right`                          | Scroll right        |
+|            | `Left`                           | Scroll left         |
+|            | `N`                              | Enter Navigate mode |
+|            | `O`                              | Show orbits         |
+|            | `U`                              | Enter Universe mode |
+|            | `[ / Mouse Wheel Backward`       | Zoom out            |
+|            | `] / Mouse Wheel Forward`        | Zoom in             |
+|            | `Space`                          | Reset zoom scale    |
+|            | `Left Mouse Button Click`        | Select star         |
+|            | `Left Mouse Button Double Click` | Center star         |
+| Universe   |                                  |                     |
+|            | `Up`                             | Scroll up           |
+|            | `Down`                           | Scroll down         |
+|            | `Right`                          | Scroll right        |
+|            | `Left`                           | Scroll left         |
+|            | `N`                              | Enter Navigate mode |
+|            | `M`                              | Enter Map mode      |
+|            | `[ / Mouse Wheel Backward`       | Zoom out            |
+|            | `] / Mouse Wheel Forward`        | Zoom in             |
+|            | `Space`                          | Reset zoom scale    |
+|            | `Left Mouse Button Double Click` | Center star         |
+| `F`        |                                  | Toggle FPS          |
+| `Esc`      |                                  | Show menu / Pause   |
 
 ## Licence
 

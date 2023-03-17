@@ -109,7 +109,7 @@ bool sdl_initialize(SDL_Window *window)
 
 /**
  * Initializes the SDL_ttf library and loads fonts into memory.
- * Loads Consola font with sizes 14 and 36 into fonts array.
+ * Loads fonts into fonts array.
  *
  * @param window A pointer to the SDL window to be used for rendering.
  *
@@ -166,10 +166,36 @@ bool sdl_ttf_load_fonts(SDL_Window *window)
         return false;
     }
 
+    // FONT_SIZE_18
+    fonts[FONT_SIZE_18] = TTF_OpenFont("../assets/fonts/consola.ttf", 18);
+
+    if (fonts[FONT_SIZE_18] == NULL)
+    {
+        SDL_Log("Could not load font: %s\n", SDL_GetError());
+        TTF_Quit();
+        SDL_DestroyRenderer(renderer);
+        SDL_DestroyWindow(window);
+        SDL_Quit();
+        return false;
+    }
+
     // FONT_SIZE_22
     fonts[FONT_SIZE_22] = TTF_OpenFont("../assets/fonts/consola.ttf", 22);
 
     if (fonts[FONT_SIZE_22] == NULL)
+    {
+        SDL_Log("Could not load font: %s\n", SDL_GetError());
+        TTF_Quit();
+        SDL_DestroyRenderer(renderer);
+        SDL_DestroyWindow(window);
+        SDL_Quit();
+        return false;
+    }
+
+    // FONT_SIZE_26
+    fonts[FONT_SIZE_26] = TTF_OpenFont("../assets/fonts/consola.ttf", 26);
+
+    if (fonts[FONT_SIZE_26] == NULL)
     {
         SDL_Log("Could not load font: %s\n", SDL_GetError());
         TTF_Quit();

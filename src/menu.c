@@ -19,12 +19,7 @@ extern SDL_Color colors[];
 
 // Static function prototypes
 static void menu_create_logo(MenuButton *logo);
-static void menu_draw_menu(GameState *, InputState *, bool is_game_started);
 static void menu_populate_menu_array(MenuButton menu[]);
-static void menu_toggle_menu_hover(GameState *game_state, InputState *input_state);
-
-// External function prototypes
-bool maths_is_point_in_rectangle(Point, Point rect[]);
 
 /**
  * Creates the main menu by populating the menu array, creating the logo, generating and placing menu stars.
@@ -66,7 +61,7 @@ static void menu_create_logo(MenuButton *logo)
     logo->rect.y = 0;
 
     // Create a texture from the text
-    SDL_Surface *logo_surface = TTF_RenderText_Solid(fonts[FONT_SIZE_32], logo->text, colors[COLOR_WHITE_255]);
+    SDL_Surface *logo_surface = TTF_RenderText_Solid(fonts[FONT_SIZE_32], logo->text, colors[COLOR_PLANET_2]);
     SDL_Texture *logo_texture = SDL_CreateTextureFromSurface(renderer, logo_surface);
     logo->text_texture = logo_texture;
 
@@ -88,7 +83,7 @@ static void menu_create_logo(MenuButton *logo)
  *
  * @return void
  */
-static void menu_draw_menu(GameState *game_state, InputState *input_state, bool is_game_started)
+void menu_draw_menu(GameState *game_state, InputState *input_state, bool is_game_started)
 {
     int num_buttons = 0;
 
@@ -143,6 +138,52 @@ static void menu_draw_menu(GameState *game_state, InputState *input_state, bool 
 }
 
 /**
+ * Checks if the mouse is over the current menu button and changes mouse cursor.
+ *
+ * @param game_state A pointer to the current GameState.
+ * @param input_state A pointer to the current InputState.
+ *
+ * @return void
+ */
+bool menu_is_hovering_menu(GameState *game_state, InputState *input_state)
+{
+    bool is_hovering_menu = false;
+
+    for (int i = 0; i < MENU_BUTTON_COUNT; i++)
+    {
+        if (game_state->menu[i].disabled)
+            continue;
+
+        Point rect[4];
+
+        int x1 = game_state->menu[i].rect.x;
+        int y1 = game_state->menu[i].rect.y;
+        int x2 = x1 + game_state->menu[i].rect.w;
+        int y2 = y1 + game_state->menu[i].rect.h;
+
+        rect[0].x = x1;
+        rect[0].y = y2;
+
+        rect[1].x = x2;
+        rect[1].y = y2;
+
+        rect[2].x = x2;
+        rect[2].y = y1;
+
+        rect[3].x = x1;
+        rect[3].y = y1;
+
+        if (maths_is_point_in_rectangle(input_state->mouse_position, rect))
+        {
+            is_hovering_menu = true;
+            break;
+        }
+    }
+
+    return is_hovering_menu;
+}
+
+/**
  * Populates a given menu button array with button information, including the text to be displayed on each button,
  * the state to transition to when each button is pressed, and whether or not each button should initially be disabled.
  *
@@ -170,6 +211,12 @@ static void menu_populate_menu_array(MenuButton menu[])
     menu[MENU_BUTTON_NEW].state = NEW;
     menu[MENU_BUTTON_NEW].disabled = true;
 
+    // Controls
+    memset(menu[MENU_BUTTON_CONTROLS].text, 0, sizeof(menu[MENU_BUTTON_CONTROLS].text));
+    strcpy(menu[MENU_BUTTON_CONTROLS].text, "Controls");
+    menu[MENU_BUTTON_CONTROLS].state = CONTROLS;
+    menu[MENU_BUTTON_CONTROLS].disabled = false;
+
     // Exit
     memset(menu[MENU_BUTTON_EXIT].text, 0, sizeof(menu[MENU_BUTTON_EXIT].text));
     strcpy(menu[MENU_BUTTON_EXIT].text, "Exit");
@@ -184,7 +231,7 @@ static void menu_populate_menu_array(MenuButton menu[])
         menu[i].rect.h = 50;
 
         // Create a texture from the button text
-        SDL_Surface *text_surface = TTF_RenderText_Solid(fonts[FONT_SIZE_14], menu[i].text, colors[COLOR_WHITE_255]);
+        SDL_Surface *text_surface = TTF_RenderText_Solid(fonts[FONT_SIZE_15], menu[i].text, colors[COLOR_WHITE_180]);
         SDL_Texture *text_texture = SDL_CreateTextureFromSurface(renderer, text_surface);
         menu[i].text_texture = text_texture;
         menu[i].texture_rect.x = 0;
@@ -193,50 +240,6 @@ static void menu_populate_menu_array(MenuButton menu[])
         menu[i].texture_rect.h = text_surface->h;
 
         SDL_FreeSurface(text_surface);
-    }
-}
-
-/**
- * Checks if the mouse is over the current menu button and changes mouse cursor.
- *
- * @param game_state A pointer to the current GameState.
- * @param input_state A pointer to the current InputState.
- *
- * @return void
- */
-static void menu_toggle_menu_hover(GameState *game_state, InputState *input_state)
-{
-    for (int i = 0; i < MENU_BUTTON_COUNT; i++)
-    {
-        if (game_state->menu[i].disabled)
-            continue;
-
-        Point rect[4];
-
-        int x1 = game_state->menu[i].rect.x;
-        int y1 = game_state->menu[i].rect.y;
-        int x2 = x1 + game_state->menu[i].rect.w;
-        int y2 = y1 + game_state->menu[i].rect.h;
-
-        rect[0].x = x1;
-        rect[0].y = y2;
-
-        rect[1].x = x2;
-        rect[1].y = y2;
-
-        rect[2].x = x2;
-        rect[2].y = y1;
-
-        rect[3].x = x1;
-        rect[3].y = y1;
-
-        if (maths_is_point_in_rectangle(input_state->mouse_position, rect))
-        {
-            SDL_SetCursor(input_state->pointing_cursor);
-            return;
-        }
-        else
-            SDL_SetCursor(input_state->default_cursor);
     }
 }
 
@@ -253,7 +256,7 @@ static void menu_toggle_menu_hover(GameState *game_state, InputState *input_stat
  *
  * @return void
  */
-void menu_run_menu_state(GameState *game_state, InputState *input_state, bool is_game_started, const NavigationState *nav_state, Bstar *bstars, Gstar *menustars, Camera *camera)
+void menu_run_state(GameState *game_state, InputState *input_state, bool is_game_started, const NavigationState *nav_state, Bstar *bstars, Gstar *menustars, Camera *camera)
 {
     // Draw background stars
     Speed speed = {.vx = 1000, .vy = 0};
@@ -275,7 +278,10 @@ void menu_run_menu_state(GameState *game_state, InputState *input_state, bool is
     gfx_draw_speed_lines(1500, camera, lines_speed);
 
     // Check if mouse is over menu buttons
-    menu_toggle_menu_hover(game_state, input_state);
+    if (menu_is_hovering_menu(game_state, input_state))
+        SDL_SetCursor(input_state->pointing_cursor);
+    else
+        SDL_SetCursor(input_state->default_cursor);
 }
 
 /**
@@ -289,7 +295,7 @@ void menu_update_menu_entries(GameState *game_state)
 {
     // Update Start button
     game_state->menu[MENU_BUTTON_START].disabled = true;
-    SDL_Surface *start_surface = TTF_RenderText_Solid(fonts[FONT_SIZE_14], game_state->menu[MENU_BUTTON_START].text, colors[COLOR_WHITE_100]);
+    SDL_Surface *start_surface = TTF_RenderText_Solid(fonts[FONT_SIZE_14], game_state->menu[MENU_BUTTON_START].text, colors[COLOR_WHITE_180]);
     SDL_DestroyTexture(game_state->menu[MENU_BUTTON_START].text_texture);
     SDL_Texture *start_texture = SDL_CreateTextureFromSurface(renderer, start_surface);
     game_state->menu[MENU_BUTTON_START].text_texture = start_texture;
@@ -297,7 +303,7 @@ void menu_update_menu_entries(GameState *game_state)
 
     // Update Resume button
     game_state->menu[MENU_BUTTON_RESUME].disabled = false;
-    SDL_Surface *resume_surface = TTF_RenderText_Solid(fonts[FONT_SIZE_14], game_state->menu[MENU_BUTTON_RESUME].text, colors[COLOR_WHITE_255]);
+    SDL_Surface *resume_surface = TTF_RenderText_Solid(fonts[FONT_SIZE_14], game_state->menu[MENU_BUTTON_RESUME].text, colors[COLOR_WHITE_180]);
     SDL_DestroyTexture(game_state->menu[MENU_BUTTON_RESUME].text_texture);
     SDL_Texture *resume_texture = SDL_CreateTextureFromSurface(renderer, resume_surface);
     game_state->menu[MENU_BUTTON_RESUME].text_texture = resume_texture;
@@ -305,7 +311,7 @@ void menu_update_menu_entries(GameState *game_state)
 
     // Update New button
     game_state->menu[MENU_BUTTON_NEW].disabled = false;
-    SDL_Surface *new_surface = TTF_RenderText_Solid(fonts[FONT_SIZE_14], game_state->menu[MENU_BUTTON_NEW].text, colors[COLOR_WHITE_255]);
+    SDL_Surface *new_surface = TTF_RenderText_Solid(fonts[FONT_SIZE_14], game_state->menu[MENU_BUTTON_NEW].text, colors[COLOR_WHITE_180]);
     SDL_DestroyTexture(game_state->menu[MENU_BUTTON_NEW].text_texture);
     SDL_Texture *new_texture = SDL_CreateTextureFromSurface(renderer, new_surface);
     game_state->menu[MENU_BUTTON_NEW].text_texture = new_texture;

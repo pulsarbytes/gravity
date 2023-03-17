@@ -300,7 +300,7 @@ void stars_delete_outside_region(StarEntry *stars[], const Star *buffer_star, do
 void stars_draw_info_box(const Star *star, const Camera *camera)
 {
     // Draw background box
-    SDL_SetRenderDrawColor(renderer, 12, 12, 12, 255);
+    SDL_SetRenderDrawColor(renderer, 12, 12, 12, 230);
     int width = 370;
     int padding = 20;
     int inner_padding = 40;
@@ -425,7 +425,7 @@ void stars_draw_info_box(const Star *star, const Camera *camera)
 void stars_draw_planets_info_box(const Star *star, const Camera *camera)
 {
     // Draw background box
-    SDL_SetRenderDrawColor(renderer, 15, 15, 15, 255);
+    SDL_SetRenderDrawColor(renderer, 15, 15, 15, 235);
     int width = 370;
     int padding = 20;
     int inner_padding = 40;

@@ -42,6 +42,8 @@ void game_change_state(GameState *game_state, GameEvents *game_events, int new_s
 
     if (game_state->state == NAVIGATE)
         game_events->is_game_started = true;
+    else if (game_state->state == CONTROLS)
+        game_state->table_top_row = 0;
 
     if (game_events->is_game_started)
         menu_update_menu_entries(game_state);
@@ -159,6 +161,7 @@ void game_reset(GameState *game_state, InputState *input_state, GameEvents *game
     input_state->default_cursor = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_ARROW);
     input_state->pointing_cursor = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_HAND);
     input_state->drag_cursor = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZEALL);
+    input_state->previous_cursor = NULL;
     input_state->mouse_position.x = 0;
     input_state->mouse_position.y = 0;
     input_state->mouse_down_position.x = 0;
@@ -1076,11 +1079,13 @@ void game_run_universe_state(GameState *game_state, InputState *input_state, Gam
                         // Seed with a fixed constant
                         pcg32_srandom_r(&rng, seed, nav_state->initseq);
 
-                        stars_populate_body(entry->star, entry->star->position, rng, game_state->game_scale);
-                        stars_draw_info_box(entry->star, camera);
-
                         // Draw star cutoff circle
                         gfx_draw_circle(renderer, camera, x, y, star_cutoff, colors[COLOR_MAGENTA_120]);
+
+                        stars_populate_body(entry->star, entry->star->position, rng, game_state->game_scale);
+
+                        if (!input_state->zoom_in && !input_state->zoom_out)
+                            stars_draw_info_box(entry->star, camera);
 
                         // Set star as current_star
                         if (nav_state->current_star != NULL)

@@ -4,13 +4,13 @@ CC=/usr/bin/gcc
 COMPILER_FLAGS=-Wall -g
 LINKER_FLAGS=`sdl2-config --libs --cflags` -lSDL2_gfx -lSDL2_image -lSDL2_ttf -lm
 
-bin/gravity: build/main.o build/sdl.o build/game.o build/menu.o build/physics.o build/maths.o build/graphics.o build/events.o build/utilities.o build/console.o build/stars.o build/galaxies.o build/pcg.o
-	$(CC) $(COMPILER_FLAGS) build/main.o build/sdl.o build/game.o build/menu.o build/physics.o build/maths.o build/graphics.o build/events.o build/utilities.o build/console.o build/stars.o build/galaxies.o build/pcg.o $(LINKER_FLAGS) -o bin/gravity
+bin/gravity: build/main.o build/sdl.o build/game.o build/menu.o build/controls.o build/physics.o build/maths.o build/graphics.o build/events.o build/utilities.o build/console.o build/stars.o build/galaxies.o build/pcg.o
+	$(CC) $(COMPILER_FLAGS) build/main.o build/sdl.o build/game.o build/menu.o build/controls.o build/physics.o build/maths.o build/graphics.o build/events.o build/utilities.o build/console.o build/stars.o build/galaxies.o build/pcg.o $(LINKER_FLAGS) -o bin/gravity
 
 build/main.o: src/main.c include/constants.h include/enums.h include/structs.h
 	$(CC) -c $(COMPILER_FLAGS) src/main.c $(LINKER_FLAGS) -o build/main.o
 
-build/sdl.o: src/sdl.c include/constants.h include/enums.h include/sdl.h
+build/sdl.o: src/sdl.c include/constants.h include/enums.h include/structs.h include/sdl.h
 	$(CC) -c $(COMPILER_FLAGS) src/sdl.c $(LINKER_FLAGS) -o build/sdl.o
 
 build/game.o: src/game.c include/constants.h include/enums.h include/structs.h include/game.h
@@ -18,6 +18,9 @@ build/game.o: src/game.c include/constants.h include/enums.h include/structs.h i
 
 build/menu.o: src/menu.c include/constants.h include/enums.h include/structs.h include/menu.h
 	$(CC) -c $(COMPILER_FLAGS) src/menu.c $(LINKER_FLAGS) -o build/menu.o
+
+build/controls.o: src/controls.c include/constants.h include/enums.h include/structs.h include/controls.h
+	$(CC) -c $(COMPILER_FLAGS) src/controls.c $(LINKER_FLAGS) -o build/controls.o
 
 build/physics.o: src/physics.c include/constants.h include/enums.h include/structs.h include/physics.h
 	$(CC) -c $(COMPILER_FLAGS) src/physics.c $(LINKER_FLAGS) -o build/physics.o

@@ -6,7 +6,9 @@ enum
     FONT_SIZE_12,
     FONT_SIZE_14,
     FONT_SIZE_15,
+    FONT_SIZE_18,
     FONT_SIZE_22,
+    FONT_SIZE_26,
     FONT_SIZE_32,
     FONT_COUNT
 };
@@ -42,6 +44,13 @@ enum
     COLOR_COUNT
 };
 
+enum
+{
+    CURSOR_DEFAULT,
+    CURSOR_POINTING,
+    CURSOR_SIZEALL
+};
+
 // States
 enum
 {
@@ -51,6 +60,7 @@ enum
     UNIVERSE,
     RESUME,
     NEW,
+    CONTROLS,
     QUIT,
 };
 
@@ -59,6 +69,7 @@ enum
     MENU_BUTTON_START,
     MENU_BUTTON_RESUME,
     MENU_BUTTON_NEW,
+    MENU_BUTTON_CONTROLS,
     MENU_BUTTON_EXIT,
     MENU_BUTTON_COUNT
 };

@@ -40,6 +40,8 @@ SDL_Color colors[COLOR_COUNT];
 // External function prototypes
 void console_draw_fps(unsigned int fps, const Camera *);
 void console_measure_fps(unsigned int *fps, unsigned int *last_time, unsigned int *frame_count);
+void controls_create_table(GameState *, const Camera *);
+void controls_run_state(GameState *, InputState *, bool is_game_started, const NavigationState *, Bstar *bstars, Gstar *menustars, const Camera *);
 void events_loop(GameState *, InputState *, GameEvents *, NavigationState *, const Camera *);
 Ship game_create_ship(int radius, Point, long double scale);
 void game_reset(GameState *, InputState *, GameEvents *, NavigationState *, Bstar *bstars, Ship *, Camera *, bool reset);
@@ -48,7 +50,7 @@ void game_run_navigate_state(GameState *, InputState *, GameEvents *, Navigation
 void game_run_universe_state(GameState *, InputState *, GameEvents *, NavigationState *, Ship *, Camera *);
 void gfx_create_default_colors(void);
 void menu_create(GameState *, NavigationState, Gstar *menustars);
-void menu_run_menu_state(GameState *, InputState *, bool is_game_started, const NavigationState *, Bstar *bstars, Gstar *menustars, Camera *);
+void menu_run_state(GameState *, InputState *, bool is_game_started, const NavigationState *, Bstar *bstars, Gstar *menustars, Camera *);
 void sdl_cleanup(SDL_Window *);
 bool sdl_initialize(SDL_Window *);
 bool sdl_ttf_load_fonts(SDL_Window *);
@@ -112,6 +114,9 @@ int main(int argc, char *argv[])
     Gstar menustars[MAX_GSTARS];
     menu_create(&game_state, nav_state, menustars);
 
+    // Create controls table
+    controls_create_table(&game_state, &camera);
+
     // Set time keeping variables
     unsigned int start_time;
     unsigned int end_time;
@@ -136,7 +141,7 @@ int main(int argc, char *argv[])
         switch (game_state.state)
         {
         case MENU:
-            menu_run_menu_state(&game_state, &input_state, game_events.is_game_started, &nav_state, bstars, menustars, &camera);
+            menu_run_state(&game_state, &input_state, game_events.is_game_started, &nav_state, bstars, menustars, &camera);
             break;
         case NAVIGATE:
             game_run_navigate_state(&game_state, &input_state, &game_events, &nav_state, bstars, &ship, &camera);
@@ -150,8 +155,11 @@ int main(int argc, char *argv[])
         case NEW:
             game_reset(&game_state, &input_state, &game_events, &nav_state, bstars, &ship, &camera, true);
             break;
+        case CONTROLS:
+            controls_run_state(&game_state, &input_state, game_events.is_game_started, &nav_state, bstars, menustars, &camera);
+            break;
         default:
-            menu_run_menu_state(&game_state, &input_state, game_events.is_game_started, &nav_state, bstars, menustars, &camera);
+            menu_run_state(&game_state, &input_state, game_events.is_game_started, &nav_state, bstars, menustars, &camera);
             break;
         }
 

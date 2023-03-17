@@ -1573,11 +1573,11 @@ void gfx_update_bstars_position(int state, bool camera_on, const NavigationState
 
     while (i < max_bstars && bstars[i].final_star == true)
     {
-        if (camera_on || state == MENU)
+        if (camera_on || state == MENU || state == CONTROLS)
         {
             float dx, dy;
 
-            if (state == MENU)
+            if (state == MENU || state == CONTROLS)
             {
                 dx = MENU_BSTARS_SPEED_FACTOR * speed.vx / FPS;
                 dy = MENU_BSTARS_SPEED_FACTOR * speed.vy / FPS;
@@ -1626,6 +1626,8 @@ void gfx_update_bstars_position(int state, bool camera_on, const NavigationState
 
         if (state == MENU)
             opacity = (double)(bstars[i].opacity * 1 / 2);
+        else if (state == CONTROLS)
+            opacity = (double)(bstars[i].opacity * 1 / 3);
         else
         {
             // Fade out opacity as we move away from galaxy center

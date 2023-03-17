@@ -73,6 +73,9 @@ void utils_cleanup_resources(GameState *game_state, InputState *input_state, Nav
     SDL_FreeCursor(input_state->pointing_cursor);
     SDL_FreeCursor(input_state->drag_cursor);
 
+    if (input_state->previous_cursor != NULL)
+        SDL_FreeCursor(input_state->previous_cursor);
+
     // Clean up galaxies
     galaxies_clear_table(nav_state->galaxies);
 
