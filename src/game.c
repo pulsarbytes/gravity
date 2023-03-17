@@ -1168,8 +1168,6 @@ void game_run_universe_state(GameState *game_state, InputState *input_state, Gam
 
         if (game_state->game_scale <= zoom_threshold / GALAXY_SCALE + epsilon)
             galaxies_draw_info_box(nav_state->current_galaxy, camera);
-        else if (!nav_state->current_star->is_selected)
-            console_draw_galaxy_console(nav_state->current_galaxy, camera);
     }
 
     console_draw_position_console(game_state, nav_state, camera, nav_state->universe_offset);

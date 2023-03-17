@@ -54,48 +54,6 @@ void console_draw_fps(unsigned int fps, const Camera *camera)
 }
 
 /**
- * Draws a console displaying information about current galaxy.
- *
- * @param galaxy A pointer to the current galaxy.
- * @param camera A pointer to the Camera struct containing the current camera state.
- *
- * @return void
- */
-void console_draw_galaxy_console(const Galaxy *galaxy, const Camera *camera)
-{
-    // Draw background box
-    SDL_SetRenderDrawColor(renderer, 12, 12, 12, 200);
-    int box_width = 370;
-    int box_height = 70;
-    int padding = 20;
-    int inner_padding = 40;
-
-    SDL_Rect box_rect;
-    box_rect.x = camera->w - (box_width + padding);
-    box_rect.y = camera->h - (box_height + padding);
-    box_rect.w = box_width;
-    box_rect.h = box_height;
-
-    SDL_RenderFillRect(renderer, &box_rect);
-
-    // Galaxy name
-    char galaxy_name[128];
-    memset(galaxy_name, 0, sizeof(galaxy_name));
-    sprintf(galaxy_name, "%s", galaxy->name);
-    SDL_Surface *galaxy_name_surface = TTF_RenderText_Blended(fonts[FONT_SIZE_22], galaxy_name, colors[COLOR_WHITE_100]);
-    SDL_Texture *galaxy_name_texture = SDL_CreateTextureFromSurface(renderer, galaxy_name_surface);
-    SDL_Rect galaxy_name_texture_rect;
-    galaxy_name_texture_rect.w = galaxy_name_surface->w;
-    galaxy_name_texture_rect.h = galaxy_name_surface->h;
-    galaxy_name_texture_rect.x = camera->w - (box_width + padding) + inner_padding;
-    galaxy_name_texture_rect.y = camera->h - padding - (box_height / 2) - (galaxy_name_texture_rect.h / 2) + 1;
-    SDL_RenderCopy(renderer, galaxy_name_texture, NULL, &galaxy_name_texture_rect);
-    SDL_FreeSurface(galaxy_name_surface);
-    SDL_DestroyTexture(galaxy_name_texture);
-    galaxy_name_texture = NULL;
-}
-
-/**
  * Draws a console displaying the ship's velocity vector and position.
  *
  * @param game_state A pointer to the GameState struct.
@@ -171,7 +129,13 @@ void console_draw_position_console(const GameState *game_state, const Navigation
     SDL_FreeSurface(zoom_value_surface);
 
     // Position
-    char *position_title = "POSITION";
+    char position_title[32];
+
+    if (game_state->state == UNIVERSE)
+        sprintf(position_title, "POSITION IN UNIVERSE");
+    else if (game_state->state == MAP)
+        sprintf(position_title, "POSITION IN GALAXY");
+
     SDL_Surface *position_title_surface = TTF_RenderText_Blended(fonts[FONT_SIZE_12], position_title, colors[COLOR_WHITE_100]);
     SDL_Texture *position_title_texture = SDL_CreateTextureFromSurface(renderer, position_title_surface);
     SDL_Rect position_title_texture_rect;

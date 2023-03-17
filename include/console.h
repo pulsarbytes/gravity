@@ -3,7 +3,6 @@
 
 // Function prototypes
 void console_draw_fps(unsigned int fps, const Camera *);
-void console_draw_galaxy_console(const Galaxy *, const Camera *);
 void console_draw_position_console(const GameState *, const NavigationState *, const Camera *, Point);
 void console_draw_ship_console(const NavigationState *, const Ship *, const Camera *);
 void console_draw_star_console(const Star *, const Camera *);

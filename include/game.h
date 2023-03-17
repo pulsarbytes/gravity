@@ -10,7 +10,6 @@ void game_run_navigate_state(GameState *, InputState *, GameEvents *, Navigation
 void game_run_universe_state(GameState *, InputState *, GameEvents *, NavigationState *, Ship *, Camera *);
 
 // External function prototypes
-void console_draw_galaxy_console(const Galaxy *, const Camera *);
 void console_draw_position_console(const GameState *, const NavigationState *, const Camera *, Point);
 void console_draw_ship_console(const NavigationState *, const Ship *, const Camera *);
 void console_draw_star_console(const Star *, const Camera *);
