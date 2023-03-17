@@ -335,6 +335,16 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
                             nav_state->current_galaxy->is_selected = true;
 
                         input_state->clicked_inside_galaxy = false;
+
+                        // Deselect star
+                        if (!input_state->is_hovering_star && !input_state->clicked_inside_star)
+                            nav_state->current_star->is_selected = false;
+
+                        // Set star as selected
+                        if (input_state->is_hovering_star)
+                            nav_state->current_star->is_selected = true;
+
+                        input_state->clicked_inside_star = false;
                     }
                     else if (game_state->state == MAP)
                     {

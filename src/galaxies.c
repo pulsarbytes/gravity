@@ -382,7 +382,7 @@ void galaxies_draw_info_box(const Galaxy *galaxy, const Camera *camera)
     for (int i = 0; i < GALAXY_INFO_COUNT; i++)
     {
         // Create a texture from the entry text
-        SDL_Surface *text_surface = TTF_RenderText_Solid(fonts[entries[i].font_size], entries[i].text, colors[COLOR_WHITE_180]);
+        SDL_Surface *text_surface = TTF_RenderText_Blended(fonts[entries[i].font_size], entries[i].text, colors[COLOR_WHITE_180]);
         SDL_Texture *text_texture = SDL_CreateTextureFromSurface(renderer, text_surface);
         entries[i].text_texture = text_texture;
         entries[i].texture_rect.w = text_surface->w;

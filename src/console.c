@@ -38,7 +38,7 @@ void console_draw_fps(unsigned int fps, const Camera *camera)
     sprintf(fps_text, "%d", fps);
 
     // Create text texture
-    SDL_Surface *fps_surface = TTF_RenderText_Solid(fonts[FONT_SIZE_22], fps_text, colors[COLOR_CYAN_150]);
+    SDL_Surface *fps_surface = TTF_RenderText_Blended(fonts[FONT_SIZE_22], fps_text, colors[COLOR_CYAN_150]);
     SDL_Texture *fps_texture = SDL_CreateTextureFromSurface(renderer, fps_surface);
     SDL_Rect fps_texture_rect;
     fps_texture_rect.x = 30;
@@ -82,7 +82,7 @@ void console_draw_galaxy_console(const Galaxy *galaxy, const Camera *camera)
     char galaxy_name[128];
     memset(galaxy_name, 0, sizeof(galaxy_name));
     sprintf(galaxy_name, "%s", galaxy->name);
-    SDL_Surface *galaxy_name_surface = TTF_RenderText_Solid(fonts[FONT_SIZE_22], galaxy_name, colors[COLOR_WHITE_100]);
+    SDL_Surface *galaxy_name_surface = TTF_RenderText_Blended(fonts[FONT_SIZE_22], galaxy_name, colors[COLOR_WHITE_100]);
     SDL_Texture *galaxy_name_texture = SDL_CreateTextureFromSurface(renderer, galaxy_name_surface);
     SDL_Rect galaxy_name_texture_rect;
     galaxy_name_texture_rect.w = galaxy_name_surface->w;
@@ -133,7 +133,7 @@ void console_draw_position_console(const GameState *game_state, const Navigation
 
     // Zoom
     char *zoom_title = "ZOOM";
-    SDL_Surface *zoom_title_surface = TTF_RenderText_Solid(fonts[FONT_SIZE_12], zoom_title, colors[COLOR_WHITE_100]);
+    SDL_Surface *zoom_title_surface = TTF_RenderText_Blended(fonts[FONT_SIZE_12], zoom_title, colors[COLOR_WHITE_100]);
     SDL_Texture *zoom_title_texture = SDL_CreateTextureFromSurface(renderer, zoom_title_surface);
     SDL_Rect zoom_title_texture_rect;
     zoom_title_texture_rect.w = zoom_title_surface->w;
@@ -160,7 +160,7 @@ void console_draw_position_console(const GameState *game_state, const Navigation
     else
         sprintf(zoom_value, "%.2Lf", 100 * game_state->game_scale);
 
-    SDL_Surface *zoom_value_surface = TTF_RenderText_Solid(fonts[FONT_SIZE_15], zoom_value, colors[COLOR_WHITE_180]);
+    SDL_Surface *zoom_value_surface = TTF_RenderText_Blended(fonts[FONT_SIZE_15], zoom_value, colors[COLOR_WHITE_180]);
     SDL_Texture *zoom_value_texture = SDL_CreateTextureFromSurface(renderer, zoom_value_surface);
     SDL_Rect zoom_value_texture_rect;
     zoom_value_texture_rect.w = zoom_value_surface->w;
@@ -172,7 +172,7 @@ void console_draw_position_console(const GameState *game_state, const Navigation
 
     // Position
     char *position_title = "POSITION";
-    SDL_Surface *position_title_surface = TTF_RenderText_Solid(fonts[FONT_SIZE_12], position_title, colors[COLOR_WHITE_100]);
+    SDL_Surface *position_title_surface = TTF_RenderText_Blended(fonts[FONT_SIZE_12], position_title, colors[COLOR_WHITE_100]);
     SDL_Texture *position_title_texture = SDL_CreateTextureFromSurface(renderer, position_title_surface);
     SDL_Rect position_title_texture_rect;
     position_title_texture_rect.w = position_title_surface->w;
@@ -188,7 +188,7 @@ void console_draw_position_console(const GameState *game_state, const Navigation
     memset(position_x_text, 0, sizeof(position_x_value));
     utils_add_thousand_separators((int)offset.x, position_x_value, sizeof(position_x_value));
     sprintf(position_x_text, "X: %*s%s", 1, "", position_x_value);
-    SDL_Surface *position_x_surface = TTF_RenderText_Solid(fonts[FONT_SIZE_12], position_x_text, colors[COLOR_WHITE_140]);
+    SDL_Surface *position_x_surface = TTF_RenderText_Blended(fonts[FONT_SIZE_12], position_x_text, colors[COLOR_WHITE_140]);
     SDL_Texture *position_x_texture = SDL_CreateTextureFromSurface(renderer, position_x_surface);
     SDL_Rect position_x_texture_rect;
     position_x_texture_rect.w = position_x_surface->w;
@@ -204,7 +204,7 @@ void console_draw_position_console(const GameState *game_state, const Navigation
     memset(position_y_text, 0, sizeof(position_y_value));
     utils_add_thousand_separators((int)offset.y, position_y_value, sizeof(position_y_value));
     sprintf(position_y_text, "Y: %*s%s", 1, "", position_y_value);
-    SDL_Surface *position_y_surface = TTF_RenderText_Solid(fonts[FONT_SIZE_12], position_y_text, colors[COLOR_WHITE_140]);
+    SDL_Surface *position_y_surface = TTF_RenderText_Blended(fonts[FONT_SIZE_12], position_y_text, colors[COLOR_WHITE_140]);
     SDL_Texture *position_y_texture = SDL_CreateTextureFromSurface(renderer, position_y_surface);
     SDL_Rect position_y_texture_rect;
     position_y_texture_rect.w = position_y_surface->w;
@@ -272,7 +272,7 @@ void console_draw_ship_console(const NavigationState *nav_state, const Ship *shi
 
     // Speed
     char *speed_title = "SPEED";
-    SDL_Surface *speed_title_surface = TTF_RenderText_Solid(fonts[FONT_SIZE_12], speed_title, colors[COLOR_WHITE_100]);
+    SDL_Surface *speed_title_surface = TTF_RenderText_Blended(fonts[FONT_SIZE_12], speed_title, colors[COLOR_WHITE_100]);
     SDL_Texture *speed_title_texture = SDL_CreateTextureFromSurface(renderer, speed_title_surface);
     SDL_Rect speed_title_texture_rect;
     speed_title_texture_rect.w = speed_title_surface->w;
@@ -285,7 +285,7 @@ void console_draw_ship_console(const NavigationState *nav_state, const Ship *shi
     char speed_value[16];
     memset(speed_value, 0, sizeof(speed_value));
     sprintf(speed_value, "%d", (int)nav_state->velocity.magnitude);
-    SDL_Surface *speed_value_surface = TTF_RenderText_Solid(fonts[FONT_SIZE_22], speed_value, colors[COLOR_WHITE_180]);
+    SDL_Surface *speed_value_surface = TTF_RenderText_Blended(fonts[FONT_SIZE_22], speed_value, colors[COLOR_WHITE_180]);
     SDL_Texture *speed_value_texture = SDL_CreateTextureFromSurface(renderer, speed_value_surface);
     SDL_Rect speed_value_texture_rect;
     speed_value_texture_rect.w = speed_value_surface->w;
@@ -297,7 +297,7 @@ void console_draw_ship_console(const NavigationState *nav_state, const Ship *shi
 
     // Position
     char *position_title = "POSITION";
-    SDL_Surface *position_title_surface = TTF_RenderText_Solid(fonts[FONT_SIZE_12], position_title, colors[COLOR_WHITE_100]);
+    SDL_Surface *position_title_surface = TTF_RenderText_Blended(fonts[FONT_SIZE_12], position_title, colors[COLOR_WHITE_100]);
     SDL_Texture *position_title_texture = SDL_CreateTextureFromSurface(renderer, position_title_surface);
     SDL_Rect position_title_texture_rect;
     position_title_texture_rect.w = position_title_surface->w;
@@ -310,7 +310,7 @@ void console_draw_ship_console(const NavigationState *nav_state, const Ship *shi
     char position_x_value[32];
     memset(position_x_value, 0, sizeof(position_x_value));
     utils_add_thousand_separators((int)nav_state->navigate_offset.x, position_x_value, sizeof(position_x_value));
-    SDL_Surface *position_x_surface = TTF_RenderText_Solid(fonts[FONT_SIZE_12], position_x_value, colors[COLOR_WHITE_140]);
+    SDL_Surface *position_x_surface = TTF_RenderText_Blended(fonts[FONT_SIZE_12], position_x_value, colors[COLOR_WHITE_140]);
     SDL_Texture *position_x_texture = SDL_CreateTextureFromSurface(renderer, position_x_surface);
     SDL_Rect position_x_texture_rect;
     position_x_texture_rect.w = position_x_surface->w;
@@ -323,7 +323,7 @@ void console_draw_ship_console(const NavigationState *nav_state, const Ship *shi
     char position_y_value[32];
     memset(position_y_value, 0, sizeof(position_y_value));
     utils_add_thousand_separators((int)nav_state->navigate_offset.y, position_y_value, sizeof(position_y_value));
-    SDL_Surface *position_y_surface = TTF_RenderText_Solid(fonts[FONT_SIZE_12], position_y_value, colors[COLOR_WHITE_140]);
+    SDL_Surface *position_y_surface = TTF_RenderText_Blended(fonts[FONT_SIZE_12], position_y_value, colors[COLOR_WHITE_140]);
     SDL_Texture *position_y_texture = SDL_CreateTextureFromSurface(renderer, position_y_surface);
     SDL_Rect position_y_texture_rect;
     position_y_texture_rect.w = position_y_surface->w;
@@ -375,7 +375,7 @@ void console_draw_star_console(const Star *star, const Camera *camera)
     char star_name[128];
     memset(star_name, 0, sizeof(star_name));
     sprintf(star_name, "%s", star->name);
-    SDL_Surface *star_name_surface = TTF_RenderText_Solid(fonts[FONT_SIZE_22], star_name, colors[COLOR_WHITE_100]);
+    SDL_Surface *star_name_surface = TTF_RenderText_Blended(fonts[FONT_SIZE_22], star_name, colors[COLOR_WHITE_100]);
     SDL_Texture *star_name_texture = SDL_CreateTextureFromSurface(renderer, star_name_surface);
     SDL_Rect star_name_texture_rect;
     star_name_texture_rect.w = star_name_surface->w;

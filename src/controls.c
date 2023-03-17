@@ -178,7 +178,7 @@ static void controls_draw_table(const GameState *game_state, const Camera *camer
         if (y >= margin && y < camera->h - margin)
         {
             // Render the group title
-            SDL_Surface *title_surface = TTF_RenderText_Solid(fonts[FONT_SIZE_26], game_state->controls_groups[i].title, colors[COLOR_WHITE_140]);
+            SDL_Surface *title_surface = TTF_RenderText_Blended(fonts[FONT_SIZE_26], game_state->controls_groups[i].title, colors[COLOR_WHITE_140]);
             SDL_Texture *title_texture = SDL_CreateTextureFromSurface(renderer, title_surface);
             SDL_Rect title_rect = {
                 x + padding,
@@ -201,9 +201,9 @@ static void controls_draw_table(const GameState *game_state, const Camera *camer
                 SDL_RenderDrawLine(renderer, table_rect.x, y, table_rect.x + table_rect.w, y);
 
                 // Render the control key and description
-                SDL_Surface *key_surface = TTF_RenderText_Solid(fonts[FONT_SIZE_18], game_state->controls_groups[i].controls[j].key, colors[COLOR_WHITE_140]);
+                SDL_Surface *key_surface = TTF_RenderText_Blended(fonts[FONT_SIZE_18], game_state->controls_groups[i].controls[j].key, colors[COLOR_WHITE_140]);
                 SDL_Texture *key_texture = SDL_CreateTextureFromSurface(renderer, key_surface);
-                SDL_Surface *description_surface = TTF_RenderText_Solid(fonts[FONT_SIZE_18], game_state->controls_groups[i].controls[j].description, colors[COLOR_WHITE_140]);
+                SDL_Surface *description_surface = TTF_RenderText_Blended(fonts[FONT_SIZE_18], game_state->controls_groups[i].controls[j].description, colors[COLOR_WHITE_140]);
                 SDL_Texture *description_texture = SDL_CreateTextureFromSurface(renderer, description_surface);
 
                 SDL_Rect key_rect = {

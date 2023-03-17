@@ -553,14 +553,16 @@ void game_run_map_state(GameState *game_state, InputState *input_state, GameEven
     SDL_RenderDrawLine(renderer, (camera->w / 2) - 7, camera->h / 2, (camera->w / 2) + 7, camera->h / 2);
     SDL_RenderDrawLine(renderer, camera->w / 2, (camera->h / 2) - 7, camera->w / 2, (camera->h / 2) + 7);
 
-    if (nav_state->current_star->is_selected &&
+    if ((nav_state->current_star->is_selected || input_state->is_hovering_star) &&
         gfx_is_object_in_camera(camera, nav_state->current_star->position.x, nav_state->current_star->position.y, nav_state->current_star->cutoff, game_state->game_scale))
     {
         // Draw star info box
-        stars_draw_info_box(nav_state->current_star, camera);
+        if (nav_state->current_star->is_selected || input_state->is_hovering_star)
+            stars_draw_info_box(nav_state->current_star, camera);
 
         // Draw planets info box
-        stars_draw_planets_info_box(nav_state->current_star, camera);
+        if (nav_state->current_star->is_selected)
+            stars_draw_planets_info_box(nav_state->current_star, camera);
     }
 
     console_draw_position_console(game_state, nav_state, camera, nav_state->map_offset);
@@ -1049,7 +1051,7 @@ void game_run_universe_state(GameState *game_state, InputState *input_state, Gam
     SDL_RenderDrawLine(renderer, (camera->w / 2) - 7, camera->h / 2, (camera->w / 2) + 7, camera->h / 2);
     SDL_RenderDrawLine(renderer, camera->w / 2, (camera->h / 2) - 7, camera->w / 2, (camera->h / 2) + 7);
 
-    // Draw star info box
+    // Star hover
     if (game_state->game_scale >= zoom_generate_preview_stars * 10 - epsilon)
     {
         for (int i = 0; i < MAX_STARS; i++)
@@ -1080,23 +1082,21 @@ void game_run_universe_state(GameState *game_state, InputState *input_state, Gam
                         pcg32_srandom_r(&rng, seed, nav_state->initseq);
 
                         // Draw star cutoff circle
-                        gfx_draw_circle(renderer, camera, x, y, star_cutoff, colors[COLOR_MAGENTA_120]);
+                        if (nav_state->current_star != NULL && !nav_state->current_star->is_selected)
+                            gfx_draw_circle(renderer, camera, x, y, star_cutoff, colors[COLOR_MAGENTA_120]);
 
+                        // Populate star
                         stars_populate_body(entry->star, entry->star->position, rng, game_state->game_scale);
-
-                        if (!input_state->zoom_in && !input_state->zoom_out)
-                            stars_draw_info_box(entry->star, camera);
 
                         // Set star as current_star
                         if (nav_state->current_star != NULL)
                         {
                             if (strcmp(nav_state->current_star->name, entry->star->name) != 0)
                                 memcpy(nav_state->current_star, entry->star, sizeof(Star));
-
-                            // Select current star
-                            if (!nav_state->current_star->is_selected)
-                                nav_state->current_star->is_selected = true;
                         }
+
+                        // Draw star info box
+                        stars_draw_info_box(entry->star, camera);
                     }
 
                     entry = entry->next;
@@ -1109,6 +1109,46 @@ void game_run_universe_state(GameState *game_state, InputState *input_state, Gam
     }
     else
         input_state->is_hovering_star = false;
+
+    // Define zoom threshold (for displaying star info)
+    double zoom_threshold;
+
+    switch (nav_state->current_galaxy->class)
+    {
+    case 1:
+        zoom_threshold = ZOOM_UNIVERSE * 10;
+        break;
+    case 2:
+        zoom_threshold = ZOOM_UNIVERSE * 5;
+        break;
+    case 3:
+        zoom_threshold = ZOOM_UNIVERSE * 3;
+        break;
+    case 4:
+        zoom_threshold = ZOOM_UNIVERSE * 2;
+        break;
+    default:
+        zoom_threshold = ZOOM_UNIVERSE;
+        break;
+    }
+
+    // Selected star
+    if (game_state->game_scale > zoom_threshold / GALAXY_SCALE + epsilon &&
+        nav_state->current_star->is_selected &&
+        !input_state->zoom_in && !input_state->zoom_out)
+    {
+        // Draw star cutoff circle
+        int x = (nav_state->current_galaxy->position.x - camera->x + nav_state->current_star->position.x / GALAXY_SCALE) * game_state->game_scale * GALAXY_SCALE;
+        int y = (nav_state->current_galaxy->position.y - camera->y + nav_state->current_star->position.y / GALAXY_SCALE) * game_state->game_scale * GALAXY_SCALE;
+        double star_cutoff = nav_state->current_star->cutoff * game_state->game_scale;
+        gfx_draw_circle(renderer, camera, x, y, star_cutoff, colors[COLOR_CYAN_100]);
+
+        // Draw star info box
+        stars_draw_info_box(nav_state->current_star, camera);
+
+        // Draw planets info box
+        stars_draw_planets_info_box(nav_state->current_star, camera);
+    }
 
     // Change mouse cursor
     if (!input_state->is_mouse_dragging)
@@ -1125,30 +1165,9 @@ void game_run_universe_state(GameState *game_state, InputState *input_state, Gam
         if (!nav_state->current_galaxy->initialized || nav_state->current_galaxy->initialized < nav_state->current_galaxy->total_groups)
             gfx_generate_gstars(nav_state->current_galaxy, false);
 
-        double zoom_threshold;
-
-        switch (nav_state->current_galaxy->class)
-        {
-        case 1:
-            zoom_threshold = ZOOM_UNIVERSE * 10;
-            break;
-        case 2:
-            zoom_threshold = ZOOM_UNIVERSE * 5;
-            break;
-        case 3:
-            zoom_threshold = ZOOM_UNIVERSE * 3;
-            break;
-        case 4:
-            zoom_threshold = ZOOM_UNIVERSE * 2;
-            break;
-        default:
-            zoom_threshold = ZOOM_UNIVERSE;
-            break;
-        }
-
         if (game_state->game_scale <= zoom_threshold / GALAXY_SCALE + epsilon)
             galaxies_draw_info_box(nav_state->current_galaxy, camera);
-        else
+        else if (!nav_state->current_star->is_selected)
             console_draw_galaxy_console(nav_state->current_galaxy, camera);
     }
 
