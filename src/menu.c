@@ -19,6 +19,7 @@ extern SDL_Color colors[];
 
 // Static function prototypes
 static void menu_create_logo(MenuButton *logo);
+static void menu_draw_footer(const Camera *camera);
 static void menu_populate_menu_array(MenuButton menu[]);
 
 /**
@@ -61,7 +62,7 @@ static void menu_create_logo(MenuButton *logo)
     logo->rect.y = 0;
 
     // Create a texture from the text
-    SDL_Surface *logo_surface = TTF_RenderText_Blended(fonts[FONT_SIZE_32], logo->text, colors[COLOR_PLANET_2]);
+    SDL_Surface *logo_surface = TTF_RenderText_Blended(fonts[LOGO_FONT_SIZE_32], logo->text, colors[COLOR_PLANET_1]);
     SDL_Texture *logo_texture = SDL_CreateTextureFromSurface(renderer, logo_surface);
     logo->text_texture = logo_texture;
 
@@ -72,6 +73,26 @@ static void menu_create_logo(MenuButton *logo)
     logo->texture_rect.y = logo->rect.y + (logo->rect.h - logo->texture_rect.h) / 2;
 
     SDL_FreeSurface(logo_surface);
+}
+
+/**
+ * Renders the footer onto the screen.
+ *
+ * @param camera A pointer to the camera object.
+ *
+ * @return void
+ */
+static void menu_draw_footer(const Camera *camera)
+{
+    int margin = 50;
+
+    char footer_text[] = "Gravity v.1.4.2 - Copyright (C) 2020 Yannis Maragos";
+    SDL_Surface *footer_text_surface = TTF_RenderText_Blended(fonts[FONT_SIZE_18], footer_text, colors[COLOR_WHITE_100]);
+    SDL_Texture *footer_text_texture = SDL_CreateTextureFromSurface(renderer, footer_text_surface);
+    SDL_Rect footer_text_rect = {camera->w - margin - footer_text_surface->w, camera->h - margin - footer_text_surface->h, footer_text_surface->w, footer_text_surface->h};
+    SDL_RenderCopy(renderer, footer_text_texture, NULL, &footer_text_rect);
+    SDL_FreeSurface(footer_text_surface);
+    SDL_DestroyTexture(footer_text_texture);
 }
 
 /**
@@ -276,6 +297,9 @@ void menu_run_state(GameState *game_state, InputState *input_state, bool is_game
     // Draw speed lines
     Speed lines_speed = {.vx = 100, .vy = 0};
     gfx_draw_speed_lines(1500, camera, lines_speed);
+
+    // Draw footer
+    menu_draw_footer(camera);
 
     // Check if mouse is over menu buttons
     if (menu_is_hovering_menu(game_state, input_state))

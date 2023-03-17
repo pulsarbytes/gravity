@@ -38,7 +38,7 @@ void console_draw_fps(unsigned int fps, const Camera *camera)
     sprintf(fps_text, "%d", fps);
 
     // Create text texture
-    SDL_Surface *fps_surface = TTF_RenderText_Blended(fonts[FONT_SIZE_22], fps_text, colors[COLOR_CYAN_150]);
+    SDL_Surface *fps_surface = TTF_RenderText_Blended(fonts[FONT_SIZE_22], fps_text, colors[COLOR_CYAN_100]);
     SDL_Texture *fps_texture = SDL_CreateTextureFromSurface(renderer, fps_surface);
     SDL_Rect fps_texture_rect;
     fps_texture_rect.x = 30;
@@ -445,13 +445,13 @@ static void console_draw_velocity_vector(const Ship *ship, Point center, const C
 /**
  * Measures the current frames per second (FPS).
  *
- * @param fps A pointer to the current FPS value.
+ * @param game_state A pointer to the GameState struct.
  * @param last_time A pointer to the last time the FPS was updated.
  * @param frame_count A pointer to the current frame count.
  *
  * @return void
  */
-void console_measure_fps(unsigned int *fps, unsigned int *last_time, unsigned int *frame_count)
+void console_measure_fps(GameState *game_state, unsigned int *last_time, unsigned int *frame_count)
 {
     unsigned int current_time = SDL_GetTicks();
     unsigned int time_diff = current_time - *last_time;
@@ -459,7 +459,7 @@ void console_measure_fps(unsigned int *fps, unsigned int *last_time, unsigned in
     // Only update FPS once per second
     if (time_diff >= 1000)
     {
-        *fps = *frame_count;
+        game_state->fps = *frame_count;
         *frame_count = 0;
         *last_time = current_time;
     }

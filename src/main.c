@@ -39,7 +39,7 @@ SDL_Color colors[COLOR_COUNT];
 
 // External function prototypes
 void console_draw_fps(unsigned int fps, const Camera *);
-void console_measure_fps(unsigned int *fps, unsigned int *last_time, unsigned int *frame_count);
+void console_measure_fps(GameState *, unsigned int *last_time, unsigned int *frame_count);
 void controls_create_table(GameState *, const Camera *);
 void controls_run_state(GameState *, InputState *, bool is_game_started, const NavigationState *, Bstar *bstars, Gstar *menustars, const Camera *);
 void events_loop(GameState *, InputState *, GameEvents *, NavigationState *, const Camera *);
@@ -120,7 +120,6 @@ int main(int argc, char *argv[])
     // Set time keeping variables
     unsigned int start_time;
     unsigned int end_time;
-    unsigned int fps = 0;
     unsigned int last_time = SDL_GetTicks();
     unsigned int frame_count = 0;
 
@@ -166,8 +165,8 @@ int main(int argc, char *argv[])
         // Draw FPS
         if (input_state.fps_on && FPS_ON)
         {
-            console_measure_fps(&fps, &last_time, &frame_count);
-            console_draw_fps(fps, &camera);
+            console_measure_fps(&game_state, &last_time, &frame_count);
+            console_draw_fps(game_state.fps, &camera);
         }
 
         // Switch buffers, display back buffer

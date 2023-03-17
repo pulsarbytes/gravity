@@ -205,10 +205,10 @@ bool sdl_ttf_load_fonts(SDL_Window *window)
         return false;
     }
 
-    // FONT_SIZE_32
-    fonts[FONT_SIZE_32] = TTF_OpenFont("../assets/fonts/consola.ttf", 32);
+    // LOGO_FONT_SIZE_32
+    fonts[LOGO_FONT_SIZE_32] = TTF_OpenFont("../assets/fonts/Ubuntu-B.ttf", 32);
 
-    if (fonts[FONT_SIZE_32] == NULL)
+    if (fonts[LOGO_FONT_SIZE_32] == NULL)
     {
         SDL_Log("Could not load font: %s\n", SDL_GetError());
         TTF_Quit();

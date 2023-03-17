@@ -127,7 +127,7 @@ void controls_create_table(GameState *game_state, const Camera *camera)
 
     // Initialize game_state variables
     int line_height = 50;
-    int margin = 50;
+    int margin = 80;
     int padding = 10;
 
     game_state->table_top_row = 0;
@@ -150,7 +150,7 @@ void controls_create_table(GameState *game_state, const Camera *camera)
  */
 static void controls_draw_table(const GameState *game_state, const Camera *camera)
 {
-    int margin = 50;
+    int margin = 80;
     int line_height = 50;
     int padding = 10;
 
@@ -175,7 +175,7 @@ static void controls_draw_table(const GameState *game_state, const Camera *camer
     // Loop through groups
     for (int i = 0; i < MAX_CONTROLS_GROUPS && y < table_rect.y + table_rect.h; i++)
     {
-        if (y >= margin && y < camera->h - margin)
+        if (y >= margin && y < camera->h - margin - cell_height / 2)
         {
             // Render the group title
             SDL_Surface *title_surface = TTF_RenderText_Blended(fonts[FONT_SIZE_26], game_state->controls_groups[i].title, colors[COLOR_WHITE_140]);
@@ -195,7 +195,7 @@ static void controls_draw_table(const GameState *game_state, const Camera *camer
         // Loop through the controls and render each cell
         for (int j = 0; j < game_state->controls_groups[i].num_controls && y < table_rect.y + table_rect.h; j++)
         {
-            if (y >= margin && y < camera->h - margin)
+            if (y >= margin && y < camera->h - margin - cell_height / 2)
             {
                 SDL_SetRenderDrawColor(renderer, 255, 255, 255, 25);
                 SDL_RenderDrawLine(renderer, table_rect.x, y, table_rect.x + table_rect.w, y);
@@ -232,7 +232,8 @@ static void controls_draw_table(const GameState *game_state, const Camera *camer
 
         if (i < MAX_CONTROLS_GROUPS - 1)
         {
-            SDL_RenderDrawLine(renderer, table_rect.x, y, table_rect.x + table_rect.w, y);
+            if (y >= margin && y < camera->h - margin - cell_height / 2)
+                SDL_RenderDrawLine(renderer, table_rect.x, y, table_rect.x + table_rect.w, y);
 
             // Add an empty row
             y += cell_height;

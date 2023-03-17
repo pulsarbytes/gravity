@@ -9,7 +9,7 @@ enum
     FONT_SIZE_18,
     FONT_SIZE_22,
     FONT_SIZE_26,
-    FONT_SIZE_32,
+    LOGO_FONT_SIZE_32,
     FONT_COUNT
 };
 

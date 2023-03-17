@@ -249,6 +249,7 @@ typedef struct
 typedef struct
 {
     int state;
+    unsigned int fps;
     int speed_limit;
     int landing_stage;
     long double game_scale;

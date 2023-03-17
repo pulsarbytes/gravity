@@ -150,6 +150,7 @@ void game_reset(GameState *game_state, InputState *input_state, GameEvents *game
         game_state->state = MENU;
 
     // GameState
+    game_state->fps = 0;
     game_state->speed_limit = BASE_SPEED_LIMIT;
     game_state->landing_stage = STAGE_OFF;
     game_state->game_scale = ZOOM_NAVIGATE;
