@@ -6,7 +6,7 @@ void menu_create(GameState *, NavigationState, Gstar *menustars);
 void menu_draw_menu(GameState *, InputState *, bool is_game_started);
 bool menu_is_hovering_menu(GameState *game_state, InputState *input_state);
 void menu_run_state(GameState *, InputState *, bool is_game_started, const NavigationState *, Bstar *bstars, Gstar *menustars, Camera *);
-void menu_update_menu_entries(GameState *);
+void menu_update_menu_entries(GameState *, GameEvents *);
 
 // External function prototypes
 Galaxy *galaxies_get_entry(GalaxyEntry *galaxies[], Point);

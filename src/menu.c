@@ -127,13 +127,7 @@ void menu_draw_menu(GameState *game_state, InputState *input_state, bool is_game
             } while (game_state->menu[input_state->selected_button_index].disabled);
         }
 
-        if (is_game_started && i == MENU_BUTTON_START)
-            continue;
-
-        if (!is_game_started && i == MENU_BUTTON_RESUME)
-            continue;
-
-        if (!is_game_started && i == MENU_BUTTON_NEW)
+        if (game_state->menu[i].disabled)
             continue;
 
         if (i == input_state->selected_button_index)
@@ -244,6 +238,12 @@ static void menu_populate_menu_array(MenuButton menu[])
     menu[MENU_BUTTON_EXIT].state = QUIT;
     menu[MENU_BUTTON_EXIT].disabled = false;
 
+    // Back
+    memset(menu[MENU_BUTTON_BACK].text, 0, sizeof(menu[MENU_BUTTON_BACK].text));
+    strcpy(menu[MENU_BUTTON_BACK].text, "Back");
+    menu[MENU_BUTTON_BACK].state = MENU;
+    menu[MENU_BUTTON_BACK].disabled = true;
+
     for (int i = 0; i < MENU_BUTTON_COUNT; i++)
     {
         menu[i].rect.x = 0;
@@ -312,32 +312,40 @@ void menu_run_state(GameState *game_state, InputState *input_state, bool is_game
  * Update the menu entries by updating the text color and disabling buttons as appropriate.
  *
  * @param game_state A pointer to the game state struct.
+ * @param game_events A pointer to the game events struct.
  *
  * @return void
  */
-void menu_update_menu_entries(GameState *game_state)
+void menu_update_menu_entries(GameState *game_state, GameEvents *game_events)
 {
-    // Update Start button
-    game_state->menu[MENU_BUTTON_START].disabled = true;
-    SDL_Surface *start_surface = TTF_RenderText_Blended(fonts[FONT_SIZE_14], game_state->menu[MENU_BUTTON_START].text, colors[COLOR_WHITE_180]);
-    SDL_DestroyTexture(game_state->menu[MENU_BUTTON_START].text_texture);
-    SDL_Texture *start_texture = SDL_CreateTextureFromSurface(renderer, start_surface);
-    game_state->menu[MENU_BUTTON_START].text_texture = start_texture;
-    SDL_FreeSurface(start_surface);
-
-    // Update Resume button
-    game_state->menu[MENU_BUTTON_RESUME].disabled = false;
-    SDL_Surface *resume_surface = TTF_RenderText_Blended(fonts[FONT_SIZE_14], game_state->menu[MENU_BUTTON_RESUME].text, colors[COLOR_WHITE_180]);
-    SDL_DestroyTexture(game_state->menu[MENU_BUTTON_RESUME].text_texture);
-    SDL_Texture *resume_texture = SDL_CreateTextureFromSurface(renderer, resume_surface);
-    game_state->menu[MENU_BUTTON_RESUME].text_texture = resume_texture;
-    SDL_FreeSurface(resume_surface);
-
-    // Update New button
-    game_state->menu[MENU_BUTTON_NEW].disabled = false;
-    SDL_Surface *new_surface = TTF_RenderText_Blended(fonts[FONT_SIZE_14], game_state->menu[MENU_BUTTON_NEW].text, colors[COLOR_WHITE_180]);
-    SDL_DestroyTexture(game_state->menu[MENU_BUTTON_NEW].text_texture);
-    SDL_Texture *new_texture = SDL_CreateTextureFromSurface(renderer, new_surface);
-    game_state->menu[MENU_BUTTON_NEW].text_texture = new_texture;
-    SDL_FreeSurface(new_surface);
+    if (game_state->state == MENU)
+    {
+        if (game_events->is_game_started)
+        {
+            game_state->menu[MENU_BUTTON_START].disabled = true;
+            game_state->menu[MENU_BUTTON_RESUME].disabled = false;
+            game_state->menu[MENU_BUTTON_NEW].disabled = false;
+            game_state->menu[MENU_BUTTON_CONTROLS].disabled = false;
+            game_state->menu[MENU_BUTTON_EXIT].disabled = false;
+            game_state->menu[MENU_BUTTON_BACK].disabled = true;
+        }
+        else
+        {
+            game_state->menu[MENU_BUTTON_START].disabled = false;
+            game_state->menu[MENU_BUTTON_RESUME].disabled = true;
+            game_state->menu[MENU_BUTTON_NEW].disabled = true;
+            game_state->menu[MENU_BUTTON_CONTROLS].disabled = false;
+            game_state->menu[MENU_BUTTON_EXIT].disabled = false;
+            game_state->menu[MENU_BUTTON_BACK].disabled = true;
+        }
+    }
+    else if (game_state->state == CONTROLS)
+    {
+        game_state->menu[MENU_BUTTON_START].disabled = true;
+        game_state->menu[MENU_BUTTON_RESUME].disabled = true;
+        game_state->menu[MENU_BUTTON_NEW].disabled = true;
+        game_state->menu[MENU_BUTTON_EXIT].disabled = true;
+        game_state->menu[MENU_BUTTON_CONTROLS].disabled = true;
+        game_state->menu[MENU_BUTTON_BACK].disabled = false;
+    }
 }

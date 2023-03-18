@@ -39,7 +39,7 @@ double maths_distance_between_points(double x1, double y1, double x2, double y2)
 double maths_get_nearest_section_line(double offset, int size);
 uint64_t maths_hash_position_to_uint64(Point);
 bool maths_points_equal(Point, Point);
-void menu_update_menu_entries(GameState *);
+void menu_update_menu_entries(GameState *, GameEvents *);
 void phys_update_velocity(Vector *velocity, const Ship *);
 void stars_clear_table(StarEntry *stars[], Star *);
 void stars_delete_outside_region(StarEntry *stars[], const Star *, double bx, double by, int region_size);

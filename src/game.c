@@ -45,8 +45,7 @@ void game_change_state(GameState *game_state, GameEvents *game_events, int new_s
     else if (game_state->state == CONTROLS)
         game_state->table_top_row = 0;
 
-    if (game_events->is_game_started)
-        menu_update_menu_entries(game_state);
+    menu_update_menu_entries(game_state, game_events);
 }
 
 /**
