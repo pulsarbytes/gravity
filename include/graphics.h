@@ -23,6 +23,7 @@ void gfx_project_galaxy_on_edge(int state, const NavigationState *, Galaxy *, co
 void gfx_project_ship_on_edge(int state, const InputState *, const NavigationState *, Ship *, const Camera *, long double scale);
 void gfx_toggle_galaxy_hover(InputState *, const NavigationState *, const Camera *, long double scale);
 void gfx_toggle_star_hover(InputState *, const NavigationState *, const Camera *, long double scale, int state);
+bool gfx_toggle_star_info_hover(InputState *, const NavigationState *, const Camera *);
 void gfx_update_bstars_position(int state, bool camera_on, const NavigationState *, Bstar *bstars, const Camera *, Speed, double distance);
 void gfx_update_camera(Camera *, Point, long double scale);
 void gfx_update_gstars_position(Galaxy *, Point, const Camera *, double distance, double limit);
@@ -32,6 +33,7 @@ double maths_distance_between_points(double x1, double y1, double x2, double y2)
 double maths_get_nearest_section_line(double offset, int size);
 uint64_t maths_hash_position_to_uint64(Point);
 uint64_t maths_hash_position_to_uint64_2(Point);
+bool maths_is_point_in_rectangle(Point, Point rect[]);
 bool maths_line_intersects_camera(const Camera *, double x1, double y1, double x2, double y2);
 bool maths_points_equal(Point, Point);
 double stars_nearest_center_distance(Point, Galaxy *, uint64_t initseq, int galaxy_density);

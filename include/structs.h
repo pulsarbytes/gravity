@@ -203,6 +203,7 @@ typedef struct
     int selected_button_index;
     bool is_hovering_galaxy;
     bool is_hovering_star;
+    bool is_hovering_star_info;
 } InputState;
 
 typedef struct
@@ -235,6 +236,7 @@ typedef struct
     Galaxy *buffer_galaxy; // Stores galaxy of current ship position
     Galaxy *previous_galaxy;
     Star *current_star;
+    Star *selected_star;
     Star *buffer_star; // Stores star of current ship position
     PointState galaxy_offset;
     Point universe_cross_line; // Keep track of nearest line position

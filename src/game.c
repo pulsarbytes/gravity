@@ -187,6 +187,7 @@ void game_reset(GameState *game_state, InputState *input_state, GameEvents *game
     input_state->selected_button_index = 0;
     input_state->is_hovering_galaxy = false;
     input_state->is_hovering_star = false;
+    input_state->is_hovering_star_info = false;
 
     // GameEvents
     if (reset)
@@ -330,6 +331,18 @@ void game_reset(GameState *game_state, InputState *input_state, GameEvents *game
         // Initialize current_star
         stars_initialize_star(nav_state->current_star);
 
+        // Allocate memory for selected_star
+        nav_state->selected_star = (Star *)malloc(sizeof(Star));
+
+        if (nav_state->selected_star == NULL)
+        {
+            fprintf(stderr, "Error: Could not allocate memory for selected_star.\n");
+            return;
+        }
+
+        // Initialize selected_star
+        stars_initialize_star(nav_state->selected_star);
+
         // Allocate memory for buffer_star
         nav_state->buffer_star = (Star *)malloc(sizeof(Star));
 
@@ -413,7 +426,7 @@ void game_run_map_state(GameState *game_state, InputState *input_state, GameEven
                 nav_state->galaxy_offset.current_y = nav_state->galaxy_offset.buffer_y;
             }
 
-            // Reset current_star
+            // Reset current_star, selected_star
             if (maths_points_equal(nav_state->current_galaxy->position, nav_state->buffer_galaxy->position))
             {
                 if (nav_state->current_star != NULL && nav_state->buffer_star != NULL)
@@ -422,8 +435,13 @@ void game_run_map_state(GameState *game_state, InputState *input_state, GameEven
                         memcpy(nav_state->current_star, nav_state->buffer_star, sizeof(Star));
 
                     // Select current star
-                    if (!nav_state->current_star->is_selected)
-                        nav_state->current_star->is_selected = true;
+                    if (nav_state->selected_star != NULL && nav_state->buffer_star != NULL)
+                    {
+                        if (strcmp(nav_state->selected_star->name, nav_state->buffer_star->name) != 0)
+                            memcpy(nav_state->selected_star, nav_state->buffer_star, sizeof(Star));
+
+                        nav_state->selected_star->is_selected = true;
+                    }
                 }
             }
         }
@@ -513,7 +531,11 @@ void game_run_map_state(GameState *game_state, InputState *input_state, GameEven
         }
     }
 
-    // Check if mouse is over current star
+    // Check if mouse is over star info box
+    input_state->is_hovering_star_info = gfx_toggle_star_info_hover(input_state, nav_state, camera);
+
+    // Check if mouse is over current star (enables click on hovered star)
+    // if (!input_state->is_hovering_star_info)
     gfx_toggle_star_hover(input_state, nav_state, camera, game_state->game_scale, MAP);
 
     // Change mouse cursor
@@ -553,16 +575,20 @@ void game_run_map_state(GameState *game_state, InputState *input_state, GameEven
     SDL_RenderDrawLine(renderer, (camera->w / 2) - 7, camera->h / 2, (camera->w / 2) + 7, camera->h / 2);
     SDL_RenderDrawLine(renderer, camera->w / 2, (camera->h / 2) - 7, camera->w / 2, (camera->h / 2) + 7);
 
-    if ((nav_state->current_star->is_selected || input_state->is_hovering_star) &&
-        gfx_is_object_in_camera(camera, nav_state->current_star->position.x, nav_state->current_star->position.y, nav_state->current_star->cutoff, game_state->game_scale))
+    if (nav_state->selected_star->is_selected &&
+        gfx_is_object_in_camera(camera, nav_state->selected_star->position.x, nav_state->selected_star->position.y, nav_state->selected_star->cutoff, game_state->game_scale))
     {
         // Draw star info box
-        if (nav_state->current_star->is_selected || input_state->is_hovering_star)
-            stars_draw_info_box(nav_state->current_star, camera);
+        stars_draw_info_box(nav_state->selected_star, camera);
 
         // Draw planets info box
-        if (nav_state->current_star->is_selected)
-            stars_draw_planets_info_box(nav_state->current_star, camera);
+        stars_draw_planets_info_box(nav_state->selected_star, camera);
+    }
+    else if (input_state->is_hovering_star &&
+             gfx_is_object_in_camera(camera, nav_state->current_star->position.x, nav_state->current_star->position.y, nav_state->current_star->cutoff, game_state->game_scale))
+    {
+        // Draw star info box
+        stars_draw_info_box(nav_state->current_star, camera);
     }
 
     console_draw_position_console(game_state, nav_state, camera, nav_state->map_offset);
@@ -644,8 +670,13 @@ void game_run_navigate_state(GameState *game_state, InputState *input_state, Gam
     }
 
     // Select current star
-    if (nav_state->current_star != NULL && !nav_state->current_star->is_selected)
-        nav_state->current_star->is_selected = true;
+    if (nav_state->current_star != NULL && nav_state->selected_star != NULL)
+    {
+        if (strcmp(nav_state->selected_star->name, nav_state->buffer_star->name) != 0)
+            memcpy(nav_state->selected_star, nav_state->buffer_star, sizeof(Star));
+
+        nav_state->selected_star->is_selected = true;
+    }
 
     // Zoom in
     if (input_state->zoom_in)
@@ -1082,7 +1113,7 @@ void game_run_universe_state(GameState *game_state, InputState *input_state, Gam
                         pcg32_srandom_r(&rng, seed, nav_state->initseq);
 
                         // Draw star cutoff circle
-                        if (nav_state->current_star != NULL && !nav_state->current_star->is_selected)
+                        if (strcmp(entry->star->name, nav_state->selected_star->name) != 0 || !nav_state->selected_star->is_selected)
                             gfx_draw_circle(renderer, camera, x, y, star_cutoff, colors[COLOR_MAGENTA_120]);
 
                         // Populate star
@@ -1096,7 +1127,8 @@ void game_run_universe_state(GameState *game_state, InputState *input_state, Gam
                         }
 
                         // Draw star info box
-                        stars_draw_info_box(entry->star, camera);
+                        if (!nav_state->selected_star->is_selected)
+                            stars_draw_info_box(entry->star, camera);
                     }
 
                     entry = entry->next;
@@ -1104,7 +1136,7 @@ void game_run_universe_state(GameState *game_state, InputState *input_state, Gam
             }
         }
 
-        // Check if mouse is over current star
+        // Check if mouse is over current star (enables click on hovered star)
         gfx_toggle_star_hover(input_state, nav_state, camera, game_state->game_scale, UNIVERSE);
     }
     else
@@ -1128,26 +1160,26 @@ void game_run_universe_state(GameState *game_state, InputState *input_state, Gam
         zoom_threshold = ZOOM_UNIVERSE * 2;
         break;
     default:
-        zoom_threshold = ZOOM_UNIVERSE;
+        zoom_threshold = ZOOM_UNIVERSE * 2;
         break;
     }
 
     // Selected star
     if (game_state->game_scale > zoom_threshold / GALAXY_SCALE + epsilon &&
-        nav_state->current_star->is_selected &&
+        nav_state->selected_star->is_selected &&
         !input_state->zoom_in && !input_state->zoom_out)
     {
         // Draw star cutoff circle
-        int x = (nav_state->current_galaxy->position.x - camera->x + nav_state->current_star->position.x / GALAXY_SCALE) * game_state->game_scale * GALAXY_SCALE;
-        int y = (nav_state->current_galaxy->position.y - camera->y + nav_state->current_star->position.y / GALAXY_SCALE) * game_state->game_scale * GALAXY_SCALE;
-        double star_cutoff = nav_state->current_star->cutoff * game_state->game_scale;
+        int x = (nav_state->current_galaxy->position.x - camera->x + nav_state->selected_star->position.x / GALAXY_SCALE) * game_state->game_scale * GALAXY_SCALE;
+        int y = (nav_state->current_galaxy->position.y - camera->y + nav_state->selected_star->position.y / GALAXY_SCALE) * game_state->game_scale * GALAXY_SCALE;
+        double star_cutoff = nav_state->selected_star->cutoff * game_state->game_scale;
         gfx_draw_circle(renderer, camera, x, y, star_cutoff, colors[COLOR_CYAN_100]);
 
         // Draw star info box
-        stars_draw_info_box(nav_state->current_star, camera);
+        stars_draw_info_box(nav_state->selected_star, camera);
 
         // Draw planets info box
-        stars_draw_planets_info_box(nav_state->current_star, camera);
+        stars_draw_planets_info_box(nav_state->selected_star, camera);
     }
 
     // Change mouse cursor

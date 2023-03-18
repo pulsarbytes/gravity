@@ -86,7 +86,7 @@ static void menu_draw_footer(const Camera *camera)
 {
     int margin = 50;
 
-    char footer_text[] = "Gravity v.1.4.2 - Copyright (C) 2020 Yannis Maragos";
+    char footer_text[] = "Gravity v.1.4.3 - Copyright (C) 2020 Yannis Maragos";
     SDL_Surface *footer_text_surface = TTF_RenderText_Blended(fonts[FONT_SIZE_18], footer_text, colors[COLOR_WHITE_100]);
     SDL_Texture *footer_text_texture = SDL_CreateTextureFromSurface(renderer, footer_text_surface);
     SDL_Rect footer_text_rect = {camera->w - margin - footer_text_surface->w, camera->h - margin - footer_text_surface->h, footer_text_surface->w, footer_text_surface->h};

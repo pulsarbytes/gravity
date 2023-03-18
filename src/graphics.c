@@ -1511,12 +1511,57 @@ void gfx_toggle_galaxy_hover(InputState *input_state, const NavigationState *nav
 }
 
 /**
- * Checks if the mouse is over the current star and toggles the variable input_state.is_hovering_star.
+ * Checks if the mouse is over the current star info box.
+ *
+ * @param input_state A pointer to the current InputState.
+ * @param nav_state A pointer to the current NavigationState.
+ * @param camera A pointer to the current Camera object.
+ *
+ * @return True if the mouse is over the current star info box, false otherwise.
+ */
+bool gfx_toggle_star_info_hover(InputState *input_state, const NavigationState *nav_state, const Camera *camera)
+{
+    if (!nav_state->selected_star->is_selected)
+        return false;
+
+    int padding = 20;
+    int width = 370;
+
+    // Define rect of info box
+    Point rect[4];
+
+    rect[0].x = camera->w - (width + padding);
+    rect[0].y = padding;
+
+    rect[1].x = camera->w - padding;
+    rect[1].y = padding;
+
+    rect[2].x = camera->w - padding;
+    rect[2].y = camera->h - padding;
+
+    rect[3].x = camera->w - (width + padding);
+    rect[3].y = camera->h - padding;
+
+    // Get mouse position
+    Point mouse_position = {.x = input_state->mouse_position.x, .y = input_state->mouse_position.y};
+
+    if (maths_is_point_in_rectangle(mouse_position, rect))
+    {
+        // input_state->is_hovering_star = false;
+        return true;
+    }
+    else
+        return false;
+}
+
+/**
+ * Checks if the mouse is over the current_star and toggles the variable input_state.is_hovering_star.
  *
  * @param input_state A pointer to the current InputState.
  * @param nav_state A pointer to the current NavigationState.
  * @param camera A pointer to the current Camera object.
  * @param scale The scaling factor applied to the camera view.
+ * @param state The current state.
  *
  * @return void
  */
@@ -1538,18 +1583,18 @@ void gfx_toggle_star_hover(InputState *input_state, const NavigationState *nav_s
         current_y = (nav_state->current_galaxy->position.y - camera->y + nav_state->current_star->position.y / GALAXY_SCALE) * scale * GALAXY_SCALE;
     }
 
-    // Get current star distance from mouse position
-    double distance = maths_distance_between_points(current_x, current_y, input_state->mouse_position.x, input_state->mouse_position.y);
+    // Get star distance from mouse position
+    double current_distance = maths_distance_between_points(current_x, current_y, input_state->mouse_position.x, input_state->mouse_position.y);
 
-    if (distance > current_cutoff)
-        input_state->is_hovering_star = false;
-    else
+    if (current_distance <= current_cutoff)
     {
         input_state->is_hovering_star = true;
 
         if (state == UNIVERSE)
             input_state->is_hovering_galaxy = false;
     }
+    else
+        input_state->is_hovering_star = false;
 }
 
 /**

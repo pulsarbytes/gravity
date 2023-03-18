@@ -321,7 +321,7 @@ void stars_draw_info_box(const Star *star, const Camera *camera)
     memset(star_name, 0, sizeof(star_name));
     strcpy(star_name, star->name);
     sprintf(entries[STAR_INFO_NAME].text, "%s", star_name);
-    entries[STAR_INFO_NAME].font_size = FONT_SIZE_22;
+    entries[STAR_INFO_NAME].font_size = FONT_SIZE_18;
 
     char position_x_text[32];
     memset(position_x_text, 0, sizeof(position_x_text));
@@ -371,7 +371,7 @@ void stars_draw_info_box(const Star *star, const Camera *camera)
     int name_height = 100;
     entries[STAR_INFO_NAME].rect.w = width;
     entries[STAR_INFO_NAME].rect.h = name_height;
-    entries[STAR_INFO_NAME].rect.x = camera->w - (width + padding) + 1.5 * padding;
+    entries[STAR_INFO_NAME].rect.x = camera->w - (width - 2.5 * padding);
     entries[STAR_INFO_NAME].rect.y = padding;
 
     SDL_RenderFillRect(renderer, &entries[STAR_INFO_NAME].rect);
@@ -388,7 +388,7 @@ void stars_draw_info_box(const Star *star, const Camera *camera)
     {
         entries[i].rect.w = width;
         entries[i].rect.h = entry_height;
-        entries[i].rect.x = camera->w - (width + padding);
+        entries[i].rect.x = camera->w - (width - 2.5 * padding);
         entries[i].rect.y = padding + name_height + (i - 1) * entry_height;
 
         SDL_RenderFillRect(renderer, &entries[i].rect);
@@ -402,9 +402,13 @@ void stars_draw_info_box(const Star *star, const Camera *camera)
     }
 
     // Star circle
-    int x_star = camera->w - (width + padding) + inner_padding + 5;
+    int x_star = camera->w - (width - 1.4 * inner_padding);
     int y_star = padding - 2 + name_height / 2;
     gfx_draw_fill_circle(renderer, x_star, y_star, 8, star->color);
+
+    // Draw line
+    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 30);
+    SDL_RenderDrawLine(renderer, x_star, y_star, x_star, padding + height);
 
     // Destroy the textures
     for (int i = 0; i < STAR_INFO_COUNT; i++)
@@ -425,7 +429,7 @@ void stars_draw_info_box(const Star *star, const Camera *camera)
 void stars_draw_planets_info_box(const Star *star, const Camera *camera)
 {
     // Draw background box
-    SDL_SetRenderDrawColor(renderer, 15, 15, 15, 235);
+    SDL_SetRenderDrawColor(renderer, 17, 17, 17, 255);
     int width = 370;
     int padding = 20;
     int inner_padding = 40;
@@ -470,10 +474,10 @@ void stars_draw_planets_info_box(const Star *star, const Camera *camera)
 
     // Draw separator line
     int x = camera->w - (width - 1.4 * inner_padding);
-    SDL_SetRenderDrawColor(renderer, star->color.r, star->color.g, star->color.b, 80);
+    SDL_SetRenderDrawColor(renderer, star->color.r, star->color.g, star->color.b, 50);
     SDL_RenderDrawLine(renderer, camera->w - (width + padding), padding + info_box_height, camera->w - padding, padding + info_box_height);
 
-    // Draw line
+    // Draw orbits line
     SDL_SetRenderDrawColor(renderer, 255, 255, 255, 30);
 
     int y1_line = padding + info_box_height + 1; // + 1 line
@@ -599,7 +603,7 @@ void stars_draw_star_system(GameState *game_state, const InputState *input_state
             int y = (body->position.y - camera->y) * game_state->game_scale;
             Point star_position = {.x = x, .y = y};
 
-            bool star_is_selected = strcmp(nav_state->current_star->name, body->name) == 0 && nav_state->current_star->is_selected;
+            bool star_is_selected = strcmp(nav_state->selected_star->name, body->name) == 0 && nav_state->selected_star->is_selected;
             bool star_is_hovered = strcmp(nav_state->current_star->name, body->name) == 0 && input_state->is_hovering_star;
 
             if (star_is_selected || star_is_hovered ||
@@ -624,29 +628,30 @@ void stars_draw_star_system(GameState *game_state, const InputState *input_state
                 }
 
                 // Draw planets
-                int max_planets = MAX_PLANETS;
-
-                for (int i = 0; i < max_planets && body->planets[i] != NULL; i++)
+                for (int i = 0; i < MAX_PLANETS && body->planets[i] != NULL; i++)
                 {
                     stars_draw_star_system(game_state, input_state, nav_state, body->planets[i], camera);
                 }
 
                 // Update current_star
-                if (strcmp(nav_state->current_star->name, body->name) != 0)
-                    memcpy(nav_state->current_star, body, sizeof(Star));
+                if (star_is_hovered ||
+                    (maths_is_point_in_circle(input_state->mouse_position, star_position, radius) &&
+                     gfx_is_object_in_camera(camera, body->position.x, body->position.y, body->radius, game_state->game_scale)))
+                {
+                    if (strcmp(nav_state->current_star->name, body->name) != 0)
+                        memcpy(nav_state->current_star, body, sizeof(Star));
+                }
+
+                // Draw cutoff area circle
+                unsigned short color_code;
+
+                if (star_is_selected)
+                    color_code = COLOR_CYAN_100;
+                else
+                    color_code = COLOR_MAGENTA_100;
 
                 if (input_state->orbits_on)
-                {
-                    unsigned short color_code;
-
-                    if (star_is_selected)
-                        color_code = COLOR_CYAN_100;
-                    else
-                        color_code = COLOR_MAGENTA_100;
-
-                    // Draw cutoff area circles
                     gfx_draw_circle(renderer, camera, x, y, radius, colors[color_code]);
-                }
             }
         }
         else if (game_state->state == NAVIGATE)
@@ -671,6 +676,12 @@ void stars_draw_star_system(GameState *game_state, const InputState *input_state
                 // Update current_star
                 if (strcmp(nav_state->current_star->name, body->name) != 0)
                     memcpy(nav_state->current_star, body, sizeof(Star));
+
+                // Update selected_star
+                if (strcmp(nav_state->selected_star->name, body->name) != 0)
+                    memcpy(nav_state->selected_star, body, sizeof(Star));
+
+                nav_state->selected_star->is_selected = true;
             }
 
             // Draw cutoff area circle
@@ -680,7 +691,7 @@ void stars_draw_star_system(GameState *game_state, const InputState *input_state
                 int x = (body->position.x - camera->x) * game_state->game_scale;
                 int y = (body->position.y - camera->y) * game_state->game_scale;
 
-                bool star_is_selected = strcmp(nav_state->current_star->name, body->name) == 0 && nav_state->current_star->is_selected;
+                bool star_is_selected = strcmp(nav_state->selected_star->name, body->name) == 0 && nav_state->selected_star->is_selected;
                 unsigned short color_code;
 
                 if (star_is_selected)

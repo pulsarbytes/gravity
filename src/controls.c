@@ -295,7 +295,4 @@ void controls_run_state(GameState *game_state, InputState *input_state, bool is_
         SDL_SetCursor(input_state->pointing_cursor);
     else
         SDL_SetCursor(input_state->default_cursor);
-
-    // Check if mouse is over scrollbar
-    // to-do
 }

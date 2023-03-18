@@ -280,7 +280,6 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
                     input_state->right_on = false;
                     input_state->left_on = true;
                     nav_state->current_galaxy->is_selected = false;
-                    nav_state->current_star->is_selected = false;
                 }
                 else
                     input_state->left_on = false;
@@ -291,7 +290,6 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
                     input_state->left_on = false;
                     input_state->right_on = true;
                     nav_state->current_galaxy->is_selected = false;
-                    nav_state->current_star->is_selected = false;
                 }
                 else
                     input_state->right_on = false;
@@ -302,7 +300,6 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
                     input_state->down_on = false;
                     input_state->up_on = true;
                     nav_state->current_galaxy->is_selected = false;
-                    nav_state->current_star->is_selected = false;
                 }
                 else
                     input_state->up_on = false;
@@ -313,7 +310,6 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
                     input_state->up_on = false;
                     input_state->down_on = true;
                     nav_state->current_galaxy->is_selected = false;
-                    nav_state->current_star->is_selected = false;
                 }
             }
             else
@@ -338,11 +334,16 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
 
                         // Deselect star
                         if (!input_state->is_hovering_star && !input_state->clicked_inside_star)
-                            nav_state->current_star->is_selected = false;
+                            nav_state->selected_star->is_selected = false;
 
                         // Set star as selected
                         if (input_state->is_hovering_star)
-                            nav_state->current_star->is_selected = true;
+                        {
+                            if (strcmp(nav_state->selected_star->name, nav_state->current_star->name) != 0)
+                                memcpy(nav_state->selected_star, nav_state->current_star, sizeof(Star));
+
+                            nav_state->selected_star->is_selected = true;
+                        }
 
                         input_state->clicked_inside_star = false;
                     }
@@ -350,11 +351,16 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
                     {
                         // Deselect star
                         if (!input_state->is_hovering_star && !input_state->clicked_inside_star)
-                            nav_state->current_star->is_selected = false;
+                            nav_state->selected_star->is_selected = false;
 
                         // Set star as selected
                         if (input_state->is_hovering_star)
-                            nav_state->current_star->is_selected = true;
+                        {
+                            if (strcmp(nav_state->selected_star->name, nav_state->current_star->name) != 0)
+                                memcpy(nav_state->selected_star, nav_state->current_star, sizeof(Star));
+
+                            nav_state->selected_star->is_selected = true;
+                        }
 
                         input_state->clicked_inside_star = false;
                     }

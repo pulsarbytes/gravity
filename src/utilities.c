@@ -93,6 +93,7 @@ void utils_cleanup_resources(GameState *game_state, InputState *input_state, Nav
     free(nav_state->buffer_galaxy);
     free(nav_state->previous_galaxy);
     free(nav_state->current_star);
+    free(nav_state->selected_star);
     free(nav_state->buffer_star);
 
     // Clean up menu textures
