@@ -1547,7 +1547,7 @@ bool gfx_toggle_star_info_hover(InputState *input_state, const NavigationState *
 
     if (maths_is_point_in_rectangle(mouse_position, rect))
     {
-        // input_state->is_hovering_star = false;
+        input_state->is_hovering_star = false;
         return true;
     }
     else

@@ -324,7 +324,7 @@ void galaxies_draw_galaxy(const InputState *input_state, NavigationState *nav_st
 void galaxies_draw_info_box(const Galaxy *galaxy, const Camera *camera)
 {
     // Draw background box
-    SDL_SetRenderDrawColor(renderer, 12, 12, 12, 200);
+    SDL_SetRenderDrawColor(renderer, 12, 12, 12, 230);
     int width = 370;
     int height = 310;
     int padding = 20;

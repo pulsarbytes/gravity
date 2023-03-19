@@ -333,7 +333,7 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
                         input_state->clicked_inside_galaxy = false;
 
                         // Deselect star
-                        if (!input_state->is_hovering_star && !input_state->clicked_inside_star)
+                        if (!input_state->is_hovering_star && !input_state->clicked_inside_star && !input_state->is_hovering_star_info)
                             nav_state->selected_star->is_selected = false;
 
                         // Set star as selected
@@ -350,7 +350,7 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
                     else if (game_state->state == MAP)
                     {
                         // Deselect star
-                        if (!input_state->is_hovering_star && !input_state->clicked_inside_star)
+                        if (!input_state->is_hovering_star && !input_state->clicked_inside_star && !input_state->is_hovering_star_info)
                             nav_state->selected_star->is_selected = false;
 
                         // Set star as selected
@@ -392,7 +392,7 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
                 input_state->mouse_position.y = event.motion.y;
 
                 // If left mouse button is held down, update the position
-                if (event.motion.state & SDL_BUTTON_LMASK)
+                if (event.motion.state & SDL_BUTTON_LMASK && !input_state->is_hovering_star_info)
                 {
                     input_state->is_mouse_dragging = true;
 

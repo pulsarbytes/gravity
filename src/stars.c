@@ -606,9 +606,10 @@ void stars_draw_star_system(GameState *game_state, const InputState *input_state
             bool star_is_selected = strcmp(nav_state->selected_star->name, body->name) == 0 && nav_state->selected_star->is_selected;
             bool star_is_hovered = strcmp(nav_state->current_star->name, body->name) == 0 && input_state->is_hovering_star;
 
-            if (star_is_selected || star_is_hovered ||
-                (maths_is_point_in_circle(input_state->mouse_position, star_position, radius) &&
-                 gfx_is_object_in_camera(camera, body->position.x, body->position.y, body->radius, game_state->game_scale)))
+            if (star_is_selected || (!input_state->is_hovering_star_info &&
+                                     (star_is_hovered ||
+                                      (maths_is_point_in_circle(input_state->mouse_position, star_position, radius) &&
+                                       gfx_is_object_in_camera(camera, body->position.x, body->position.y, body->radius, game_state->game_scale)))))
             {
                 // Create system
                 if (!body->initialized)

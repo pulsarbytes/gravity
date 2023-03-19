@@ -66,7 +66,7 @@ void console_draw_fps(unsigned int fps, const Camera *camera)
 void console_draw_position_console(const GameState *game_state, const NavigationState *nav_state, const Camera *camera, Point offset)
 {
     // Draw background box
-    SDL_SetRenderDrawColor(renderer, 12, 12, 12, 200);
+    SDL_SetRenderDrawColor(renderer, 12, 12, 12, 230);
     int box_width = 300;
     int box_height = 70;
     int padding = 20;
@@ -203,7 +203,7 @@ void console_draw_position_console(const GameState *game_state, const Navigation
 void console_draw_ship_console(const NavigationState *nav_state, const Ship *ship, const Camera *camera)
 {
     // Draw background box
-    SDL_SetRenderDrawColor(renderer, 12, 12, 12, 200);
+    SDL_SetRenderDrawColor(renderer, 12, 12, 12, 230);
     int box_width = 300;
     int box_height = 70;
     int padding = 20;
@@ -321,7 +321,7 @@ void console_draw_ship_console(const NavigationState *nav_state, const Ship *shi
 void console_draw_star_console(const Star *star, const Camera *camera)
 {
     // Draw background box
-    SDL_SetRenderDrawColor(renderer, 12, 12, 12, 200);
+    SDL_SetRenderDrawColor(renderer, 12, 12, 12, 230);
     int box_width = 370;
     int box_height = 70;
     int padding = 20;

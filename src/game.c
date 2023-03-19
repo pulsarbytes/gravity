@@ -535,8 +535,8 @@ void game_run_map_state(GameState *game_state, InputState *input_state, GameEven
     input_state->is_hovering_star_info = gfx_toggle_star_info_hover(input_state, nav_state, camera);
 
     // Check if mouse is over current star (enables click on hovered star)
-    // if (!input_state->is_hovering_star_info)
-    gfx_toggle_star_hover(input_state, nav_state, camera, game_state->game_scale, MAP);
+    if (!input_state->is_hovering_star_info)
+        gfx_toggle_star_hover(input_state, nav_state, camera, game_state->game_scale, MAP);
 
     // Change mouse cursor
     if (!input_state->is_mouse_dragging)
@@ -1101,7 +1101,10 @@ void game_run_universe_state(GameState *game_state, InputState *input_state, Gam
                     double distance_star = maths_distance_between_points(input_state->mouse_position.x, input_state->mouse_position.y, x, y);
                     double star_cutoff = entry->star->cutoff * game_state->game_scale;
 
-                    if (distance_star <= star_cutoff)
+                    // Check if mouse is over star info box
+                    input_state->is_hovering_star_info = gfx_toggle_star_info_hover(input_state, nav_state, camera);
+
+                    if (!input_state->is_hovering_star_info && distance_star <= star_cutoff)
                     {
                         // Use a local rng
                         pcg32_random_t rng;
@@ -1137,7 +1140,8 @@ void game_run_universe_state(GameState *game_state, InputState *input_state, Gam
         }
 
         // Check if mouse is over current star (enables click on hovered star)
-        gfx_toggle_star_hover(input_state, nav_state, camera, game_state->game_scale, UNIVERSE);
+        if (!input_state->is_hovering_star_info)
+            gfx_toggle_star_hover(input_state, nav_state, camera, game_state->game_scale, UNIVERSE);
     }
     else
         input_state->is_hovering_star = false;
