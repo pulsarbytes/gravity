@@ -485,13 +485,31 @@ void stars_draw_planets_info_box(const Star *star, const Camera *camera)
     int line_height = y2_line - y1_line;
     SDL_RenderDrawLine(renderer, x, y1_line, x, y2_line);
 
+    // Calculate total width of all orbits and scaled diameters
+    float total_planet_orbit = 0;
+    float total_planet_diameter = 0;
+
+    for (int i = 0; i < MAX_PLANETS && star->planets[i] != NULL; i++)
+    {
+        total_planet_orbit += star->planets[i]->orbit_radius;
+        total_planet_diameter += star->planets[i]->radius;
+    }
+
+    float total_width = (total_planet_orbit * line_height / star->cutoff) + (total_planet_diameter / planets_scaling_factor);
+    float cutoff;
+
+    if (total_width > star->cutoff)
+        cutoff = total_width;
+    else
+        cutoff = star->cutoff;
+
     // Draw planets
     // Line represents star cutoff distance
     float y_so_far = y1_line;
 
     for (int i = 0; i < MAX_PLANETS && star->planets[i] != NULL; i++)
     {
-        float planet_orbit = star->planets[i]->orbit_radius * line_height / star->cutoff;
+        float planet_orbit = star->planets[i]->orbit_radius * line_height / cutoff;
         float planet_diameter = star->planets[i]->radius / planets_scaling_factor;
         y_so_far += planet_orbit + planet_diameter;
 
