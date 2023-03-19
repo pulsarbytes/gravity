@@ -575,8 +575,7 @@ void game_run_map_state(GameState *game_state, InputState *input_state, GameEven
     SDL_RenderDrawLine(renderer, (camera->w / 2) - 7, camera->h / 2, (camera->w / 2) + 7, camera->h / 2);
     SDL_RenderDrawLine(renderer, camera->w / 2, (camera->h / 2) - 7, camera->w / 2, (camera->h / 2) + 7);
 
-    if (nav_state->selected_star->is_selected &&
-        gfx_is_object_in_camera(camera, nav_state->selected_star->position.x, nav_state->selected_star->position.y, nav_state->selected_star->cutoff, game_state->game_scale))
+    if (nav_state->selected_star->is_selected)
     {
         // Draw star info box
         stars_draw_info_box(nav_state->selected_star, camera);
@@ -1113,7 +1112,7 @@ void game_run_universe_state(GameState *game_state, InputState *input_state, Gam
                         uint64_t seed = maths_hash_position_to_uint64(entry->star->position);
 
                         // Seed with a fixed constant
-                        pcg32_srandom_r(&rng, seed, nav_state->initseq);
+                        pcg32_srandom_r(&rng, seed, seed);
 
                         // Draw star cutoff circle
                         if (strcmp(entry->star->name, nav_state->selected_star->name) != 0 || !nav_state->selected_star->is_selected)

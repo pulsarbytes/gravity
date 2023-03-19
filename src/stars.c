@@ -58,7 +58,7 @@ static void stars_add_entry(StarEntry *stars[], Point position, Star *star)
 }
 
 /**
- * Cleans up the planets of a celestial body and destroys its texture.
+ * Cleans up the planets of a celestial body by freeing the path array.
  *
  * @param body A pointer to the celestial body to clean up.
  *
@@ -67,9 +67,8 @@ static void stars_add_entry(StarEntry *stars[], Point position, Star *star)
 static void stars_cleanup_planets(CelestialBody *body)
 {
     int planets_size = sizeof(body->planets) / sizeof(body->planets[0]);
-    int i;
 
-    for (i = 0; i < planets_size && body->planets[i] != NULL; i++)
+    for (int i = 0; i < planets_size && body->planets[i] != NULL; i++)
     {
         stars_cleanup_planets(body->planets[i]);
     }
@@ -131,7 +130,7 @@ static Star *stars_create_star(const NavigationState *nav_state, Point position,
     uint64_t seed = maths_hash_position_to_uint64(position);
 
     // Seed with a fixed constant
-    pcg32_srandom_r(&rng, seed, nav_state->initseq);
+    pcg32_srandom_r(&rng, seed, seed); // Unique sequence for this seed
 
     switch (class)
     {
@@ -592,15 +591,15 @@ void stars_draw_star_system(GameState *game_state, const InputState *input_state
         if (input_state->orbits_on)
         {
             int radius = distance * game_state->game_scale;
-            int _x = (body->parent->position.x - camera->x) * game_state->game_scale;
-            int _y = (body->parent->position.y - camera->y) * game_state->game_scale;
+            int x = (body->parent->position.x - camera->x) * game_state->game_scale;
+            int y = (body->parent->position.y - camera->y) * game_state->game_scale;
             SDL_Color orbit_color = {
                 colors[COLOR_WHITE_255].r,
                 colors[COLOR_WHITE_255].g,
                 colors[COLOR_WHITE_255].b,
                 orbit_opacity};
 
-            gfx_draw_circle(renderer, camera, _x, _y, radius, orbit_color);
+            gfx_draw_circle(renderer, camera, x, y, radius, orbit_color);
         }
 
         // Draw moons
@@ -641,7 +640,7 @@ void stars_draw_star_system(GameState *game_state, const InputState *input_state
                     uint64_t seed = maths_hash_position_to_uint64(star_position);
 
                     // Seed with a fixed constant
-                    pcg32_srandom_r(&rng, seed, nav_state->initseq);
+                    pcg32_srandom_r(&rng, seed, seed);
 
                     stars_populate_body(body, star_position, rng, game_state->game_scale);
                 }
@@ -1833,7 +1832,7 @@ void stars_update_orbital_positions(GameState *game_state, const InputState *inp
                     uint64_t seed = maths_hash_position_to_uint64(star_position);
 
                     // Seed with a fixed constant
-                    pcg32_srandom_r(&rng, seed, nav_state->initseq);
+                    pcg32_srandom_r(&rng, seed, seed);
 
                     stars_populate_body(body, star_position, rng, game_state->game_scale);
                 }

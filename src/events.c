@@ -61,7 +61,7 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
 
                 Uint32 current_time = SDL_GetTicks();
 
-                // Detect double-clicks (500 milliseconds)
+                // Detect double-clicks
                 if (current_time - input_state->last_click_time < DOUBLE_CLICK_INTERVAL)
                 {
                     if (game_state->state == UNIVERSE)
@@ -411,12 +411,9 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
                         // Trigger star generation
                         game_events->start_stars_preview = true;
 
-                        // Calculate drag speed
-                        double speed_universe_step = 10000;
-
                         // Update the position
-                        nav_state->universe_offset.x -= delta_x / (game_state->game_scale * speed_universe_step);
-                        nav_state->universe_offset.y -= delta_y / (game_state->game_scale * speed_universe_step);
+                        nav_state->universe_offset.x -= delta_x / (game_state->game_scale * GALAXY_SCALE);
+                        nav_state->universe_offset.y -= delta_y / (game_state->game_scale * GALAXY_SCALE);
                     }
                     else if (game_state->state == MAP)
                     {
@@ -438,7 +435,7 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
             double zoom_universe_step = ZOOM_UNIVERSE_STEP;
             double zoom_step = ZOOM_STEP;
 
-            if (game_state->state == UNIVERSE || game_state->state == MAP)
+            if (game_state->state == UNIVERSE || game_state->state == MAP || game_state->state == NAVIGATE)
             {
                 // Wait until previous zoom has ended
                 if (input_state->zoom_in || input_state->zoom_out)
@@ -452,7 +449,7 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
             // Handle mouse wheel
             if (event.wheel.y > 0)
             {
-                if (game_state->state == UNIVERSE || game_state->state == MAP)
+                if (game_state->state == UNIVERSE || game_state->state == MAP || game_state->state == NAVIGATE)
                 {
                     // Zoom in
                     input_state->zoom_in = true;
@@ -485,7 +482,7 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
             }
             else if (event.wheel.y < 0)
             {
-                if (game_state->state == UNIVERSE || game_state->state == MAP)
+                if (game_state->state == UNIVERSE || game_state->state == MAP || game_state->state == NAVIGATE)
                 {
                     // Zoom out
                     input_state->zoom_in = false;

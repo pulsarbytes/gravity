@@ -102,7 +102,7 @@ static Galaxy *galaxies_create_galaxy(Point position)
     uint64_t seed = maths_hash_position_to_uint64_2(position);
 
     // Seed with a fixed constant
-    pcg32_srandom_r(&rng, seed, 1);
+    pcg32_srandom_r(&rng, seed, seed); // Unique sequence for this seed
 
     float radius;
 

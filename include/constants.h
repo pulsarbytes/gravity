@@ -60,7 +60,7 @@
 
 // Zoom
 #define ZOOM_NAVIGATE 1.0      // Default: 1.0
-#define ZOOM_NAVIGATE_MIN 0.20 // Default: 0.20
+#define ZOOM_NAVIGATE_MIN 0.01 // Default: 0.01
 #define ZOOM_MAX 1.0           // Default: 1.0
 
 #define ZOOM_STEP 0.01      // Default: 0.01
