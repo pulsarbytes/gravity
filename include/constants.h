@@ -59,22 +59,26 @@
 #define MENU_BSTARS_SPEED_FACTOR 0.012 // Default: 0.012
 
 // Zoom
-#define ZOOM_NAVIGATE 1.0      // Default: 1.0
-#define ZOOM_NAVIGATE_MIN 0.01 // Default: 0.01
-#define ZOOM_MAX 1.0           // Default: 1.0
+#define ZOOM_NAVIGATE 1.0     // Default: 1.0
+#define ZOOM_NAVIGATE_MIN 0.1 // Default: 0.1
+#define ZOOM_MAX 1.0          // Default: 1.0
+#define ZOOM_STEP 0.01        // Default: 0.01
+#define ZOOM_EPSILON 0.0001   // Default: 0.0001
 
-#define ZOOM_STEP 0.01      // Default: 0.01
-#define ZOOM_EPSILON 0.0001 // Default: 0.0001
-
-#define ZOOM_MAP 0.01                        // Default: 0.01
-#define ZOOM_MAP_REGION_SWITCH 0.01          // Default: 0.01
-#define ZOOM_MAP_SWITCH 0.005                // Default: 0.005
+#define ZOOM_MAP 0.002                       // Default: 0.002
+#define ZOOM_MAP_STEP_SWITCH 0.01            // Default: 0.01
+#define ZOOM_MAP_SWITCH 0.002                // Default: 0.002
 #define ZOOM_MAP_MIN ZOOM_MAP_SWITCH - 0.001 // Default: ZOOM_MAP_SWITCH - 0.001
-
-#define ZOOM_UNIVERSE 0.01                  // Universe scale. Default: 0.01
-#define ZOOM_UNIVERSE_MIN 0.01              // Universe scale. Default: 0.01
-#define ZOOM_UNIVERSE_STEP 0.001            // Default: 0.001
-#define ZOOM_GENERATE_PREVIEW_STARS 0.00001 // Generate more stars over this limit. Default: 0.00001
+#define ZOOM_UNIVERSE_STAR_SYSTEMS 0.0005    // Default: 0.0005
+#define ZOOM_UNIVERSE 0.01                   // Universe scale. Default: 0.01
+#define ZOOM_UNIVERSE_MIN 0.01               // Universe scale. Default: 0.01
+#define ZOOM_UNIVERSE_STEP 0.001             // Default: 0.001
+#define ZOOM_STAR_1_PREVIEW_STARS 0.00005    // Generate more stars over this limit.
+#define ZOOM_STAR_2_PREVIEW_STARS 0.00002
+#define ZOOM_STAR_3_PREVIEW_STARS 0.00004
+#define ZOOM_STAR_4_PREVIEW_STARS 0.00004
+#define ZOOM_STAR_5_PREVIEW_STARS 0.00005
+#define ZOOM_STAR_6_PREVIEW_STARS 0.00001
 
 // Universe
 #define UNIVERSE_REGION_SIZE 40     // Sections per axis. Even number; Default: 40
@@ -86,13 +90,12 @@
 #define UNIVERSE_Y_LIMIT 200000000  // Default: 200000000
 
 // Galaxy
-#define GALAXY_REGION_SIZE 30     // Sections per axis. Even number; Default: 30
-#define GALAXY_REGION_SIZE_MAX 60 // Region size for zoom < ZOOM_MAP_REGION_SWITCH. Default:60
-#define GALAXY_DENSITY 30         // Maximum at galaxy center per 1000 sections. Default: 30 (max 150)
-#define GALAXY_CLOUD_DENSITY 30   // Default: 30 (max 150)
-#define MAX_STARS 907             // First prime number > (GALAXY_REGION_SIZE * GALAXY_REGION_SIZE). Default 907
-                                  // We use this in the modulo operations of the hash function output
-#define GALAXY_SECTION_SIZE 10000 // Default: 10000
+#define GALAXY_REGION_SIZE 30      // Sections per axis. Even number; Default: 30
+#define GALAXY_DENSITY 40          // Maximum at galaxy center per 1000 sections. Default: 40 (max 150)
+#define GALAXY_CLOUD_DENSITY 40    // Default: 40 (max 150)
+#define MAX_STARS 907              // First prime number > (GALAXY_REGION_SIZE * GALAXY_REGION_SIZE). Default 907
+                                   // We use this in the modulo operations of the hash function output
+#define GALAXY_SECTION_SIZE 100000 // Default: 100000
 
 // Starting position
 #define UNIVERSE_START_X -140000
@@ -122,41 +125,41 @@
 #define GALAXY_6_RADIUS_MAX 3000  // Default: 3000 (+ 25000 = 28000) (max 30000)
 
 // Stars
-#define STAR_1_RADIUS_MIN 100 // Default: 100
-#define STAR_1_RADIUS_MAX 100 // Default: 100 (+ 100 = 200)
-#define STAR_2_RADIUS_MIN 200 // Default: 200
-#define STAR_2_RADIUS_MAX 100 // Default: 100 (+ 200 = 300)
-#define STAR_3_RADIUS_MIN 300 // Default: 300
-#define STAR_3_RADIUS_MAX 150 // Default: 150 (+ 300 = 450)
-#define STAR_4_RADIUS_MIN 450 // Default: 450
-#define STAR_4_RADIUS_MAX 150 // Default: 150 (+ 450 = 600)
-#define STAR_5_RADIUS_MIN 600 // Default: 600
-#define STAR_5_RADIUS_MAX 200 // Default: 200 (+ 600 = 800)
-#define STAR_6_RADIUS_MIN 800 // Default: 800
-#define STAR_6_RADIUS_MAX 200 // Default: 200 (+ 800 = 1000)
+#define STAR_1_RADIUS_MIN 120 // Default: 120
+#define STAR_1_RADIUS_MAX 100 // Default: 100
+#define STAR_2_RADIUS_MIN 220 // Default: 220
+#define STAR_2_RADIUS_MAX 130 // Default: 130
+#define STAR_3_RADIUS_MIN 350 // Default: 350
+#define STAR_3_RADIUS_MAX 150 // Default: 150
+#define STAR_4_RADIUS_MIN 500 // Default: 500
+#define STAR_4_RADIUS_MAX 160 // Default: 160
+#define STAR_5_RADIUS_MIN 660 // Default: 660
+#define STAR_5_RADIUS_MAX 200 // Default: 200
+#define STAR_6_RADIUS_MIN 860 // Default: 860
+#define STAR_6_RADIUS_MAX 200 // Default: 200
 
 // Planets
-#define MAX_PLANETS 10 // Default: 10
+#define MAX_PLANETS 12 // Default: 10
 
 /* Number of star radiuses for orbits */
-#define STAR_1_PLANET_ORBIT_MIN 5 // Default: 5
-#define STAR_1_PLANET_ORBIT_MAX 8 // Default: 8 (+ 5 = 13)
-#define STAR_2_PLANET_ORBIT_MIN 5 // Default: 5
-#define STAR_2_PLANET_ORBIT_MAX 8 // Default: 8 (+ 5 = 13)
-#define STAR_3_PLANET_ORBIT_MIN 4 // Default: 4
-#define STAR_3_PLANET_ORBIT_MAX 7 // Default: 7 (+ 4 = 11)
-#define STAR_4_PLANET_ORBIT_MIN 3 // Default: 3
-#define STAR_4_PLANET_ORBIT_MAX 6 // Default: 6 (+ 3 = 9)
-#define STAR_5_PLANET_ORBIT_MIN 2 // Default: 2
-#define STAR_5_PLANET_ORBIT_MAX 5 // Default: 5 (+ 2 = 7)
-#define STAR_6_PLANET_ORBIT_MIN 2 // Default: 2
-#define STAR_6_PLANET_ORBIT_MAX 4 // Default: 4 (+ 2 = 6)
+#define STAR_1_PLANET_ORBIT_MIN 25 // Default: 25
+#define STAR_1_PLANET_ORBIT_MAX 8  // Default: 8
+#define STAR_2_PLANET_ORBIT_MIN 25 // Default: 25
+#define STAR_2_PLANET_ORBIT_MAX 8  // Default: 8
+#define STAR_3_PLANET_ORBIT_MIN 24 // Default: 24
+#define STAR_3_PLANET_ORBIT_MAX 7  // Default: 7
+#define STAR_4_PLANET_ORBIT_MIN 23 // Default: 23
+#define STAR_4_PLANET_ORBIT_MAX 6  // Default: 6
+#define STAR_5_PLANET_ORBIT_MIN 22 // Default: 22
+#define STAR_5_PLANET_ORBIT_MAX 5  // Default: 5
+#define STAR_6_PLANET_ORBIT_MIN 22 // Default: 22
+#define STAR_6_PLANET_ORBIT_MAX 4  // Default: 4
 
 #define PLANET_RADIUS_MIN 20 // Default: 20
-#define TERRESTRIAL_RADIUS_MAX 2 * PLANET_RADIUS_MIN
-#define EARTH_RADIUS_MAX 3 * PLANET_RADIUS_MIN
-#define SUBNEPTUNE_RADIUS_MAX 4 * PLANET_RADIUS_MIN
-#define NEPTUNE_RADIUS_MAX 5 * PLANET_RADIUS_MIN
+#define TERRESTRIAL_RADIUS_MAX 3 * PLANET_RADIUS_MIN
+#define EARTH_RADIUS_MAX 4 * PLANET_RADIUS_MIN
+#define SUBNEPTUNE_RADIUS_MAX 5 * PLANET_RADIUS_MIN
+#define NEPTUNE_RADIUS_MAX 6 * PLANET_RADIUS_MIN
 #define ICE_GIANT_RADIUS_MAX 6 * PLANET_RADIUS_MIN
 #define GAS_GIANT_RADIUS_MAX 7 * PLANET_RADIUS_MIN
 
@@ -164,7 +167,7 @@
 #define STAR_2_PLANET_RADIUS_MAX SUBNEPTUNE_RADIUS_MAX
 #define STAR_3_PLANET_RADIUS_MAX ICE_GIANT_RADIUS_MAX - 10
 #define STAR_4_PLANET_RADIUS_MAX ICE_GIANT_RADIUS_MAX
-#define STAR_5_PLANET_RADIUS_MAX GAS_GIANT_RADIUS_MAX
+#define STAR_5_PLANET_RADIUS_MAX GAS_GIANT_RADIUS_MAX - 10
 #define STAR_6_PLANET_RADIUS_MAX GAS_GIANT_RADIUS_MAX
 
 // Moons
@@ -173,17 +176,17 @@
 
 /* Number of planet radiuses for orbits */
 #define PLANET_1_ORBIT_MIN 6 // Default: 6
-#define PLANET_1_ORBIT_MAX 1 // Default: 1 (+ 6 = 7)
+#define PLANET_1_ORBIT_MAX 1 // Default: 1
 #define PLANET_2_ORBIT_MIN 6 // Default: 6
-#define PLANET_2_ORBIT_MAX 2 // Default: 2 (+ 6 = 8)
+#define PLANET_2_ORBIT_MAX 2 // Default: 2
 #define PLANET_3_ORBIT_MIN 6 // Default: 6
-#define PLANET_3_ORBIT_MAX 3 // Default: 3 (+ 6 = 9)
+#define PLANET_3_ORBIT_MAX 3 // Default: 3
 #define PLANET_4_ORBIT_MIN 5 // Default: 5
-#define PLANET_4_ORBIT_MAX 4 // Default: 4 (+ 5 = 9)
+#define PLANET_4_ORBIT_MAX 4 // Default: 4
 #define PLANET_5_ORBIT_MIN 5 // Default: 5
-#define PLANET_5_ORBIT_MAX 4 // Default: 4 (+ 5 = 9)
+#define PLANET_5_ORBIT_MAX 4 // Default: 4
 #define PLANET_6_ORBIT_MIN 5 // Default: 5
-#define PLANET_6_ORBIT_MAX 4 // Default: 4 (+ 5 = 9)
+#define PLANET_6_ORBIT_MAX 4 // Default: 4
 
 #define MOON_RADIUS_MIN 10           // Default: 7
 #define PLANET_1_MOON_RADIUS_MAX 12  // Default: 12

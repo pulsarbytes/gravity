@@ -26,7 +26,7 @@ static void console_draw_velocity_vector(const Ship *, Point, const Camera *);
  * Draws the current frames per second (FPS) on the screen.
  *
  * @param fps An integer representing the current FPS value.
- * @param camera A pointer to the Camera struct containing the current camera state.
+ * @param camera A pointer to the current Camera object.
  *
  * @return void
  */
@@ -56,14 +56,13 @@ void console_draw_fps(unsigned int fps, const Camera *camera)
 /**
  * Draws a console displaying the ship's velocity vector and position.
  *
- * @param game_state A pointer to the GameState struct.
- * @param nav_state A pointer to the NavigationState struct.
- * @param camera A pointer to the Camera struct containing the current camera state.
- * @param offset A Point struct representing the current position.
+ * @param game_state A pointer to the current GameState object.
+ * @param nav_state A pointer to the current NavigationState object.
+ * @param camera A pointer to the current Camera object.
  *
  * @return void
  */
-void console_draw_position_console(const GameState *game_state, const NavigationState *nav_state, const Camera *camera, Point offset)
+void console_draw_position_console(const GameState *game_state, const NavigationState *nav_state, const Camera *camera)
 {
     // Draw background box
     SDL_SetRenderDrawColor(renderer, 12, 12, 12, 230);
@@ -129,12 +128,58 @@ void console_draw_position_console(const GameState *game_state, const Navigation
     SDL_FreeSurface(zoom_value_surface);
 
     // Position
+    Point offset = {.x = 0.0, .y = 0.0};
+    const double epsilon = ZOOM_EPSILON / GALAXY_SCALE;
+    double zoom_generate_preview_stars;
+
+    switch (nav_state->current_galaxy->class)
+    {
+    case 1:
+        zoom_generate_preview_stars = ZOOM_STAR_1_PREVIEW_STARS;
+        break;
+    case 2:
+        zoom_generate_preview_stars = ZOOM_STAR_2_PREVIEW_STARS;
+        break;
+    case 3:
+        zoom_generate_preview_stars = ZOOM_STAR_3_PREVIEW_STARS;
+        break;
+    case 4:
+        zoom_generate_preview_stars = ZOOM_STAR_4_PREVIEW_STARS;
+        break;
+    case 5:
+        zoom_generate_preview_stars = ZOOM_STAR_5_PREVIEW_STARS;
+        break;
+    case 6:
+        zoom_generate_preview_stars = ZOOM_STAR_6_PREVIEW_STARS;
+        break;
+    default:
+        zoom_generate_preview_stars = ZOOM_STAR_1_PREVIEW_STARS;
+        break;
+    }
+
     char position_title[32];
 
     if (game_state->state == UNIVERSE)
-        sprintf(position_title, "POSITION IN UNIVERSE");
+    {
+        if (game_state->game_scale >= zoom_generate_preview_stars - epsilon)
+        {
+            sprintf(position_title, "POSITION IN GALAXY");
+            offset.x = nav_state->map_offset.x;
+            offset.y = nav_state->map_offset.y;
+        }
+        else
+        {
+            sprintf(position_title, "POSITION IN UNIVERSE");
+            offset.x = nav_state->universe_offset.x;
+            offset.y = nav_state->universe_offset.y;
+        }
+    }
     else if (game_state->state == MAP)
+    {
         sprintf(position_title, "POSITION IN GALAXY");
+        offset.x = nav_state->map_offset.x;
+        offset.y = nav_state->map_offset.y;
+    }
 
     SDL_Surface *position_title_surface = TTF_RenderText_Blended(fonts[FONT_SIZE_12], position_title, colors[COLOR_WHITE_100]);
     SDL_Texture *position_title_texture = SDL_CreateTextureFromSurface(renderer, position_title_surface);
@@ -194,17 +239,18 @@ void console_draw_position_console(const GameState *game_state, const Navigation
 /**
  * Draws a console displaying the ship's velocity vector and position.
  *
- * @param nav_state A pointer to the NavigationState struct containing the ship's velocity.
+ * @param game_state A pointer to the current GameState object.
+ * @param nav_state A pointer to the current NavigationState object.
  * @param ship A pointer to the Ship struct containing the ship's current state.
- * @param camera A pointer to the Camera struct containing the current camera state.
+ * @param camera A pointer to the current Camera object.
  *
  * @return void
  */
-void console_draw_ship_console(const NavigationState *nav_state, const Ship *ship, const Camera *camera)
+void console_draw_ship_console(const GameState *game_state, const NavigationState *nav_state, const Ship *ship, const Camera *camera)
 {
     // Draw background box
     SDL_SetRenderDrawColor(renderer, 12, 12, 12, 230);
-    int box_width = 300;
+    int box_width = 400;
     int box_height = 70;
     int padding = 20;
     int inner_padding = 10;
@@ -221,16 +267,44 @@ void console_draw_ship_console(const NavigationState *nav_state, const Ship *shi
     SDL_SetRenderDrawColor(renderer, 255, 255, 255, 20);
 
     int section_width = 100;
-    int separator_1_x = (camera->w / 2) - (section_width / 2);
-    int separator_2_x = (camera->w / 2) + (section_width / 2);
+    int separator_1_x = (camera->w / 2) - section_width;
+    int separator_2_x = (camera->w / 2);
+    int separator_3_x = (camera->w / 2) + section_width;
     int separator_y1 = camera->h - (box_height + padding);
     int separator_y2 = separator_y1 + box_height;
 
     SDL_RenderDrawLine(renderer, separator_1_x, separator_y1, separator_1_x, separator_y2);
     SDL_RenderDrawLine(renderer, separator_2_x, separator_y1, separator_2_x, separator_y2);
+    SDL_RenderDrawLine(renderer, separator_3_x, separator_y1, separator_3_x, separator_y2);
+
+    // Zoom
+    char *zoom_title = "ZOOM";
+    SDL_Surface *zoom_title_surface = TTF_RenderText_Blended(fonts[FONT_SIZE_12], zoom_title, colors[COLOR_WHITE_100]);
+    SDL_Texture *zoom_title_texture = SDL_CreateTextureFromSurface(renderer, zoom_title_surface);
+    SDL_Rect zoom_title_texture_rect;
+    zoom_title_texture_rect.w = zoom_title_surface->w;
+    zoom_title_texture_rect.h = zoom_title_surface->h;
+    zoom_title_texture_rect.x = (camera->w / 2) - 1.5 * section_width - (zoom_title_texture_rect.w / 2);
+    zoom_title_texture_rect.y = box_rect.y + inner_padding;
+    SDL_RenderCopy(renderer, zoom_title_texture, NULL, &zoom_title_texture_rect);
+    SDL_FreeSurface(zoom_title_surface);
+
+    char zoom_value[16];
+    memset(zoom_value, 0, sizeof(zoom_value));
+    sprintf(zoom_value, "%.2Lf", 100 * game_state->game_scale);
+
+    SDL_Surface *zoom_value_surface = TTF_RenderText_Blended(fonts[FONT_SIZE_15], zoom_value, colors[COLOR_WHITE_180]);
+    SDL_Texture *zoom_value_texture = SDL_CreateTextureFromSurface(renderer, zoom_value_surface);
+    SDL_Rect zoom_value_texture_rect;
+    zoom_value_texture_rect.w = zoom_value_surface->w;
+    zoom_value_texture_rect.h = zoom_value_surface->h;
+    zoom_value_texture_rect.x = (camera->w / 2) - 1.5 * section_width - (zoom_value_texture_rect.w / 2);
+    zoom_value_texture_rect.y = box_rect.y + 3.4 * inner_padding;
+    SDL_RenderCopy(renderer, zoom_value_texture, NULL, &zoom_value_texture_rect);
+    SDL_FreeSurface(zoom_value_surface);
 
     // Velocity vector
-    Point center = {.x = (camera->w / 2) - section_width,
+    Point center = {.x = (camera->w / 2) - 0.5 * section_width,
                     .y = camera->h - (box_height / 2) - padding};
     console_draw_velocity_vector(ship, center, camera);
 
@@ -241,7 +315,7 @@ void console_draw_ship_console(const NavigationState *nav_state, const Ship *shi
     SDL_Rect speed_title_texture_rect;
     speed_title_texture_rect.w = speed_title_surface->w;
     speed_title_texture_rect.h = speed_title_surface->h;
-    speed_title_texture_rect.x = (camera->w / 2) - (speed_title_texture_rect.w / 2);
+    speed_title_texture_rect.x = (camera->w / 2) + 0.5 * section_width - (speed_title_texture_rect.w / 2);
     speed_title_texture_rect.y = box_rect.y + inner_padding;
     SDL_RenderCopy(renderer, speed_title_texture, NULL, &speed_title_texture_rect);
     SDL_FreeSurface(speed_title_surface);
@@ -254,7 +328,7 @@ void console_draw_ship_console(const NavigationState *nav_state, const Ship *shi
     SDL_Rect speed_value_texture_rect;
     speed_value_texture_rect.w = speed_value_surface->w;
     speed_value_texture_rect.h = speed_value_surface->h;
-    speed_value_texture_rect.x = (camera->w / 2) - (speed_value_texture_rect.w / 2);
+    speed_value_texture_rect.x = (camera->w / 2) + 0.5 * section_width - (speed_value_texture_rect.w / 2);
     speed_value_texture_rect.y = box_rect.y + 3.4 * inner_padding;
     SDL_RenderCopy(renderer, speed_value_texture, NULL, &speed_value_texture_rect);
     SDL_FreeSurface(speed_value_surface);
@@ -266,7 +340,7 @@ void console_draw_ship_console(const NavigationState *nav_state, const Ship *shi
     SDL_Rect position_title_texture_rect;
     position_title_texture_rect.w = position_title_surface->w;
     position_title_texture_rect.h = position_title_surface->h;
-    position_title_texture_rect.x = (camera->w / 2) + section_width - (position_title_texture_rect.w / 2);
+    position_title_texture_rect.x = (camera->w / 2) + 1.5 * section_width - (position_title_texture_rect.w / 2);
     position_title_texture_rect.y = box_rect.y + inner_padding;
     SDL_RenderCopy(renderer, position_title_texture, NULL, &position_title_texture_rect);
     SDL_FreeSurface(position_title_surface);
@@ -279,7 +353,7 @@ void console_draw_ship_console(const NavigationState *nav_state, const Ship *shi
     SDL_Rect position_x_texture_rect;
     position_x_texture_rect.w = position_x_surface->w;
     position_x_texture_rect.h = position_x_surface->h;
-    position_x_texture_rect.x = (camera->w / 2) + section_width - (position_x_texture_rect.w / 2);
+    position_x_texture_rect.x = (camera->w / 2) + 1.5 * section_width - (position_x_texture_rect.w / 2);
     position_x_texture_rect.y = box_rect.y + 3 * inner_padding;
     SDL_RenderCopy(renderer, position_x_texture, NULL, &position_x_texture_rect);
     SDL_FreeSurface(position_x_surface);
@@ -292,12 +366,14 @@ void console_draw_ship_console(const NavigationState *nav_state, const Ship *shi
     SDL_Rect position_y_texture_rect;
     position_y_texture_rect.w = position_y_surface->w;
     position_y_texture_rect.h = position_y_surface->h;
-    position_y_texture_rect.x = (camera->w / 2) + section_width - (position_x_texture_rect.w / 2);
+    position_y_texture_rect.x = (camera->w / 2) + 1.5 * section_width - (position_x_texture_rect.w / 2);
     position_y_texture_rect.y = box_rect.y + 5 * inner_padding;
     SDL_RenderCopy(renderer, position_y_texture, NULL, &position_y_texture_rect);
     SDL_FreeSurface(position_y_surface);
 
     // Destroy the textures
+    SDL_DestroyTexture(zoom_value_texture);
+    zoom_value_texture = NULL;
     SDL_DestroyTexture(speed_title_texture);
     speed_title_texture = NULL;
     SDL_DestroyTexture(speed_value_texture);
@@ -314,7 +390,7 @@ void console_draw_ship_console(const NavigationState *nav_state, const Ship *shi
  * Draws a console displaying information about current star.
  *
  * @param star A pointer to the current star.
- * @param camera A pointer to the Camera struct containing the current camera state.
+ * @param camera A pointer to the current Camera object.
  *
  * @return void
  */
@@ -362,7 +438,7 @@ void console_draw_star_console(const Star *star, const Camera *camera)
  *
  * @param ship A pointer to a Ship struct representing the ship whose velocity vector will be drawn.
  * @param center A Point struct representing the center point from which the velocity vector will be drawn.
- * @param camera A pointer to a Camera struct representing the camera that is currently in use.
+ * @param camera A pointer to the current Camera object.
  *
  * @return void
  */
@@ -409,7 +485,7 @@ static void console_draw_velocity_vector(const Ship *ship, Point center, const C
 /**
  * Measures the current frames per second (FPS).
  *
- * @param game_state A pointer to the GameState struct.
+ * @param game_state A pointer to the current GameState object.
  * @param last_time A pointer to the last time the FPS was updated.
  * @param frame_count A pointer to the current frame count.
  *

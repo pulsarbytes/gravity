@@ -1,7 +1,7 @@
 /*
  * Gravity - An infinite procedural 2d universe that models gravity and orbital motion.
  *
- * v1.4.3
+ * v1.4.4
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 only,
@@ -59,7 +59,7 @@ void utils_cleanup_resources(GameState *, InputState *, NavigationState *, Bstar
 int main(int argc, char *argv[])
 {
     // Check for valid GALAXY_SCALE
-    if (GALAXY_SCALE > 10000 || GALAXY_SCALE < 1000)
+    if (GALAXY_SCALE > 100000 || GALAXY_SCALE < 1000)
     {
         fprintf(stderr, "Error: Invalid GALAXY_SCALE.\n");
         return 1;

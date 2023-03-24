@@ -70,7 +70,7 @@ double maths_get_nearest_section_line(double offset, int size)
 /**
  * This function checks if the line segment specified by (x1,y1) and (x2,y2) intersects with the viewport defined by `camera`.
  *
- * @param camera A pointer to a camera structure that defines the viewport.
+ * @param camera A pointer to the current Camera object.
  * @param x1 The x-coordinate of the first end point of the line segment.
  * @param y1 The y-coordinate of the first end point of the line segment.
  * @param x2 The x-coordinate of the second end point of the line segment.

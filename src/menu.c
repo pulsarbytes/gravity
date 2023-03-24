@@ -25,8 +25,8 @@ static void menu_populate_menu_array(MenuButton menu[]);
 /**
  * Creates the main menu by populating the menu array, creating the logo, generating and placing menu stars.
  *
- * @param game_state The current state of the game.
- * @param nav_state The current navigation state of the game.
+ * @param game_state A pointer to the current GameState object.
+ * @param nav_state The current NavigationState object.
  * @param menustars The array of menu stars to be generated and placed.
  *
  * @return void
@@ -78,7 +78,7 @@ static void menu_create_logo(MenuButton *logo)
 /**
  * Renders the footer onto the screen.
  *
- * @param camera A pointer to the camera object.
+ * @param camera A pointer to the current Camera object.
  *
  * @return void
  */
@@ -98,8 +98,8 @@ static void menu_draw_footer(const Camera *camera)
 /**
  * Renders the menu buttons onto the screen.
  *
- * @param game_state A pointer to the game state struct.
- * @param input_state A pointer to the input state struct.
+ * @param game_state A pointer to the current GameState object.
+ * @param input_state A pointer to the current InputState object.
  * @param is_game_started Flag indicating if the game has started.
  *
  * @return void
@@ -155,8 +155,8 @@ void menu_draw_menu(GameState *game_state, InputState *input_state, bool is_game
 /**
  * Checks if the mouse is over the current menu button and changes mouse cursor.
  *
- * @param game_state A pointer to the current GameState.
- * @param input_state A pointer to the current InputState.
+ * @param game_state A pointer to the current GameState object.
+ * @param input_state A pointer to the current InputState object.
  *
  * @return void
  */
@@ -267,13 +267,13 @@ static void menu_populate_menu_array(MenuButton menu[])
 /**
  * Runs the menu state by updating and rendering the background stars, logo, menu, galaxy, and speed lines.
  *
- * @param game_state A pointer to the current game state.
- * @param input_state A pointer to the current input state.
+ * @param game_state A pointer to the current GameState object.
+ * @param input_state A pointer to the current InputState object.
  * @param is_game_started A boolean indicating whether the game has already started.
- * @param nav_state A pointer to the current navigation state.
+ * @param nav_state A pointer to the current NavigationState object.
  * @param bstars A pointer to an array of background stars.
  * @param menustars A pointer to an array of menu galaxy stars.
- * @param camera A pointer to the camera object.
+ * @param camera A pointer to the current Camera object.
  *
  * @return void
  */
@@ -311,8 +311,8 @@ void menu_run_state(GameState *game_state, InputState *input_state, bool is_game
 /**
  * Update the menu entries by updating the text color and disabling buttons as appropriate.
  *
- * @param game_state A pointer to the game state struct.
- * @param game_events A pointer to the game events struct.
+ * @param game_state A pointer to the current GameState object.
+ * @param game_events A pointer to the current GameEvents object.
  *
  * @return void
  */

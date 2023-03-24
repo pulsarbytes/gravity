@@ -221,9 +221,9 @@ static void galaxies_delete_entry(GalaxyEntry *galaxies[], Point position)
  * Draws the given galaxy if it is within range, along with any associated stars.
  * If the galaxy is out of range, it draws a projection or nothing depending on the scale.
  *
- * @param nav_state A pointer to the current navigation state.
+ * @param nav_state A pointer to the current NavigationState object.
  * @param galaxy A pointer to the galaxy to draw.
- * @param camera A pointer to the current camera state.
+ * @param camera A pointer to the current Camera object.
  * @param state An integer representing the current game state.
  * @param scale A long double representing the current scale of the universe.
  *
@@ -255,11 +255,14 @@ void galaxies_draw_galaxy(const InputState *input_state, NavigationState *nav_st
         unsigned short color_code;
 
         if (galaxy_is_selected)
-            color_code = COLOR_CYAN_70;
+            color_code = COLOR_CYAN_100;
         else
-            color_code = COLOR_MAGENTA_70;
+            color_code = COLOR_MAGENTA_100;
 
-        gfx_draw_circle_approximation(renderer, camera, x, y, cutoff, colors[color_code]);
+        if (2 * cutoff * scale > camera->h)
+            gfx_draw_circle_approximation(renderer, camera, x, y, cutoff, colors[color_code]);
+        else
+            gfx_draw_circle(renderer, camera, x, y, cutoff, colors[color_code]);
 
         // Generate gstars
         if (!galaxy->initialized || galaxy->initialized < galaxy->total_groups)
@@ -268,16 +271,30 @@ void galaxies_draw_galaxy(const InputState *input_state, NavigationState *nav_st
         if (!galaxy->initialized_hd || galaxy->initialized_hd < galaxy->total_groups_hd)
             gfx_generate_gstars(galaxy, true);
 
-        double zoom_generate_preview_stars = ZOOM_GENERATE_PREVIEW_STARS;
+        double zoom_generate_preview_stars;
 
         switch (nav_state->current_galaxy->class)
         {
         case 1:
-            zoom_generate_preview_stars = 0.00005;
+            zoom_generate_preview_stars = ZOOM_STAR_1_PREVIEW_STARS - 0.00001;
             break;
-
+        case 2:
+            zoom_generate_preview_stars = ZOOM_STAR_2_PREVIEW_STARS - 0.00001;
+            break;
+        case 3:
+            zoom_generate_preview_stars = ZOOM_STAR_3_PREVIEW_STARS - 0.00001;
+            break;
+        case 4:
+            zoom_generate_preview_stars = ZOOM_STAR_4_PREVIEW_STARS - 0.00001;
+            break;
+        case 5:
+            zoom_generate_preview_stars = ZOOM_STAR_5_PREVIEW_STARS - 0.00001;
+            break;
+        case 6:
+            zoom_generate_preview_stars = ZOOM_STAR_6_PREVIEW_STARS - 0.000001;
+            break;
         default:
-            zoom_generate_preview_stars = ZOOM_GENERATE_PREVIEW_STARS;
+            zoom_generate_preview_stars = ZOOM_STAR_1_PREVIEW_STARS - 0.00001;
             break;
         }
 
@@ -481,8 +498,8 @@ static bool galaxies_entry_exists(GalaxyEntry *galaxies[], Point position)
  * with the nearest section lines. Deletes galaxies that end up outside of the
  * region. Uses a local rng for random number generation.
  *
- * @param game_events A pointer to the game events struct.
- * @param nav_state A pointer to the navigation state struct.
+ * @param game_events A pointer to the current GameEvents object.
+ * @param nav_state A pointer to the current NavigationState object.
  * @param offset A point in space around which to generate galaxies.
  *
  * @return void
@@ -675,7 +692,7 @@ static double galaxies_nearest_center_distance(Point position)
  * Finds the galaxy closest to the circumference of the circle surrounding the given point.
  * Excludes the current galaxy if exclude flag is set.
  *
- * @param nav_state A pointer to the current NavigationState.
+ * @param nav_state A pointer to the current NavigationState object.
  * @param position The point to find the closest galaxy circumference to.
  * @param exclude Flag to exclude the current galaxy.
  *

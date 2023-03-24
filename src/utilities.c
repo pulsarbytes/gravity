@@ -59,8 +59,8 @@ void utils_add_thousand_separators(int num, char *result, size_t result_size)
 /**
  * Frees the resources used by the game state, navigation state, bstars, and ship.
  *
- * @param game_state The current game state.
- * @param nav_state The current navigation state.
+ * @param game_state A pointer to the current GameState object.
+ * @param nav_state A pointer to the current NavigationState object.
  * @param bstars The bstar array.
  * @param ship The current ship.
  *

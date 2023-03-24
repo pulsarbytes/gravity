@@ -1,10 +1,6 @@
 # Gravity
 
-An infinite procedural 2d universe that models gravity and orbital motion.
-
-Is it truly infinite? No, but it's extremely vast.
-
-With more than 32 million unique galaxies, each containing a potential of up to 32 million stars, well, it's a mind-boggling number.
+A vast procedural 2d universe that models gravity and orbital motion.
 
 ## Prerequisites
 

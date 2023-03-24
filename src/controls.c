@@ -23,7 +23,8 @@ static void controls_draw_table(const GameState *, const Camera *);
 /**
  * Creates the controls table.
  *
- * @param game_state A pointer to the current game state.
+ * @param game_state A pointer to the current GameState object.
+ * @param camera A pointer to the current Camera object.
  *
  * @return void
  */
@@ -143,8 +144,8 @@ void controls_create_table(GameState *game_state, const Camera *camera)
 /**
  * Draws a table displaying the game controls and their corresponding keys and descriptions.
  *
- * @param game_state A pointer to the current game state.
- * @param camera A pointer to the camera used to display the game.
+ * @param game_state A pointer to the current GameState object.
+ * @param camera A pointer to the current Camera object.
  *
  * @return void
  */
@@ -256,13 +257,13 @@ static void controls_draw_table(const GameState *game_state, const Camera *camer
 /**
  * Runs the controls state by updating and rendering the background stars, logo, menu, galaxy, speed lines and controls table.
  *
- * @param game_state A pointer to the current game state.
- * @param input_state A pointer to the current input state.
+ * @param game_state A pointer to the current GameState object.
+ * @param input_state A pointer to the current InputState object.
  * @param is_game_started A boolean indicating whether the game has already started.
- * @param nav_state A pointer to the current navigation state.
+ * @param nav_state A pointer to the current NavigationState object.
  * @param bstars A pointer to an array of background stars.
  * @param menustars A pointer to an array of menu galaxy stars.
- * @param camera A pointer to the camera object.
+ * @param camera A pointer to the current Camera object.
  *
  * @return void
  */

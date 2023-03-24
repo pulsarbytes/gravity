@@ -10,6 +10,7 @@ Galaxy *galaxies_get_entry(GalaxyEntry *galaxies[], Point);
 Galaxy *galaxies_nearest_circumference(const NavigationState *, Point, int exclude);
 
 // External function prototypes
+void gfx_draw_circle(SDL_Renderer *, const Camera *, int xc, int yc, int radius, SDL_Color);
 void gfx_draw_circle_approximation(SDL_Renderer *, const Camera *, int x, int y, int r, SDL_Color);
 void gfx_draw_galaxy_cloud(Galaxy *, const Camera *, int gstars_count, bool high_definition, long double scale);
 void gfx_generate_gstars(Galaxy *, bool high_definition);

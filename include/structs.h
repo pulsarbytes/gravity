@@ -85,6 +85,7 @@ typedef struct CelestialBody
     struct CelestialBody *parent;
     unsigned short level;
     bool is_selected; // Whether the body is selected in Map
+    char galaxy_name[MAX_OBJECT_NAME];
 } CelestialBody;
 
 typedef CelestialBody Planet;
@@ -257,7 +258,6 @@ typedef struct
     long double game_scale;
     long double save_scale;
     long double game_scale_override;
-    int galaxy_region_size;
     MenuButton menu[MENU_BUTTON_COUNT];
     MenuButton logo;
     ControlsGroup controls_groups[MAX_CONTROLS_GROUPS];

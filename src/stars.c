@@ -105,7 +105,7 @@ void stars_clear_table(StarEntry *stars[], Star *buffer_star)
 /**
  * Creates a new Star object with given parameters.
  *
- * @param nav_state A pointer to NavigationState struct.
+ * @param nav_state A pointer to the current NavigationState object.
  * @param position A point struct representing the position of the star.
  * @param preview An integer representing whether or not the star is a preview.
  * @param scale A long double representing the scale factor of the star's position.
@@ -202,6 +202,7 @@ static Star *stars_create_star(const NavigationState *nav_state, Point position,
     star->parent = NULL;
     star->level = LEVEL_STAR;
     star->is_selected = false;
+    sprintf(star->galaxy_name, "%s", nav_state->current_galaxy->name);
 
     return star;
 }
@@ -449,10 +450,10 @@ void stars_draw_planets_info_box(const Star *star, const Camera *camera)
     switch (star->class)
     {
     case STAR_1:
-        planets_scaling_factor = 4;
+        planets_scaling_factor = 5;
         break;
     case STAR_2:
-        planets_scaling_factor = 4;
+        planets_scaling_factor = 5;
         break;
     case STAR_3:
         planets_scaling_factor = 6;
@@ -461,7 +462,7 @@ void stars_draw_planets_info_box(const Star *star, const Camera *camera)
         planets_scaling_factor = 6;
         break;
     case STAR_5:
-        planets_scaling_factor = 6;
+        planets_scaling_factor = 7;
         break;
     case STAR_6:
         planets_scaling_factor = 8;
@@ -484,53 +485,32 @@ void stars_draw_planets_info_box(const Star *star, const Camera *camera)
     int line_height = y2_line - y1_line;
     SDL_RenderDrawLine(renderer, x, y1_line, x, y2_line);
 
-    // Calculate total width of all orbits and scaled diameters
-    float total_planet_orbit = 0;
-    float total_planet_diameter = 0;
-
-    for (int i = 0; i < MAX_PLANETS && star->planets[i] != NULL; i++)
-    {
-        total_planet_orbit += star->planets[i]->orbit_radius;
-        total_planet_diameter += star->planets[i]->radius;
-    }
-
-    float total_width = (total_planet_orbit * line_height / star->cutoff) + (total_planet_diameter / planets_scaling_factor);
-    float cutoff;
-
-    if (total_width > star->cutoff)
-        cutoff = total_width;
-    else
-        cutoff = star->cutoff;
-
     // Draw planets
     // Line represents star cutoff distance
     float y_so_far = y1_line;
 
     for (int i = 0; i < MAX_PLANETS && star->planets[i] != NULL; i++)
     {
-        float planet_orbit = star->planets[i]->orbit_radius * line_height / cutoff;
-        float planet_diameter = star->planets[i]->radius / planets_scaling_factor;
-        y_so_far += planet_orbit + planet_diameter;
+        float planet_orbit = star->planets[i]->orbit_radius * line_height / star->cutoff;
+        float planet_radius = star->planets[i]->radius / planets_scaling_factor;
+        y_so_far += planet_orbit;
 
-        gfx_draw_fill_circle(renderer, x, y_so_far - planet_diameter / 2, planet_diameter, star->planets[i]->color);
+        gfx_draw_fill_circle(renderer, x, y_so_far, planet_radius, star->planets[i]->color);
 
         // Draw moons
         if (star->planets[i]->num_planets > 0)
         {
-            // Line represents planet cutoff distance
-            SDL_SetRenderDrawColor(renderer, 255, 255, 255, 30);
-            int x1_line = x + star->planets[i]->radius / planets_scaling_factor;
-            int x2_line = x1_line + planet_orbit / 2;
-            int line_width = x2_line - x1_line;
-            SDL_RenderDrawLine(renderer, x1_line, y_so_far - planet_diameter / 2, x2_line, y_so_far - planet_diameter / 2);
-            float x_so_far = x1_line;
+            int line_width = planet_orbit;
+            float x_so_far = x + planet_radius;
 
             for (int j = 0; j < MAX_MOONS && star->planets[i]->planets[j] != NULL; j++)
             {
-                float moon_orbit = line_width * star->planets[i]->planets[j]->orbit_radius / star->planets[i]->cutoff;
-                float moon_diameter = star->planets[i]->planets[j]->radius / planets_scaling_factor;
-                x_so_far += moon_orbit + moon_diameter;
-                gfx_draw_fill_circle(renderer, x_so_far, y_so_far - planet_diameter / 2, moon_diameter, star->planets[i]->planets[j]->color);
+                float moon_orbit = star->planets[i]->planets[j]->orbit_radius * line_width / star->planets[i]->cutoff;
+                float moon_radius = star->planets[i]->planets[j]->radius / planets_scaling_factor;
+                SDL_SetRenderDrawColor(renderer, 255, 255, 255, 30);
+                SDL_RenderDrawLine(renderer, x_so_far, y_so_far, x_so_far + moon_orbit, y_so_far);
+                x_so_far += moon_orbit + 2 * moon_radius;
+                gfx_draw_fill_circle(renderer, x_so_far - moon_radius, y_so_far, moon_radius, star->planets[i]->planets[j]->color);
             }
         }
     }
@@ -539,11 +519,11 @@ void stars_draw_planets_info_box(const Star *star, const Camera *camera)
 /**
  * Draws a celestial body system, including its planets and orbits, onto the game's renderer.
  *
- * @param game_state The current game state.
- * @param input_state The current input state.
- * @param nav_state The current navigation state.
+ * @param game_state A pointer to the current GameState object.
+ * @param input_state A pointer to the current InputState object.
+ * @param nav_state A pointer to the current NavigationState object.
  * @param body The celestial body to draw.
- * @param camera The current camera state.
+ * @param camera A pointer to the current Camera object.
  *
  * @return void
  */
@@ -566,8 +546,6 @@ void stars_draw_star_system(GameState *game_state, const InputState *input_state
     // Draw planets
     if (body->level != LEVEL_STAR)
     {
-        body->is_selected = body->parent->is_selected ? true : false;
-
         float orbit_opacity;
 
         if (game_state->state == NAVIGATE)
@@ -590,16 +568,20 @@ void stars_draw_star_system(GameState *game_state, const InputState *input_state
         // Draw orbit
         if (input_state->orbits_on)
         {
-            int radius = distance * game_state->game_scale;
+            float radius = distance * game_state->game_scale;
             int x = (body->parent->position.x - camera->x) * game_state->game_scale;
             int y = (body->parent->position.y - camera->y) * game_state->game_scale;
+
             SDL_Color orbit_color = {
                 colors[COLOR_WHITE_255].r,
                 colors[COLOR_WHITE_255].g,
                 colors[COLOR_WHITE_255].b,
                 orbit_opacity};
 
-            gfx_draw_circle(renderer, camera, x, y, radius, orbit_color);
+            if (2 * body->orbit_radius * game_state->game_scale > camera->h)
+                gfx_draw_circle_approximation(renderer, camera, x, y, (int)radius, orbit_color);
+            else
+                gfx_draw_circle(renderer, camera, x, y, (int)radius, orbit_color);
         }
 
         // Draw moons
@@ -618,6 +600,7 @@ void stars_draw_star_system(GameState *game_state, const InputState *input_state
             int radius = (body->class * GALAXY_SECTION_SIZE / 2) * game_state->game_scale;
             int x = (body->position.x - camera->x) * game_state->game_scale;
             int y = (body->position.y - camera->y) * game_state->game_scale;
+
             Point star_position = {.x = x, .y = y};
 
             bool star_is_selected = strcmp(nav_state->selected_star->name, body->name) == 0 && nav_state->selected_star->is_selected;
@@ -669,7 +652,12 @@ void stars_draw_star_system(GameState *game_state, const InputState *input_state
                     color_code = COLOR_MAGENTA_100;
 
                 if (input_state->orbits_on)
-                    gfx_draw_circle(renderer, camera, x, y, radius, colors[color_code]);
+                {
+                    if (2 * radius * game_state->game_scale > camera->h)
+                        gfx_draw_circle_approximation(renderer, camera, x, y, radius, colors[color_code]);
+                    else
+                        gfx_draw_circle(renderer, camera, x, y, radius, colors[color_code]);
+                }
             }
         }
         else if (game_state->state == NAVIGATE)
@@ -677,7 +665,7 @@ void stars_draw_star_system(GameState *game_state, const InputState *input_state
             // Get star distance from position
             distance = maths_distance_between_points(body->position.x, body->position.y, position.x, position.y);
 
-            if (distance < body->cutoff)
+            if (distance <= body->cutoff)
             {
                 // Draw planets
                 int max_planets = MAX_PLANETS;
@@ -717,7 +705,7 @@ void stars_draw_star_system(GameState *game_state, const InputState *input_state
                 else
                     color_code = COLOR_MAGENTA_70;
 
-                gfx_draw_circle(renderer, camera, x, y, cutoff, colors[color_code]);
+                gfx_draw_circle_approximation(renderer, camera, x, y, cutoff, colors[color_code]);
             }
         }
     }
@@ -725,10 +713,11 @@ void stars_draw_star_system(GameState *game_state, const InputState *input_state
     // Draw body
     if (gfx_is_object_in_camera(camera, body->position.x, body->position.y, body->radius, game_state->game_scale))
     {
+        float radius = body->radius * game_state->game_scale;
         int center_x = (body->position.x - camera->x) * game_state->game_scale;
         int center_y = (body->position.y - camera->y) * game_state->game_scale;
 
-        gfx_draw_fill_circle(renderer, center_x, center_y, body->radius * game_state->game_scale, body->color);
+        gfx_draw_fill_circle(renderer, center_x, center_y, (int)radius, body->color);
     }
     // Draw body projection
     else if (PROJECT_BODIES_ON)
@@ -741,8 +730,86 @@ void stars_draw_star_system(GameState *game_state, const InputState *input_state
                 gfx_project_body_on_edge(game_state, nav_state, body, camera);
         }
         else
-            gfx_project_body_on_edge(game_state, nav_state, body, camera);
+        {
+            if (game_state->state == NAVIGATE)
+            {
+                if (body->level == LEVEL_PLANET)
+                    gfx_project_body_on_edge(game_state, nav_state, body, camera);
+                else if (body->level == LEVEL_STAR)
+                {
+                    // Get selected star distance from position
+                    distance = maths_distance_between_points(nav_state->selected_star->position.x, nav_state->selected_star->position.y, position.x, position.y);
+
+                    if (distance > nav_state->selected_star->cutoff || strcmp(nav_state->selected_star->name, body->name) == 0)
+                        gfx_project_body_on_edge(game_state, nav_state, body, camera);
+                }
+            }
+        }
     }
+}
+
+/**
+ * Draws a celestial body system, including its planets and orbits, onto the game's renderer.
+ *
+ * @param game_state A pointer to the current GameState object.
+ * @param input_state A pointer to the current InputState object.
+ * @param nav_state A pointer to the current NavigationState object.
+ * @param body The celestial body to draw.
+ * @param camera A pointer to the current Camera object.
+ *
+ * @return void
+ */
+void stars_draw_universe_star_system(GameState *game_state, const InputState *input_state, NavigationState *nav_state, CelestialBody *body, const Camera *camera)
+{
+    double distance;
+
+    // Draw planets
+    if (body->level != LEVEL_STAR)
+    {
+        // Find distance from parent
+        distance = maths_distance_between_points(body->parent->position.x, body->parent->position.y, body->position.x, body->position.y);
+
+        float orbit_opacity = 32;
+
+        // Draw orbit
+        if (input_state->orbits_on)
+        {
+            float radius = distance * game_state->game_scale;
+            int x = (nav_state->current_galaxy->position.x - camera->x + body->parent->position.x / GALAXY_SCALE) * game_state->game_scale * GALAXY_SCALE;
+            int y = (nav_state->current_galaxy->position.y - camera->y + body->parent->position.y / GALAXY_SCALE) * game_state->game_scale * GALAXY_SCALE;
+
+            SDL_Color orbit_color = {
+                colors[COLOR_WHITE_255].r,
+                colors[COLOR_WHITE_255].g,
+                colors[COLOR_WHITE_255].b,
+                orbit_opacity};
+
+            gfx_draw_circle(renderer, camera, x, y, (int)radius, orbit_color);
+        }
+
+        // Draw moons
+        int max_planets = MAX_MOONS;
+
+        for (int i = 0; i < max_planets && body->planets[i] != NULL; i++)
+        {
+            stars_draw_universe_star_system(game_state, input_state, nav_state, body->planets[i], camera);
+        }
+    }
+    else if (body->level == LEVEL_STAR)
+    {
+        // Draw planets
+        for (int i = 0; i < MAX_PLANETS && body->planets[i] != NULL; i++)
+        {
+            stars_draw_universe_star_system(game_state, input_state, nav_state, body->planets[i], camera);
+        }
+    }
+
+    // Draw body
+    float radius = body->radius * game_state->game_scale;
+    int center_x = (nav_state->current_galaxy->position.x - camera->x + body->position.x / GALAXY_SCALE) * game_state->game_scale * GALAXY_SCALE;
+    int center_y = (nav_state->current_galaxy->position.y - camera->y + body->position.y / GALAXY_SCALE) * game_state->game_scale * GALAXY_SCALE;
+
+    gfx_draw_fill_circle(renderer, center_x, center_y, (int)radius, body->color);
 }
 
 /**
@@ -777,9 +844,9 @@ static bool stars_entry_exists(StarEntry *stars[], Point position)
 /**
  * Creates a list of randomly positioned stars within a defined rectangular area.
  *
- * @param game_state A pointer to the current GameState struct.
- * @param game_events A pointer to the current GameEvents struct.
- * @param nav_state A pointer to the current NavigationState struct.
+ * @param game_state A pointer to the current GameState object.
+ * @param game_events A pointer to the current GameEvents object.
+ * @param nav_state A pointer to the current NavigationState object.
  * @param bstars A pointer to an array of Bstar structs for storing the generated background stars.
  * @param ship A pointer to the current Ship struct.
  */
@@ -920,16 +987,16 @@ void stars_generate(GameState *game_state, GameEvents *game_events, NavigationSt
     else
         game_events->has_exited_galaxy = false;
 
-    // Define a region of galaxy_region_size * galaxy_region_size
+    // Define a region of GALAXY_REGION_SIZE * GALAXY_REGION_SIZE
     // bx,by are at the center of this area
     double ix, iy;
-    double left_boundary = bx - ((game_state->galaxy_region_size / 2) * GALAXY_SECTION_SIZE);
-    double right_boundary = bx + ((game_state->galaxy_region_size / 2) * GALAXY_SECTION_SIZE);
-    double top_boundary = by - ((game_state->galaxy_region_size / 2) * GALAXY_SECTION_SIZE);
-    double bottom_boundary = by + ((game_state->galaxy_region_size / 2) * GALAXY_SECTION_SIZE);
+    double left_boundary = bx - ((GALAXY_REGION_SIZE / 2) * GALAXY_SECTION_SIZE);
+    double right_boundary = bx + ((GALAXY_REGION_SIZE / 2) * GALAXY_SECTION_SIZE);
+    double top_boundary = by - ((GALAXY_REGION_SIZE / 2) * GALAXY_SECTION_SIZE);
+    double bottom_boundary = by + ((GALAXY_REGION_SIZE / 2) * GALAXY_SECTION_SIZE);
 
-    // Add a buffer zone of <galaxy_region_size> sections beyond galaxy radius
-    int radius_plus_buffer = (nav_state->current_galaxy->radius * GALAXY_SCALE) + game_state->galaxy_region_size * GALAXY_SECTION_SIZE;
+    // Add a buffer zone of <GALAXY_REGION_SIZE> sections beyond galaxy radius
+    int radius_plus_buffer = (nav_state->current_galaxy->radius * GALAXY_SCALE) + GALAXY_REGION_SIZE * GALAXY_SECTION_SIZE;
     int in_horizontal_bounds = left_boundary > -radius_plus_buffer && right_boundary < radius_plus_buffer;
     int in_vertical_bounds = top_boundary > -radius_plus_buffer && bottom_boundary < radius_plus_buffer;
 
@@ -982,7 +1049,7 @@ void stars_generate(GameState *game_state, GameEvents *game_events, NavigationSt
     }
 
     // Delete stars that end up outside the region
-    stars_delete_outside_region(nav_state->stars, nav_state->buffer_star, bx, by, game_state->galaxy_region_size);
+    stars_delete_outside_region(nav_state->stars, nav_state->buffer_star, bx, by, GALAXY_REGION_SIZE);
 
     // First star generation complete
     game_events->start_stars_generation = false;
@@ -992,8 +1059,8 @@ void stars_generate(GameState *game_state, GameEvents *game_events, NavigationSt
  * Generates a preview of the stars within the current section of the galaxy.
  * The function implements lazy initialization of stars in batches.
  *
- * @param nav_state A pointer to the current NavigationState struct.
- * @param camera A pointer to the current Camera struct.
+ * @param nav_state A pointer to the current NavigationState object.
+ * @param camera A pointer to the current Camera object.
  * @param scale A long double representing the current scale of the galaxy.
  *
  * @return void
@@ -1008,62 +1075,34 @@ void stars_generate_preview(GameEvents *game_events, NavigationState *nav_state,
     // Scale section_size with game_scale
     int section_size = GALAXY_SECTION_SIZE;
     const double epsilon = ZOOM_EPSILON / (10 * GALAXY_SCALE);
-    int num_sections = 16;
+    int num_sections;
 
     // Scale num_sections with galaxy class
     switch (nav_state->current_galaxy->class)
     {
     case 1:
-        if (scale <= 0.0001 + epsilon)
-            num_sections = 4;
-        else if (scale <= 0.0004 + epsilon)
-            num_sections = 2;
-        else
-            num_sections = 1;
-        break;
     case 2:
-        if (scale <= 0.00001 + epsilon)
-            num_sections = 32;
-        else if (scale <= 0.00004 + epsilon)
-            num_sections = 12;
-        else if (scale <= 0.00007 + epsilon)
-            num_sections = 8;
-        else if (scale <= 0.0001 + epsilon)
-            num_sections = 4;
-        else if (scale <= 0.0004 + epsilon)
-            num_sections = 2;
-        else
-            num_sections = 1;
-        break;
     case 3:
     case 4:
-        if (scale <= 0.00001 + epsilon)
-            num_sections = 24;
-        else if (scale <= 0.00004 + epsilon)
-            num_sections = 16;
-        else if (scale <= 0.00007 + epsilon)
-            num_sections = 8;
-        else if (scale <= 0.0001 + epsilon)
-            num_sections = 4;
-        else if (scale <= 0.0004 + epsilon)
-            num_sections = 2;
-        else
-            num_sections = 1;
+        num_sections = 1;
         break;
     case 5:
     case 6:
         if (scale <= 0.00001 + epsilon)
-            num_sections = 32;
+            num_sections = 4;
         else if (scale <= 0.00004 + epsilon)
-            num_sections = 16;
-        else if (scale <= 0.00007 + epsilon)
-            num_sections = 12;
-        else if (scale <= 0.0001 + epsilon)
-            num_sections = 6;
-        else if (scale <= 0.0004 + epsilon)
             num_sections = 2;
+        else if (scale <= 0.00007 + epsilon)
+            num_sections = 1;
+        else if (scale <= 0.0001 + epsilon)
+            num_sections = 1;
+        else if (scale <= 0.0004 + epsilon)
+            num_sections = 1;
         else
             num_sections = 1;
+        break;
+    default:
+        num_sections = 1;
         break;
     }
 
@@ -1096,29 +1135,6 @@ void stars_generate_preview(GameEvents *game_events, NavigationState *nav_state,
     double top_boundary = by - (half_sections_y * GALAXY_SECTION_SIZE);
     double bottom_boundary = by + (half_sections_y * GALAXY_SECTION_SIZE);
 
-    // Store previous boundaries
-    static Point boundaries_minus;
-    static Point boundaries_plus;
-    static int initialized = false;
-
-    // Define rect of previous boundaries
-    Point rect[4];
-
-    if (initialized)
-    {
-        rect[0].x = boundaries_minus.x;
-        rect[0].y = boundaries_plus.y;
-
-        rect[1].x = boundaries_plus.x;
-        rect[1].y = boundaries_plus.y;
-
-        rect[2].x = boundaries_plus.x;
-        rect[2].y = boundaries_minus.y;
-
-        rect[3].x = boundaries_minus.x;
-        rect[3].y = boundaries_minus.y;
-    }
-
     // Use a local rng
     pcg32_random_t rng;
 
@@ -1141,14 +1157,6 @@ void stars_generate_preview(GameEvents *game_events, NavigationState *nav_state,
         for (iy = top_boundary; iy < bottom_boundary; iy += section_size)
         {
             Point position = {.x = ix, .y = iy};
-
-            // If this point has been checked in previous function call,
-            // check that point is not within previous boundaries
-            if (initialized && !game_events->zoom_preview && scale <= 0.001 + epsilon)
-            {
-                if (maths_is_point_in_rectangle(position, rect))
-                    continue;
-            }
 
             // Check that point is within galaxy radius
             double distance_from_center = sqrt(ix * ix + iy * iy);
@@ -1186,13 +1194,6 @@ void stars_generate_preview(GameEvents *game_events, NavigationState *nav_state,
 
             if (current_batch >= num_batches * BSTARS_BATCH_SIZE)
             {
-                // Store previous boundaries
-                boundaries_minus.x = left_boundary;
-                boundaries_minus.y = top_boundary;
-                boundaries_plus.x = ix;
-                boundaries_plus.y = iy;
-                initialized = true;
-
                 // Delete stars that end up outside the region
                 int region_size = sections_in_camera_x;
                 stars_delete_outside_region(nav_state->stars, nav_state->buffer_star, bx, by, region_size);
@@ -1204,13 +1205,6 @@ void stars_generate_preview(GameEvents *game_events, NavigationState *nav_state,
 
     // End lazy loading
     game_events->lazy_load_started = false;
-
-    // Store previous boundaries
-    boundaries_minus.x = left_boundary;
-    boundaries_minus.y = top_boundary;
-    boundaries_plus.x = right_boundary;
-    boundaries_plus.y = bottom_boundary;
-    initialized = true;
 
     // Delete stars that end up outside the region
     int region_size = sections_in_camera_x;
@@ -1249,6 +1243,7 @@ void stars_initialize_star(Star *star)
     star->parent = NULL;
     star->level = 0;
     star->is_selected = false;
+    memset(star->galaxy_name, 0, sizeof(star->galaxy_name));
 }
 
 /**
@@ -1724,9 +1719,9 @@ unsigned short stars_size_class(float distance)
  * Updates the orbital positions of celestial bodies, including planets and stars,
  * based on the current game state, input state, navigation state, and ship information.
  *
- * @param game_state A pointer to the current game state.
- * @param input_state A pointer to the current input state.
- * @param nav_state A pointer to the current navigation state.
+ * @param game_state A pointer to the current GameState object.
+ * @param input_state A pointer to the current InputState object.
+ * @param nav_state A pointer to the current NavigationState object.
  * @param body A pointer to the celestial body being updated.
  * @param ship A pointer to the player's ship.
  * @param star_class An integer indicating the class of the current star (only relevant for stars).

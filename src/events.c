@@ -14,11 +14,11 @@
 /**
  * The events_loop function handles the events that occur while the game is running.
  *
- * @param game_state A pointer to the current game state.
- * @param input_state A pointer to the current input state.
- * @param game_events A pointer to the current game events.
- * @param nav_events A pointer to the current navigation state.
- * @param camera A pointer to the camera.
+ * @param game_state A pointer to the current GameState object.
+ * @param input_state A pointer to the current InputState object.
+ * @param game_events A pointer to the current GameEvents object.
+ * @param nav_state A pointer to the current NavigationState object.
+ * @param camera A pointer to the current Camera object.
  *
  * @return void
  */
@@ -133,25 +133,17 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
                                 switch (nav_state->current_star->class)
                                 {
                                 case 1:
-                                    new_scale = ZOOM_MAP * 9;
-                                    break;
-                                case 2:
                                     new_scale = ZOOM_MAP * 5;
                                     break;
+                                case 2:
+                                    new_scale = ZOOM_MAP * 2 + 0.001;
+                                    break;
                                 case 3:
-                                    new_scale = ZOOM_MAP * 3;
-                                    break;
                                 case 4:
-                                    new_scale = ZOOM_MAP * 2;
-                                    break;
-                                case 5:
-                                    new_scale = ZOOM_MAP * 2;
-                                    break;
-                                case 6:
-                                    new_scale = ZOOM_MAP * 2;
+                                    new_scale = ZOOM_MAP + 0.001;
                                     break;
                                 default:
-                                    new_scale = ZOOM_MAP * 1;
+                                    new_scale = ZOOM_MAP;
                                     break;
                                 }
 
@@ -187,25 +179,17 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
                                 switch (nav_state->current_star->class)
                                 {
                                 case 1:
-                                    new_scale = ZOOM_MAP * 9;
-                                    break;
-                                case 2:
                                     new_scale = ZOOM_MAP * 5;
                                     break;
+                                case 2:
+                                    new_scale = ZOOM_MAP * 2 + 0.001;
+                                    break;
                                 case 3:
-                                    new_scale = ZOOM_MAP * 3;
-                                    break;
                                 case 4:
-                                    new_scale = ZOOM_MAP * 2;
-                                    break;
-                                case 5:
-                                    new_scale = ZOOM_MAP * 2;
-                                    break;
-                                case 6:
-                                    new_scale = ZOOM_MAP * 2;
+                                    new_scale = ZOOM_MAP + 0.001;
                                     break;
                                 default:
-                                    new_scale = ZOOM_MAP * 1;
+                                    new_scale = ZOOM_MAP;
                                     break;
                                 }
 
@@ -468,7 +452,7 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
                     }
                     else if (game_state->state == MAP)
                     {
-                        if (game_state->game_scale <= ZOOM_MAP_REGION_SWITCH - epsilon)
+                        if (game_state->game_scale <= ZOOM_MAP_STEP_SWITCH - epsilon)
                             zoom_step = zoom_step / 10;
                     }
                 }
@@ -501,7 +485,7 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
                     }
                     else if (game_state->state == MAP)
                     {
-                        if (game_state->game_scale <= ZOOM_MAP_REGION_SWITCH + epsilon)
+                        if (game_state->game_scale <= ZOOM_MAP_STEP_SWITCH + epsilon)
                             zoom_step = -(zoom_step / 10);
                         else
                             zoom_step = -ZOOM_STEP;
@@ -677,10 +661,23 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
                 // Center Map / Center Universe
                 if (game_state->state == NAVIGATE)
                     game_events->is_centering_navigate = true;
-                if (game_state->state == MAP)
-                    game_events->is_centering_map = true;
-                else if (game_state->state == UNIVERSE)
-                    game_events->is_centering_universe = true;
+                else
+                {
+                    long double zoom_generate_preview_stars = game_zoom_generate_preview_stars(nav_state->current_galaxy->class);
+
+                    if (game_state->game_scale >= zoom_generate_preview_stars - epsilon)
+                    {
+                        game_events->is_centering_map = true;
+
+                        if (game_state->state == UNIVERSE)
+                        {
+                            input_state->click_count = 0;
+                            game_change_state(game_state, game_events, MAP);
+                        }
+                    }
+                    else
+                        game_events->is_centering_universe = true;
+                }
                 break;
             case SDL_SCANCODE_ESCAPE:
                 // Toggle Menu

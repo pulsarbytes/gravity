@@ -6,5 +6,6 @@ void events_loop(GameState *, InputState *, GameEvents *, NavigationState *, con
 
 // External function prototypes
 void game_change_state(GameState *, GameEvents *, int new_state);
+long double game_zoom_generate_preview_stars(unsigned short galaxy_class);
 
 #endif

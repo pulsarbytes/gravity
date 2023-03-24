@@ -30,8 +30,8 @@ static void game_zoom_universe(GameState *, InputState *, GameEvents *, Navigati
 /**
  * Changes the state of the game to a new state and updates relevant game events.
  *
- * @param game_state A pointer to the current game state.
- * @param game_events A pointer to the current game events.
+ * @param game_state A pointer to the current GameState object.
+ * @param game_events A pointer to the current GameEvents object.
  * @param new_state An integer representing the new state to transition to.
  *
  * @return void
@@ -100,11 +100,11 @@ Ship game_create_ship(int radius, Point position, long double scale)
 /**
  * Draws the ship on the screen with the given state and camera
  *
- * @param game_state A pointer to the current game state.
- * @param input_state A pointer to the current input state.
- * @param nav_state A pointer to the current navigation state.
+ * @param game_state A pointer to the current GameState object.
+ * @param input_state A pointer to the current InputState object.
+ * @param nav_state A pointer to the current NavigationState object.
  * @param ship A pointer to the ship to be drawn.
- * @param camera A pointer to the current camera state.
+ * @param camera A pointer to the current Camera object.
  *
  * @return void
  */
@@ -130,13 +130,13 @@ static void game_draw_ship(GameState *game_state, const InputState *input_state,
 /**
  * Resets the game state to the initial state.
  *
- * @param game_state A pointer to the game state.
- * @param input_state A pointer to the input state.
- * @param game_events A pointer to the game events.
- * @param nav_state A pointer to the navigation state.
+ * @param game_state A pointer to the current GameState object.
+ * @param input_state A pointer to the current InputState object.
+ * @param game_events A pointer to the current GameEvents object.
+ * @param nav_state A pointer to the current NavigationState object.
  * @param bstars A pointer to the bstars.
  * @param ship A pointer to the ship.
- * @param camera A pointer to the camera.
+ * @param camera A pointer to the current Camera object.
  * @param reset A boolean value indicating whether the game is being reset or not.
  *
  * @return void
@@ -155,7 +155,6 @@ void game_reset(GameState *game_state, InputState *input_state, GameEvents *game
     game_state->game_scale = ZOOM_NAVIGATE;
     game_state->save_scale = false;
     game_state->game_scale_override = 0;
-    game_state->galaxy_region_size = GALAXY_REGION_SIZE;
 
     // InputState
     input_state->default_cursor = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_ARROW);
@@ -373,20 +372,18 @@ void game_reset(GameState *game_state, InputState *input_state, GameEvents *game
  * Updates the game state and graphics for the map mode. This includes handling user input for zooming and
  * centering the view on the player's ship, as well as generating and rendering stars and galaxies.
  *
- * @param game_state A pointer to the current game state.
- * @param input_state A pointer to the current input state.
- * @param game_events A pointer to the current game events.
- * @param nav_state A pointer to the current navigation state.
+ * @param game_state A pointer to the current GameState object.
+ * @param input_state A pointer to the current InputState object.
+ * @param game_events A pointer to the current GameEvents object.
+ * @param nav_state A pointer to the current NavigationState object.
  * @param bstars A pointer to the Bstar structure that holds information about the binary stars.
  * @param ship A pointer to the current ship.
- * @param camera A pointer to the current camera position.
+ * @param camera A pointer to the current Camera object.
  *
  * @return void
  */
 void game_run_map_state(GameState *game_state, InputState *input_state, GameEvents *game_events, NavigationState *nav_state, Bstar *bstars, Ship *ship, Camera *camera)
 {
-    const double epsilon = ZOOM_EPSILON;
-
     if (game_events->is_entering_map || game_events->is_centering_map)
     {
         stars_clear_table(nav_state->stars, nav_state->buffer_star);
@@ -402,13 +399,7 @@ void game_run_map_state(GameState *game_state, InputState *input_state, GameEven
                 game_state->save_scale = game_state->game_scale;
         }
 
-        if (game_events->switch_to_map)
-        {
-            // Reset region_size
-            if (game_state->game_scale < ZOOM_MAP_REGION_SWITCH - epsilon)
-                game_state->galaxy_region_size = GALAXY_REGION_SIZE_MAX;
-        }
-        else
+        if (!game_events->switch_to_map)
         {
             game_state->game_scale = ZOOM_MAP;
 
@@ -457,18 +448,6 @@ void game_run_map_state(GameState *game_state, InputState *input_state, GameEven
                 ship->position.y = ship->previous_position.y;
             }
 
-            // Reset region size
-            game_state->galaxy_region_size = GALAXY_REGION_SIZE;
-
-            // Delete stars that end up outside the region
-            if (game_state->game_scale - ZOOM_STEP <= ZOOM_MAP_REGION_SWITCH + epsilon)
-            {
-                double bx = maths_get_nearest_section_line(nav_state->map_offset.x, GALAXY_SECTION_SIZE);
-                double by = maths_get_nearest_section_line(nav_state->map_offset.y, GALAXY_SECTION_SIZE);
-
-                stars_delete_outside_region(nav_state->stars, nav_state->buffer_star, bx, by, game_state->galaxy_region_size);
-            }
-
             game_events->is_centering_map = false;
         }
     }
@@ -476,7 +455,9 @@ void game_run_map_state(GameState *game_state, InputState *input_state, GameEven
     game_zoom_map(game_state, input_state, game_events, nav_state);
     stars_generate(game_state, game_events, nav_state, bstars, ship);
     gfx_update_camera(camera, nav_state->map_offset, game_state->game_scale);
-    gfx_draw_section_lines(camera, game_state->state, colors[COLOR_ORANGE_32], game_state->game_scale);
+
+    if (!game_events->switch_to_universe)
+        gfx_draw_section_lines(camera, game_state->state, colors[COLOR_ORANGE_32], game_state->game_scale);
 
     // Check for nearest galaxy, excluding current galaxy
     if (game_events->has_exited_galaxy && PROJECTIONS_ON)
@@ -523,7 +504,13 @@ void game_run_map_state(GameState *game_state, InputState *input_state, GameEven
 
                 while (entry != NULL)
                 {
-                    stars_update_orbital_positions(game_state, input_state, nav_state, entry->star, ship, camera, entry->star->class);
+                    // Don't show buffer_star if in another galaxy
+                    if (strcmp(nav_state->current_galaxy->name, entry->star->galaxy_name) != 0)
+                    {
+                        entry = entry->next;
+                        continue;
+                    }
+
                     stars_draw_star_system(game_state, input_state, nav_state, entry->star, camera);
                     entry = entry->next;
                 }
@@ -590,7 +577,7 @@ void game_run_map_state(GameState *game_state, InputState *input_state, GameEven
         stars_draw_info_box(nav_state->current_star, camera);
     }
 
-    console_draw_position_console(game_state, nav_state, camera, nav_state->map_offset);
+    console_draw_position_console(game_state, nav_state, camera);
     gfx_draw_screen_frame(camera);
 
     if (game_events->switch_to_map)
@@ -604,13 +591,13 @@ void game_run_map_state(GameState *game_state, InputState *input_state, GameEven
  * This function handles the navigation state of the game, including resetting game elements when exiting the
  * navigation state, zooming in and out, updating the camera position, generating stars, and drawing the galaxy cloud.
  *
- * @param game_state A pointer to the current game state.
- * @param input_state A pointer to the current input state.
- * @param game_events A pointer to the current game events.
- * @param nav_state A pointer to the current navigation state.
+ * @param game_state A pointer to the current GameState object.
+ * @param input_state A pointer to the current InputState object.
+ * @param game_events A pointer to the current GameEvents object.
+ * @param nav_state A pointer to the current NavigationState object.
  * @param bstars A pointer to the Bstar structure that holds information about the binary stars.
  * @param ship A pointer to the current ship.
- * @param camera A pointer to the current camera position.
+ * @param camera A pointer to the current Camera object.
  *
  * @return void
  */
@@ -647,14 +634,11 @@ void game_run_navigate_state(GameState *game_state, InputState *input_state, Gam
         ship->position.x = ship->previous_position.x;
         ship->position.y = ship->previous_position.y;
 
-        // Reset region size
-        game_state->galaxy_region_size = GALAXY_REGION_SIZE;
-
         // Delete stars that end up outside the region
         double bx = maths_get_nearest_section_line(ship->position.x, GALAXY_SECTION_SIZE);
         double by = maths_get_nearest_section_line(ship->position.y, GALAXY_SECTION_SIZE);
 
-        stars_delete_outside_region(nav_state->stars, nav_state->buffer_star, bx, by, game_state->galaxy_region_size);
+        stars_delete_outside_region(nav_state->stars, nav_state->buffer_star, bx, by, GALAXY_REGION_SIZE);
 
         // Reset saved game_scale
         if (game_state->save_scale)
@@ -855,7 +839,7 @@ void game_run_navigate_state(GameState *game_state, InputState *input_state, Gam
             console_draw_star_console(nav_state->current_star, camera);
     }
 
-    console_draw_ship_console(nav_state, ship, camera);
+    console_draw_ship_console(game_state, nav_state, ship, camera);
     gfx_draw_screen_frame(camera);
 
     if (game_events->is_exiting_map)
@@ -871,12 +855,12 @@ void game_run_navigate_state(GameState *game_state, InputState *input_state, Gam
  * a stars preview. It also handles resetting certain game elements when the player exits or enters the universe,
  * and adjusts the game scale based on the current galaxy class.
  *
- * @param game_state A pointer to the GameState struct containing the current state of the game.
- * @param input_state A pointer to the InputState struct containing the current user input state.
- * @param game_events A pointer to the GameEvents struct containing the current events in the game.
- * @param nav_state A pointer to the NavigationState struct containing the current navigation state of the game.
+ * @param game_state A pointer to the current GameState object.
+ * @param input_state A pointer to the current InputState object.
+ * @param game_events A pointer to the current GameEvents object.
+ * @param nav_state A pointer to the current NavigationState object.
  * @param ship A pointer to the Ship struct representing the player's ship.
- * @param camera A pointer to the Camera struct representing the current camera position.
+ * @param camera A pointer to the current Camera object.
  *
  * @return void
  */
@@ -898,14 +882,11 @@ void game_run_universe_state(GameState *game_state, InputState *input_state, Gam
         ship->position.x = ship->previous_position.x;
         ship->position.y = ship->previous_position.y;
 
-        // Reset region size
-        game_state->galaxy_region_size = GALAXY_REGION_SIZE;
-
         // Delete stars that end up outside the region
         double bx = maths_get_nearest_section_line(ship->position.x, GALAXY_SECTION_SIZE);
         double by = maths_get_nearest_section_line(ship->position.y, GALAXY_SECTION_SIZE);
 
-        stars_delete_outside_region(nav_state->stars, nav_state->buffer_star, bx, by, game_state->galaxy_region_size);
+        stars_delete_outside_region(nav_state->stars, nav_state->buffer_star, bx, by, GALAXY_REGION_SIZE);
     }
 
     if (game_events->is_entering_universe || game_events->is_centering_universe)
@@ -982,17 +963,7 @@ void game_run_universe_state(GameState *game_state, InputState *input_state, Gam
     gfx_draw_section_lines(camera, game_state->state, colors[COLOR_ORANGE_32], game_state->game_scale * GALAXY_SCALE);
 
     // Generate stars preview
-    double zoom_generate_preview_stars = ZOOM_GENERATE_PREVIEW_STARS;
-
-    switch (nav_state->current_galaxy->class)
-    {
-    case 1:
-        zoom_generate_preview_stars = 0.00005;
-        break;
-    default:
-        zoom_generate_preview_stars = ZOOM_GENERATE_PREVIEW_STARS;
-        break;
-    }
+    long double zoom_generate_preview_stars = game_zoom_generate_preview_stars(nav_state->current_galaxy->class);
 
     if (game_state->game_scale >= zoom_generate_preview_stars - epsilon)
     {
@@ -1005,30 +976,6 @@ void game_run_universe_state(GameState *game_state, InputState *input_state, Gam
             stars_generate_preview(game_events, nav_state, camera, game_state->game_scale);
             game_events->start_stars_preview = false;
             game_events->zoom_preview = false;
-        }
-
-        for (int i = 0; i < MAX_STARS; i++)
-        {
-            if (nav_state->stars[i] != NULL)
-            {
-                // Each index can have many entries, loop through all of them
-                StarEntry *entry = nav_state->stars[i];
-
-                while (entry != NULL)
-                {
-                    int x = (nav_state->current_galaxy->position.x - camera->x + entry->star->position.x / GALAXY_SCALE) * game_state->game_scale * GALAXY_SCALE;
-                    int y = (nav_state->current_galaxy->position.y - camera->y + entry->star->position.y / GALAXY_SCALE) * game_state->game_scale * GALAXY_SCALE;
-                    int opacity = entry->star->class * (255 / 6);
-
-                    if (opacity < 120)
-                        opacity = 120;
-
-                    SDL_SetRenderDrawColor(renderer, entry->star->color.r, entry->star->color.g, entry->star->color.b, opacity);
-                    SDL_RenderDrawPoint(renderer, x, y);
-
-                    entry = entry->next;
-                }
-            }
         }
     }
 
@@ -1058,6 +1005,123 @@ void game_run_universe_state(GameState *game_state, InputState *input_state, Gam
     game_zoom_universe(game_state, input_state, game_events, nav_state);
     gfx_update_camera(camera, nav_state->universe_offset, game_state->game_scale * GALAXY_SCALE);
 
+    // Draw cross at position
+    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 128);
+    SDL_RenderDrawLine(renderer, (camera->w / 2) - 7, camera->h / 2, (camera->w / 2) + 7, camera->h / 2);
+    SDL_RenderDrawLine(renderer, camera->w / 2, (camera->h / 2) - 7, camera->w / 2, (camera->h / 2) + 7);
+
+    // Draw stars and star systems
+    if (game_state->game_scale >= zoom_generate_preview_stars - epsilon)
+    {
+        for (int i = 0; i < MAX_STARS; i++)
+        {
+            if (nav_state->stars[i] != NULL)
+            {
+                // Each index can have many entries, loop through all of them
+                StarEntry *entry = nav_state->stars[i];
+
+                while (entry != NULL)
+                {
+                    // Skip buffer_star if in another galaxy
+                    if (strcmp(nav_state->current_galaxy->name, entry->star->galaxy_name) != 0)
+                    {
+                        entry = entry->next;
+                        continue;
+                    }
+
+                    // Calculate opacity
+                    float opacity = entry->star->class * (255 / 6);
+
+                    if (opacity < 120)
+                        opacity = 120.0f;
+
+                    double zoom_threshold;
+
+                    switch (entry->star->class)
+                    {
+                    case 1:
+                        zoom_threshold = ZOOM_UNIVERSE_STAR_SYSTEMS;
+                        break;
+                    case 2:
+                        zoom_threshold = ZOOM_UNIVERSE_STAR_SYSTEMS - 0.0002;
+                        break;
+                    case 3:
+                    case 4:
+                        zoom_threshold = ZOOM_UNIVERSE_STAR_SYSTEMS - 0.0003;
+                        break;
+                    case 5:
+                    case 6:
+                        zoom_threshold = ZOOM_UNIVERSE_STAR_SYSTEMS - 0.0004;
+                        break;
+                    default:
+                        zoom_threshold = ZOOM_UNIVERSE_STAR_SYSTEMS;
+                        break;
+                    }
+
+                    opacity = (((game_state->game_scale - zoom_generate_preview_stars) / (zoom_threshold - zoom_generate_preview_stars)) * (255.0f - opacity) + opacity);
+
+                    if (game_state->game_scale >= zoom_threshold)
+                        opacity = 255.0f;
+
+                    // Check if mouse is inside star cutoff
+                    int x = (nav_state->current_galaxy->position.x - camera->x + entry->star->position.x / GALAXY_SCALE) * game_state->game_scale * GALAXY_SCALE;
+                    int y = (nav_state->current_galaxy->position.y - camera->y + entry->star->position.y / GALAXY_SCALE) * game_state->game_scale * GALAXY_SCALE;
+                    double distance_star = maths_distance_between_points(input_state->mouse_position.x, input_state->mouse_position.y, x, y);
+                    double star_cutoff = entry->star->cutoff * game_state->game_scale;
+
+                    // Check if mouse is over star info box
+                    input_state->is_hovering_star_info = gfx_toggle_star_info_hover(input_state, nav_state, camera);
+
+                    bool star_is_selected = strcmp(nav_state->selected_star->name, entry->star->name) == 0 && nav_state->selected_star->is_selected;
+
+                    if (star_is_selected || (!input_state->is_hovering_star_info && distance_star <= star_cutoff))
+                    {
+                        // Use a local rng
+                        pcg32_random_t rng;
+
+                        // Create rng seed by combining x,y values
+                        uint64_t seed = maths_hash_position_to_uint64(entry->star->position);
+
+                        // Seed with a fixed constant
+                        pcg32_srandom_r(&rng, seed, seed);
+
+                        // Draw star cutoff circle
+                        if (strcmp(entry->star->name, nav_state->selected_star->name) != 0 || !nav_state->selected_star->is_selected)
+                            gfx_draw_circle(renderer, camera, x, y, star_cutoff, colors[COLOR_MAGENTA_120]);
+
+                        stars_populate_body(entry->star, entry->star->position, rng, game_state->game_scale);
+
+                        // Draw star systems
+                        if (game_state->game_scale >= zoom_threshold - epsilon)
+                        {
+                            stars_draw_universe_star_system(game_state, input_state, nav_state, entry->star, camera);
+                        }
+                        else
+                        {
+                            SDL_SetRenderDrawColor(renderer, entry->star->color.r, entry->star->color.g, entry->star->color.b, (int)opacity);
+                            SDL_RenderDrawPoint(renderer, x, y);
+                        }
+
+                        // Set star as current_star
+                        if (nav_state->current_star != NULL && distance_star <= star_cutoff)
+                        {
+                            if (strcmp(nav_state->current_star->name, entry->star->name) != 0)
+                                memcpy(nav_state->current_star, entry->star, sizeof(Star));
+                        }
+                    }
+                    else
+                    {
+                        // Draw points
+                        SDL_SetRenderDrawColor(renderer, entry->star->color.r, entry->star->color.g, entry->star->color.b, (int)opacity);
+                        SDL_RenderDrawPoint(renderer, x, y);
+                    }
+
+                    entry = entry->next;
+                }
+            }
+        }
+    }
+
     // Draw ship projection
     if (!game_events->switch_to_map)
     {
@@ -1076,13 +1140,8 @@ void game_run_universe_state(GameState *game_state, InputState *input_state, Gam
             SDL_RenderCopyEx(renderer, ship->projection->texture, &ship->projection->main_img_rect, &ship->projection->rect, ship->projection->angle, &ship->projection->rotation_pt, SDL_FLIP_NONE);
     }
 
-    // Draw cross at position
-    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 128);
-    SDL_RenderDrawLine(renderer, (camera->w / 2) - 7, camera->h / 2, (camera->w / 2) + 7, camera->h / 2);
-    SDL_RenderDrawLine(renderer, camera->w / 2, (camera->h / 2) - 7, camera->w / 2, (camera->h / 2) + 7);
-
-    // Star hover
-    if (game_state->game_scale >= zoom_generate_preview_stars * 10 - epsilon)
+    // Toggle star hover / Draw star info box
+    if (game_state->game_scale >= zoom_generate_preview_stars - epsilon)
     {
         for (int i = 0; i < MAX_STARS; i++)
         {
@@ -1093,6 +1152,13 @@ void game_run_universe_state(GameState *game_state, InputState *input_state, Gam
 
                 while (entry != NULL)
                 {
+                    // Skip buffer_star if in another galaxy
+                    if (strcmp(nav_state->current_galaxy->name, entry->star->galaxy_name) != 0)
+                    {
+                        entry = entry->next;
+                        continue;
+                    }
+
                     int x = (nav_state->current_galaxy->position.x - camera->x + entry->star->position.x / GALAXY_SCALE) * game_state->game_scale * GALAXY_SCALE;
                     int y = (nav_state->current_galaxy->position.y - camera->y + entry->star->position.y / GALAXY_SCALE) * game_state->game_scale * GALAXY_SCALE;
 
@@ -1105,29 +1171,6 @@ void game_run_universe_state(GameState *game_state, InputState *input_state, Gam
 
                     if (!input_state->is_hovering_star_info && distance_star <= star_cutoff)
                     {
-                        // Use a local rng
-                        pcg32_random_t rng;
-
-                        // Create rng seed by combining x,y values
-                        uint64_t seed = maths_hash_position_to_uint64(entry->star->position);
-
-                        // Seed with a fixed constant
-                        pcg32_srandom_r(&rng, seed, seed);
-
-                        // Draw star cutoff circle
-                        if (strcmp(entry->star->name, nav_state->selected_star->name) != 0 || !nav_state->selected_star->is_selected)
-                            gfx_draw_circle(renderer, camera, x, y, star_cutoff, colors[COLOR_MAGENTA_120]);
-
-                        // Populate star
-                        stars_populate_body(entry->star, entry->star->position, rng, game_state->game_scale);
-
-                        // Set star as current_star
-                        if (nav_state->current_star != NULL)
-                        {
-                            if (strcmp(nav_state->current_star->name, entry->star->name) != 0)
-                                memcpy(nav_state->current_star, entry->star, sizeof(Star));
-                        }
-
                         // Draw star info box
                         if (!nav_state->selected_star->is_selected)
                             stars_draw_info_box(entry->star, camera);
@@ -1145,44 +1188,23 @@ void game_run_universe_state(GameState *game_state, InputState *input_state, Gam
     else
         input_state->is_hovering_star = false;
 
-    // Define zoom threshold (for displaying star info)
-    double zoom_threshold;
-
-    switch (nav_state->current_galaxy->class)
-    {
-    case 1:
-        zoom_threshold = ZOOM_UNIVERSE * 10;
-        break;
-    case 2:
-        zoom_threshold = ZOOM_UNIVERSE * 5;
-        break;
-    case 3:
-        zoom_threshold = ZOOM_UNIVERSE * 3;
-        break;
-    case 4:
-        zoom_threshold = ZOOM_UNIVERSE * 2;
-        break;
-    default:
-        zoom_threshold = ZOOM_UNIVERSE * 2;
-        break;
-    }
-
     // Selected star
-    if (game_state->game_scale > zoom_threshold / GALAXY_SCALE + epsilon &&
+    if (game_state->game_scale > zoom_generate_preview_stars - epsilon &&
         nav_state->selected_star->is_selected &&
         !input_state->zoom_in && !input_state->zoom_out)
     {
-        // Draw star cutoff circle
-        int x = (nav_state->current_galaxy->position.x - camera->x + nav_state->selected_star->position.x / GALAXY_SCALE) * game_state->game_scale * GALAXY_SCALE;
-        int y = (nav_state->current_galaxy->position.y - camera->y + nav_state->selected_star->position.y / GALAXY_SCALE) * game_state->game_scale * GALAXY_SCALE;
-        double star_cutoff = nav_state->selected_star->cutoff * game_state->game_scale;
-        gfx_draw_circle(renderer, camera, x, y, star_cutoff, colors[COLOR_CYAN_100]);
+        // Don't show buffer_star if in another galaxy
+        if (strcmp(nav_state->current_galaxy->name, nav_state->selected_star->galaxy_name) == 0)
+        {
+            // Draw star cutoff circle
+            int x = (nav_state->current_galaxy->position.x - camera->x + nav_state->selected_star->position.x / GALAXY_SCALE) * game_state->game_scale * GALAXY_SCALE;
+            int y = (nav_state->current_galaxy->position.y - camera->y + nav_state->selected_star->position.y / GALAXY_SCALE) * game_state->game_scale * GALAXY_SCALE;
+            double star_cutoff = nav_state->selected_star->cutoff * game_state->game_scale;
+            gfx_draw_circle(renderer, camera, x, y, star_cutoff, colors[COLOR_CYAN_100]);
 
-        // Draw star info box
-        stars_draw_info_box(nav_state->selected_star, camera);
-
-        // Draw planets info box
-        stars_draw_planets_info_box(nav_state->selected_star, camera);
+            stars_draw_info_box(nav_state->selected_star, camera);
+            stars_draw_planets_info_box(nav_state->selected_star, camera);
+        }
     }
 
     // Change mouse cursor
@@ -1194,17 +1216,34 @@ void game_run_universe_state(GameState *game_state, InputState *input_state, Gam
             SDL_SetCursor(input_state->default_cursor);
     }
 
+    // Define zoom threshold (for displaying galaxy info box)
+    double zoom_threshold;
+
+    switch (nav_state->current_galaxy->class)
+    {
+    case 1:
+    case 2:
+    case 3:
+    case 4:
+    case 5:
+        zoom_threshold = zoom_generate_preview_stars - 0.00001;
+        break;
+    default:
+        zoom_threshold = zoom_generate_preview_stars - 0.000001;
+        break;
+    }
+
     // Draw galaxy info box
     if (nav_state->current_galaxy->is_selected)
     {
         if (!nav_state->current_galaxy->initialized || nav_state->current_galaxy->initialized < nav_state->current_galaxy->total_groups)
             gfx_generate_gstars(nav_state->current_galaxy, false);
 
-        if (game_state->game_scale <= zoom_threshold / GALAXY_SCALE + epsilon)
+        if (game_state->game_scale <= zoom_threshold + epsilon)
             galaxies_draw_info_box(nav_state->current_galaxy, camera);
     }
 
-    console_draw_position_console(game_state, nav_state, camera, nav_state->universe_offset);
+    console_draw_position_console(game_state, nav_state, camera);
     gfx_draw_screen_frame(camera);
 
     if (game_events->is_exiting_map)
@@ -1226,10 +1265,10 @@ void game_run_universe_state(GameState *game_state, InputState *input_state, Gam
 /**
  * Moves the map by a given speed based on the input state and camera parameters.
  *
- * @param game_state A pointer to the game state struct.
- * @param input_state A pointer to the input state struct.
- * @param nav_state A pointer to the navigation state struct.
- * @param camera A pointer to the camera struct.
+ * @param game_state A pointer to the current GameState object.
+ * @param input_state A pointer to the current InputState object.
+ * @param nav_state A pointer to the current NavigationState object.
+ * @param camera A pointer to the current Camera object.
  *
  * @return void
  */
@@ -1255,11 +1294,11 @@ static void game_scroll_map(const GameState *game_state, const InputState *input
 /**
  * Moves the universe by a given speed based on the input state and camera parameters.
  *
- * @param game_state A pointer to the game state struct.
- * @param input_state A pointer to the input state struct.
- * @param game_events A pointer to the game events struct.
- * @param nav_state A pointer to the navigation state struct.
- * @param camera A pointer to the camera struct.
+ * @param game_state A pointer to the current GameState object.
+ * @param input_state A pointer to the current InputState object.
+ * @param game_events A pointer to the current GameEvents object.
+ * @param nav_state A pointer to the current NavigationState object.
+ * @param camera A pointer to the current Camera object.
  *
  * @return void
  */
@@ -1314,10 +1353,10 @@ static void game_scroll_universe(const GameState *game_state, const InputState *
 /**
  * Updates the position of a ship based on input state and camera position.
  *
- * @param game_state A pointer to the current game state.
- * @param input_state A pointer to the current input state.
+ * @param game_state A pointer to the current GameState object.
+ * @param input_state A pointer to the current InputState object.
  * @param ship A pointer to the ship to update.
- * @param camera A pointer to the camera used to render the game.
+ * @param camera A pointer to the current Camera object.
  *
  * @return void
  */
@@ -1380,12 +1419,51 @@ static void game_update_ship_position(GameState *game_state, const InputState *i
 }
 
 /**
+ * Calculates the game scale above which stars are generated for the given galaxy class.
+ *
+ * @param galaxy_class The class of the galaxy for which the preview stars are to be generated.
+ *
+ * @return Returns the game scale as a long double.
+ */
+long double game_zoom_generate_preview_stars(unsigned short galaxy_class)
+{
+    long double zoom_generate_preview_stars;
+
+    switch (galaxy_class)
+    {
+    case 1:
+        zoom_generate_preview_stars = ZOOM_STAR_1_PREVIEW_STARS;
+        break;
+    case 2:
+        zoom_generate_preview_stars = ZOOM_STAR_2_PREVIEW_STARS;
+        break;
+    case 3:
+        zoom_generate_preview_stars = ZOOM_STAR_3_PREVIEW_STARS;
+        break;
+    case 4:
+        zoom_generate_preview_stars = ZOOM_STAR_4_PREVIEW_STARS;
+        break;
+    case 5:
+        zoom_generate_preview_stars = ZOOM_STAR_5_PREVIEW_STARS;
+        break;
+    case 6:
+        zoom_generate_preview_stars = ZOOM_STAR_6_PREVIEW_STARS;
+        break;
+    default:
+        zoom_generate_preview_stars = ZOOM_STAR_1_PREVIEW_STARS;
+        break;
+    }
+
+    return zoom_generate_preview_stars;
+}
+
+/**
  * Zoom in/out the map, resets the region size, and zooms in/out on each star system.
  *
- * @param game_state A pointer to the game state object.
- * @param input_state A pointer to the input state object.
- * @param game_events A pointer to the game events object.
- * @param nav_state A pointer to the navigation state object.
+ * @param game_state A pointer to the current GameState object.
+ * @param input_state A pointer to the current InputState object.
+ * @param game_events A pointer to the current GameEvents object.
+ * @param nav_state A pointer to the current NavigationState object.
  *
  * @return void
  */
@@ -1397,7 +1475,7 @@ static void game_zoom_map(GameState *game_state, InputState *input_state, GameEv
     // Zoom in
     if (input_state->zoom_in)
     {
-        if (game_state->game_scale <= ZOOM_MAP_REGION_SWITCH - epsilon)
+        if (game_state->game_scale <= ZOOM_MAP_STEP_SWITCH - epsilon)
             zoom_step /= 10;
 
         if (game_state->game_scale + zoom_step <= ZOOM_MAX + epsilon)
@@ -1408,19 +1486,13 @@ static void game_zoom_map(GameState *game_state, InputState *input_state, GameEv
             else
                 game_state->game_scale += zoom_step;
 
-            // Reset region_size
-            if (game_state->game_scale >= ZOOM_MAP_REGION_SWITCH - epsilon)
+            // Delete stars that end up outside the region
+            if (game_state->game_scale <= ZOOM_MAP_STEP_SWITCH + zoom_step + epsilon)
             {
-                game_state->galaxy_region_size = GALAXY_REGION_SIZE;
+                double bx = maths_get_nearest_section_line(nav_state->map_offset.x, GALAXY_SECTION_SIZE);
+                double by = maths_get_nearest_section_line(nav_state->map_offset.y, GALAXY_SECTION_SIZE);
 
-                // Delete stars that end up outside the region
-                if (game_state->game_scale <= ZOOM_MAP_REGION_SWITCH + zoom_step + epsilon)
-                {
-                    double bx = maths_get_nearest_section_line(nav_state->map_offset.x, GALAXY_SECTION_SIZE);
-                    double by = maths_get_nearest_section_line(nav_state->map_offset.y, GALAXY_SECTION_SIZE);
-
-                    stars_delete_outside_region(nav_state->stars, nav_state->buffer_star, bx, by, game_state->galaxy_region_size);
-                }
+                stars_delete_outside_region(nav_state->stars, nav_state->buffer_star, bx, by, GALAXY_REGION_SIZE);
             }
         }
         else if (game_state->game_scale_override)
@@ -1433,7 +1505,7 @@ static void game_zoom_map(GameState *game_state, InputState *input_state, GameEv
     // Zoom out
     if (input_state->zoom_out)
     {
-        if (game_state->game_scale <= ZOOM_MAP_REGION_SWITCH + epsilon)
+        if (game_state->game_scale <= ZOOM_MAP_STEP_SWITCH + epsilon)
             zoom_step = ZOOM_STEP / 10;
 
         if (game_state->game_scale - zoom_step >= ZOOM_MAP_MIN - epsilon)
@@ -1443,15 +1515,6 @@ static void game_zoom_map(GameState *game_state, InputState *input_state, GameEv
                 game_state->game_scale = game_state->game_scale_override;
             else
                 game_state->game_scale -= zoom_step;
-
-            // Reset region_size
-            if (game_state->game_scale < ZOOM_MAP_REGION_SWITCH - epsilon)
-            {
-                game_state->galaxy_region_size = GALAXY_REGION_SIZE_MAX;
-
-                // Trigger generation of new stars for new region size
-                game_events->start_stars_generation = true;
-            }
 
             // Switch to Universe mode
             if (game_state->game_scale <= ZOOM_MAP_SWITCH - epsilon)
@@ -1477,10 +1540,10 @@ static void game_zoom_map(GameState *game_state, InputState *input_state, GameEv
 /**
  * Zoom in/out the universe, resets the region size, and zooms in/out on each star system.
  *
- * @param game_state A pointer to the game state object.
- * @param input_state A pointer to the input state object.
- * @param game_events A pointer to the game events object.
- * @param nav_state A pointer to the navigation state object.
+ * @param game_state A pointer to the current GameState object.
+ * @param input_state A pointer to the current InputState object.
+ * @param game_events A pointer to the current GameEvents object.
+ * @param nav_state A pointer to the current NavigationState object.
  *
  * @return void
  */

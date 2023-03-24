@@ -7,6 +7,7 @@ void stars_delete_outside_region(StarEntry *stars[], const Star *, double bx, do
 void stars_draw_info_box(const Star *, const Camera *);
 void stars_draw_planets_info_box(const Star *, const Camera *);
 void stars_draw_star_system(GameState *, const InputState *, NavigationState *, CelestialBody *, const Camera *);
+void stars_draw_universe_star_system(GameState *, const InputState *, NavigationState *, CelestialBody *, const Camera *);
 void stars_generate(GameState *, GameEvents *, NavigationState *, Bstar *bstars, Ship *ship);
 void stars_generate_preview(GameEvents *, NavigationState *, const Camera *, long double scale);
 void stars_initialize_star(Star *);
@@ -19,6 +20,7 @@ void stars_update_orbital_positions(GameState *, const InputState *, NavigationS
 void galaxies_generate(GameEvents *, NavigationState *, Point);
 Galaxy *galaxies_nearest_circumference(const NavigationState *, Point, int exclude);
 void gfx_draw_circle(SDL_Renderer *renderer, const Camera *, int xc, int yc, int radius, SDL_Color color);
+void gfx_draw_circle_approximation(SDL_Renderer *, const Camera *, int x, int y, int r, SDL_Color);
 void gfx_draw_fill_circle(SDL_Renderer *, int xc, int yc, int radius, SDL_Color);
 bool gfx_is_object_in_camera(const Camera *, double x, double y, float radius, long double scale);
 void gfx_project_body_on_edge(const GameState *, const NavigationState *, CelestialBody *, const Camera *);

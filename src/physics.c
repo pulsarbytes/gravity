@@ -15,9 +15,9 @@
 /**
  * Apply gravity and handle collision with a celestial body to update the state of the ship.
  *
- * @param game_state A pointer to the GameState struct that holds the current state of the game.
+ * @param game_state A pointer to the current GameState object.
  * @param thrust_on boolean indicating whether the ship is currently being thrust forward.
- * @param nav_state A pointer to the NavigationState struct that holds the current state of the ship's navigation.
+ * @param nav_state A pointer to the current NavigationState object.
  * @param body A pointer to the CelestialBody struct representing the celestial body that the ship is interacting with.
  * @param ship A pointer to the Ship struct representing the ship whose state is being updated.
  * @param star_class An integer representing the class of the star the ship is interacting with.

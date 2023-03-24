@@ -175,7 +175,7 @@ void gfx_create_default_colors(void)
  * on the given SDL_Renderer. Only draws points within the camera's view and is efficient for small circles.
  *
  * @param renderer The SDL_Renderer to draw on.
- * @param camera The Camera that defines the viewable area.
+ * @param camera A pointer to the current Camera object.
  * @param xc The x-coordinate of the circle's center (game_scale).
  * @param yc The y-coordinate of the circle's center (game_scale).
  * @param radius The radius of the circle.
@@ -244,12 +244,12 @@ void gfx_draw_circle(SDL_Renderer *renderer, const Camera *camera, int xc, int y
  * Draws a circle approximation using a series of bezier curves. This function will only draw segments
  * of the circle that intersect with the viewport defined by `camera` and is efficient for large circles.
  *
- * @param renderer The renderer to use to draw the circle
- * @param camera The camera used to view the scene
- * @param x The x coordinate of the center of the circle
- * @param y The y coordinate of the center of the circle
- * @param r The radius of the circle
- * @param color The color to use when drawing the circle
+ * @param renderer The renderer to use to draw the circle.
+ * @param camera A pointer to the current Camera object.
+ * @param x The x coordinate of the center of the circle.
+ * @param y The y coordinate of the center of the circle.
+ * @param r The radius of the circle.
+ * @param color The color to use when drawing the circle.
  */
 void gfx_draw_circle_approximation(SDL_Renderer *renderer, const Camera *camera, int x, int y, int r, SDL_Color color)
 {
@@ -407,7 +407,7 @@ void gfx_draw_fill_circle(SDL_Renderer *renderer, int xc, int yc, int radius, SD
  * using a provided Camera structure and scaling factor.
  *
  * @param galaxy A pointer to Galaxy struct.
- * @param camera a pointer to Camera struct.
+ * @param camera A pointer to the current Camera object.
  * @param gstars_count Number of stars in the galaxy cloud.
  * @param high_definition A boolean to indicate whether to use high definition stars or not.
  * @param scale Scaling factor for the galaxy cloud.
@@ -416,7 +416,7 @@ void gfx_draw_fill_circle(SDL_Renderer *renderer, int xc, int yc, int radius, SD
  */
 void gfx_draw_galaxy_cloud(Galaxy *galaxy, const Camera *camera, int gstars_count, bool high_definition, long double scale)
 {
-    const double epsilon = ZOOM_EPSILON / GALAXY_SCALE;
+    // const double epsilon = ZOOM_EPSILON / GALAXY_SCALE;
 
     for (int i = 0; i < gstars_count; i++)
     {
@@ -430,26 +430,26 @@ void gfx_draw_galaxy_cloud(Galaxy *galaxy, const Camera *camera, int gstars_coun
 
         switch (galaxy->class)
         {
-        case 1:
-            if (scale <= (ZOOM_UNIVERSE_MIN / GALAXY_SCALE) + epsilon)
-                opacity = 0.35 * star_opacity;
-            else if (scale <= 0.000002 + epsilon)
-                opacity = 0.5 * star_opacity;
-            else
-                opacity = star_opacity;
-            break;
-        case 2:
-            if (scale <= (ZOOM_UNIVERSE_MIN / GALAXY_SCALE) + epsilon)
-                opacity = 0.5 * star_opacity;
-            else
-                opacity = star_opacity;
-            break;
-        case 3:
-            if (scale <= (ZOOM_UNIVERSE_MIN / GALAXY_SCALE) + epsilon)
-                opacity = 0.8 * star_opacity;
-            else
-                opacity = star_opacity;
-            break;
+        // case 1:
+        //     if (scale <= (ZOOM_UNIVERSE_MIN / GALAXY_SCALE) + epsilon)
+        //         opacity = 0.35 * star_opacity;
+        //     else if (scale <= 0.000002 + epsilon)
+        //         opacity = 0.5 * star_opacity;
+        //     else
+        //         opacity = star_opacity;
+        //     break;
+        // case 2:
+        //     if (scale <= (ZOOM_UNIVERSE_MIN / GALAXY_SCALE) + epsilon)
+        //         opacity = 0.5 * star_opacity;
+        //     else
+        //         opacity = star_opacity;
+        //     break;
+        // case 3:
+        //     if (scale <= (ZOOM_UNIVERSE_MIN / GALAXY_SCALE) + epsilon)
+        //         opacity = 0.8 * star_opacity;
+        //     else
+        //         opacity = star_opacity;
+        //     break;
         default:
             opacity = star_opacity;
         }
@@ -476,7 +476,7 @@ void gfx_draw_galaxy_cloud(Galaxy *galaxy, const Camera *camera, int gstars_coun
 /**
  * Draws a cloud of stars for the menu screen, using a provided Camera structure and an array of Gstar structures.
  *
- * @param camera A pointer to the Camera structure indicating the current viewpoint.
+ * @param camera A pointer to the current Camera object.
  * @param menustars An array of Gstar structures containing information about the stars in the cloud.
  *
  * @return void
@@ -508,7 +508,7 @@ void gfx_draw_menu_galaxy_cloud(const Camera *camera, Gstar *menustars)
  * a height equal to the camera's height minus 4 * PROJECTION_RADIUS and a
  * width of 2 * PROJECTION_RADIUS.
  *
- * @param camera A pointer to the Camera struct representing the current camera position and dimensions.
+ * @param camera A pointer to the current Camera object.
  *
  * @return void
  */
@@ -548,7 +548,7 @@ void gfx_draw_screen_frame(Camera *camera)
 /**
  * Draws section lines on the screen for a given camera state and scale.
  *
- * @param camera A pointer to the camera used to draw the section lines.
+ * @param camera A pointer to the current Camera object.
  * @param state An integer representing the current state of the camera, either MAP or UNIVERSE.
  * @param color An SDL_Color struct representing the color of the section lines.
  * @param scale A long double representing the current zoom scale of the camera.
@@ -564,7 +564,7 @@ void gfx_draw_section_lines(Camera *camera, int state, SDL_Color color, long dou
 
     if (state == MAP)
     {
-        if (scale < 0.01 + epsilon)
+        if (GALAXY_SECTION_SIZE == 10000 && scale < 0.01 + epsilon)
             section_size = GALAXY_SECTION_SIZE * 10;
         else
             section_size = GALAXY_SECTION_SIZE;
@@ -616,7 +616,7 @@ void gfx_draw_section_lines(Camera *camera, int state, SDL_Color color, long dou
  * in the direction of the ship's velocity.
  *
  * @param ship A pointer to a Ship struct that contains the position and velocity of the ship.
- * @param camera A pointer to a Camera struct that contains the position of the camera.
+ * @param camera A pointer to the current Camera object.
  * @param scale Long double value that represents the scale at which to draw the arc.
  *
  * @return void
@@ -719,7 +719,7 @@ void gfx_draw_speed_arc(const Ship *ship, const Camera *camera, long double scal
  * side of the screen if they go off-screen.
  *
  * @param velocity The speed of the object.
- * @param camera A pointer to the current camera position.
+ * @param camera A pointer to the current Camera object.
  * @param speed The current speed of the object.
  *
  * @return void
@@ -882,9 +882,9 @@ void gfx_draw_speed_lines(float velocity, const Camera *camera, Speed speed)
  * Generates a set of randomly placed and sized stars on a given camera view.
  * The function implements lazy initialization of bstars in batches.
  *
- * @param nav_state A pointer to NavigationState object.
+ * @param nav_state A pointer to the current NavigationState object.
  * @param bstars Array of Bstar objects to populate with generated stars.
- * @param camera A pointer to Camera object representing current view.
+ * @param camera A pointer to the current Camera object.
  * @param lazy_load A boolean indicating whether or not bstars will be lazy-loaded.
  *
  * @return void
@@ -1035,7 +1035,7 @@ void gfx_generate_gstars(Galaxy *galaxy, bool high_definition)
 
         // Allow <array_factor> times more than array size as galaxy_density is low
         // Increase array_factor to show more stars
-        int array_factor = 12;
+        int array_factor = 16;
 
         while (total_groups > MAX_GSTARS_ROW * array_factor)
         {
@@ -1145,10 +1145,15 @@ void gfx_generate_gstars(Galaxy *galaxy, bool high_definition)
                 unsigned short class = stars_size_class(distance);
                 float class_opacity_max = class * (255 / 6);
                 class_opacity_max = class_opacity_max > 255 ? 255 : class_opacity_max;
-                float class_opacity_min = class_opacity_max - (255 / 6);
-                int opacity = (abs(pcg32_random_r(&rng)) % (int)class_opacity_max + (int)class_opacity_min);
-                star.opacity = opacity;
-                star.opacity = star.opacity < 0 ? 0 : star.opacity;
+                // float class_opacity_min = class_opacity_max - (255 / 6);
+                // int opacity = (abs(pcg32_random_r(&rng)) % (int)class_opacity_max + (int)class_opacity_min);
+                // star.opacity = opacity;
+                // star.opacity = star.opacity < 0 ? 0 : star.opacity;
+
+                star.opacity = class_opacity_max;
+
+                if (star.opacity < 120)
+                    star.opacity = 120;
 
                 // Calculate color
                 unsigned short color_code;
@@ -1341,7 +1346,7 @@ void gfx_generate_menu_gstars(Galaxy *galaxy, Gstar *menustars)
 /**
  * Checks if an object with a given position and radius is within the bounds of the camera.
  *
- * @param camera The camera to check against.
+ * @param camera A pointer to the current Camera object.
  * @param x The x-coordinate of the object's center.
  * @param y The y-coordinate of the object's center.
  * @param radius The radius of the object.
@@ -1358,7 +1363,7 @@ bool gfx_is_object_in_camera(const Camera *camera, double x, double y, float rad
 /**
  * Determines if a relative position (x,y) is within the bounds of the camera.
  *
- * @param camera A pointer to the Camera object.
+ * @param camera A pointer to the current Camera object.
  * @param x The x-coordinate of the position relative to the camera.
  * @param y The y-coordinate of the position relative to the camera.
  *
@@ -1372,10 +1377,10 @@ bool gfx_is_relative_position_in_camera(const Camera *camera, int x, int y)
 /**
  * Projects the given CelestialBody onto the edge of the screen.
  *
- * @param game_state A pointer to the current GameState.
- * @param nav_state A pointer to the current NavigationState.
+ * @param game_state A pointer to the current GameState object.
+ * @param nav_state A pointer to the current NavigationState object.
  * @param body A pointer to the CelestialBody to be projected.
- * @param camera A pointer to the current Camera.
+ * @param camera A pointer to the current Camera object.
  *
  * @return void
  */
@@ -1390,15 +1395,8 @@ void gfx_project_body_on_edge(const GameState *game_state, const NavigationState
     if (body->level == LEVEL_STAR)
     {
         SDL_Color color = body->color;
-        int opacity;
-
-        if (game_state->state == NAVIGATE)
-            opacity = gfx_update_projection_opacity(distance, GALAXY_REGION_SIZE, GALAXY_SECTION_SIZE);
-        else if (game_state->state == MAP)
-            opacity = gfx_update_projection_opacity(distance, game_state->galaxy_region_size, GALAXY_SECTION_SIZE);
-
+        int opacity = gfx_update_projection_opacity(distance, GALAXY_REGION_SIZE, GALAXY_SECTION_SIZE);
         color.a = opacity;
-
         int center_x = body->projection.x + PROJECTION_RADIUS;
         int center_y = body->projection.y + PROJECTION_RADIUS;
 
@@ -1417,9 +1415,9 @@ void gfx_project_body_on_edge(const GameState *game_state, const NavigationState
  * Projects the given Galaxy object onto the edge of the given Camera object, with the given state and scale.
  *
  * @param state An integer representing the current state of the game.
- * @param nav_state A pointer to a NavigationState object representing the current state of the navigation system.
+ * @param nav_state A pointer to the current NavigationState object.
  * @param galaxy A pointer to a Galaxy object to be projected.
- * @param camera A pointer to a Camera object representing the current camera position and size.
+ * @param camera A pointer to the current Camera object.
  * @param scale A long double representing the current game scale.
  *
  * @return void
@@ -1453,10 +1451,10 @@ void gfx_project_galaxy_on_edge(int state, const NavigationState *nav_state, Gal
  * Draw the ship projection on the edge of the screen, taking into account the current camera position and zoom level.
  *
  * @param state An integer representing the current game state (NAVIGATE or MAP).
- * @param input_state A pointer to the current InputState struct.
- * @param nav_state A pointer to the current NavigationState struct.
+ * @param input_state A pointer to the current InputState object.
+ * @param nav_state A pointer to the current NavigationState object.
  * @param ship A pointer to the Ship struct to be drawn.
- * @param camera A pointer to the current Camera struct.
+ * @param camera A pointer to the current Camera object.
  * @param scale A long double representing the current zoom level.
  *
  * @return void
@@ -1483,8 +1481,8 @@ void gfx_project_ship_on_edge(int state, const InputState *input_state, const Na
 /**
  * Checks if the mouse is over the current galaxy and toggles the variable input_state.is_hovering_galaxy.
  *
- * @param input_state A pointer to the current InputState.
- * @param nav_state A pointer to the current NavigationState.
+ * @param input_state A pointer to the current InputState object.
+ * @param nav_state A pointer to the current NavigationState object.
  * @param camera A pointer to the current Camera object.
  * @param scale The scaling factor applied to the camera view.
  *
@@ -1513,8 +1511,8 @@ void gfx_toggle_galaxy_hover(InputState *input_state, const NavigationState *nav
 /**
  * Checks if the mouse is over the current star info box.
  *
- * @param input_state A pointer to the current InputState.
- * @param nav_state A pointer to the current NavigationState.
+ * @param input_state A pointer to the current InputState object.
+ * @param nav_state A pointer to the current NavigationState object.
  * @param camera A pointer to the current Camera object.
  *
  * @return True if the mouse is over the current star info box, false otherwise.
@@ -1557,8 +1555,8 @@ bool gfx_toggle_star_info_hover(InputState *input_state, const NavigationState *
 /**
  * Checks if the mouse is over the current_star and toggles the variable input_state.is_hovering_star.
  *
- * @param input_state A pointer to the current InputState.
- * @param nav_state A pointer to the current NavigationState.
+ * @param input_state A pointer to the current InputState object.
+ * @param nav_state A pointer to the current NavigationState object.
  * @param camera A pointer to the current Camera object.
  * @param scale The scaling factor applied to the camera view.
  * @param state The current state.
@@ -1602,9 +1600,9 @@ void gfx_toggle_star_hover(InputState *input_state, const NavigationState *nav_s
  *
  * @param state The current game state.
  * @param camera_on Whether or not the camera is turned on.
- * @param nav_state The current navigation state.
+ * @param nav_state A pointer to the current NavigationState object.
  * @param bstars An array of background stars.
- * @param camera The current camera object.
+ * @param camera A pointer to the current Camera object.
  * @param speed The current speed object.
  * @param distance The distance from the current galaxy center.
  *
@@ -1697,7 +1695,7 @@ void gfx_update_bstars_position(int state, bool camera_on, const NavigationState
 /**
  * Updates the camera position and scale.
  *
- * @param camera A pointer to the Camera struct to be updated.
+ * @param camera A pointer to the current Camera object.
  * @param position The position of the camera center.
  * @param scale The scaling factor applied to the camera view.
  *
@@ -1714,7 +1712,7 @@ void gfx_update_camera(Camera *camera, Point position, long double scale)
  *
  * @param galaxy A pointer to a Galaxy struct representing the galaxy.
  * @param ship_position The position of the player's ship in the galaxy.
- * @param camera A pointer to a Camera struct representing the current camera view.
+ * @param camera A pointer to the current Camera object.
  * @param distance The distance between the player's ship and the center of the galaxy.
  * @param limit The maximum distance at which stars will be drawn.
  *
@@ -1816,10 +1814,10 @@ static int gfx_update_projection_opacity(double distance, int region_size, int s
  * Updates the projection position of a given entity based on the current navigation state, camera position,
  * scale, and screen quadrant. Finds the screen quadrant for the entity's exit from the screen.
  *
- * @param nav_state The current navigation state.
+ * @param nav_state A pointer to the current NavigationState object.
  * @param ptr A pointer to the entity to update the projection position of.
  * @param entity_type The type of entity to update the projection position of.
- * @param camera The current camera.
+ * @param camera A pointer to the current Camera object.
  * @param state The current state of the program.
  * @param scale The scale to apply to the projection.
  *
