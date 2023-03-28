@@ -3,8 +3,10 @@
 
 // Function prototypes
 void gfx_create_default_colors(void);
+void gfx_draw_button(char *text, unsigned short font_size, SDL_Rect, SDL_Color, SDL_Color);
 void gfx_draw_circle(SDL_Renderer *, const Camera *, int xc, int yc, int radius, SDL_Color);
 void gfx_draw_circle_approximation(SDL_Renderer *, const Camera *, int x, int y, int r, SDL_Color);
+void gfx_draw_diamond(SDL_Renderer *renderer, int x, int y, int size, SDL_Color);
 void gfx_draw_galaxy_cloud(Galaxy *, const Camera *, int gstars_count, bool high_definition, long double scale);
 void gfx_draw_fill_circle(SDL_Renderer *, int xc, int yc, int radius, SDL_Color);
 void gfx_draw_fill_diamond(SDL_Renderer *, int x, int y, int size, SDL_Color);
@@ -13,7 +15,8 @@ void gfx_draw_screen_frame(Camera *);
 void gfx_draw_section_lines(Camera *, int state, SDL_Color color, long double scale);
 void gfx_draw_speed_arc(const Ship *, const Camera *, long double scale);
 void gfx_draw_speed_lines(float velocity, const Camera *, Speed);
-void gfx_generate_bstars(GameEvents *, NavigationState *nav_state, Bstar *bstars, const Camera *camera, bool lazy_load);
+void gfx_draw_waypoint_path(const GameState *, const NavigationState *, const Camera *);
+void gfx_generate_bstars(GameEvents *, NavigationState *, Bstar *bstars, const Camera *, bool lazy_load);
 void gfx_generate_gstars(Galaxy *, bool high_definition);
 void gfx_generate_menu_gstars(Galaxy *, Gstar *menustars);
 bool gfx_is_object_in_camera(const Camera *, double x, double y, float radius, long double scale);
@@ -24,6 +27,8 @@ void gfx_project_ship_on_edge(int state, const InputState *, const NavigationSta
 void gfx_toggle_galaxy_hover(InputState *, const NavigationState *, const Camera *, long double scale);
 void gfx_toggle_star_hover(InputState *, const NavigationState *, const Camera *, long double scale, int state);
 bool gfx_toggle_star_info_hover(InputState *, const NavigationState *, const Camera *);
+void gfx_toggle_star_info_planet_hover(InputState *, const Camera *, SDL_Rect, int index);
+void gfx_toggle_star_waypoint_button_hover(InputState *, SDL_Rect);
 void gfx_update_bstars_position(int state, bool camera_on, const NavigationState *, Bstar *bstars, const Camera *, Speed, double distance);
 void gfx_update_camera(Camera *, Point, long double scale);
 void gfx_update_gstars_position(Galaxy *, Point, const Camera *, double distance, double limit);

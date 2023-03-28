@@ -43,6 +43,7 @@ void console_measure_fps(GameState *, unsigned int *last_time, unsigned int *fra
 void controls_create_table(GameState *, const Camera *);
 void controls_run_state(GameState *, InputState *, bool is_game_started, const NavigationState *, Bstar *bstars, Gstar *menustars, const Camera *);
 void events_loop(GameState *, InputState *, GameEvents *, NavigationState *, const Camera *);
+void events_set_cursor(GameState *, InputState *);
 Ship game_create_ship(int radius, Point, long double scale);
 void game_reset(GameState *, InputState *, GameEvents *, NavigationState *, Bstar *bstars, Ship *, Camera *, bool reset);
 void game_run_map_state(GameState *, InputState *, GameEvents *, NavigationState *, Bstar *bstars, Ship *, Camera *);
@@ -161,6 +162,9 @@ int main(int argc, char *argv[])
             menu_run_state(&game_state, &input_state, game_events.is_game_started, &nav_state, bstars, menustars, &camera);
             break;
         }
+
+        // Set mouse cursor
+        events_set_cursor(&game_state, &input_state);
 
         // Draw FPS
         if (input_state.fps_on && FPS_ON)

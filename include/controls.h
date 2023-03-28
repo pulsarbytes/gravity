@@ -10,7 +10,6 @@ void gfx_draw_menu_galaxy_cloud(const Camera *, Gstar *menustars);
 void gfx_draw_speed_lines(float velocity, const Camera *, Speed);
 void gfx_update_bstars_position(int state, bool camera_on, const NavigationState *, Bstar *bstars, const Camera *, Speed, double distance);
 void menu_draw_menu(GameState *, InputState *, bool is_game_started);
-bool menu_is_hovering_menu(GameState *game_state, InputState *input_state);
 void sdl_set_cursor(InputState *, unsigned short cursor_type);
 
 #endif

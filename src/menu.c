@@ -116,21 +116,21 @@ void menu_draw_menu(GameState *game_state, InputState *input_state, bool is_game
             input_state->mouse_position.y >= game_state->menu[i].rect.y &&
             input_state->mouse_position.y <= game_state->menu[i].rect.y + game_state->menu[i].rect.h)
         {
-            input_state->selected_button_index = i;
+            input_state->selected_menu_button_index = i;
         }
 
-        if (i == input_state->selected_button_index && game_state->menu[i].disabled)
+        if (i == input_state->selected_menu_button_index && game_state->menu[i].disabled)
         {
             do
             {
-                input_state->selected_button_index = (input_state->selected_button_index + 1) % MENU_BUTTON_COUNT;
-            } while (game_state->menu[input_state->selected_button_index].disabled);
+                input_state->selected_menu_button_index = (input_state->selected_menu_button_index + 1) % MENU_BUTTON_COUNT;
+            } while (game_state->menu[input_state->selected_menu_button_index].disabled);
         }
 
         if (game_state->menu[i].disabled)
             continue;
 
-        if (i == input_state->selected_button_index)
+        if (i == input_state->selected_menu_button_index)
             SDL_SetRenderDrawColor(renderer, 255, 255, 255, 40);
         else
             SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
@@ -300,12 +300,6 @@ void menu_run_state(GameState *game_state, InputState *input_state, bool is_game
 
     // Draw footer
     menu_draw_footer(camera);
-
-    // Check if mouse is over menu buttons
-    if (menu_is_hovering_menu(game_state, input_state))
-        SDL_SetCursor(input_state->pointing_cursor);
-    else
-        SDL_SetCursor(input_state->default_cursor);
 }
 
 /**

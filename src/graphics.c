@@ -7,6 +7,7 @@
 #include <limits.h>
 
 #include <SDL2/SDL.h>
+#include <SDL2/SDL_ttf.h>
 #include "../lib/pcg-c-basic-0.9/pcg_basic.h"
 
 #include "../include/constants.h"
@@ -15,10 +16,12 @@
 #include "../include/graphics.h"
 
 // External variable definitions
+extern TTF_Font *fonts[];
 extern SDL_Renderer *renderer;
 extern SDL_Color colors[];
 
 // Static function prototypes
+static bool gfx_has_line_of_sight(const NavigationState *, double x1, double y1, double x2, double y2);
 static void gfx_update_projection_position(const NavigationState *, void *ptr, int entity_type, const Camera *, int state, long double scale);
 static int gfx_update_projection_opacity(double distance, int region_size, int section_size);
 
@@ -29,145 +32,94 @@ static int gfx_update_projection_opacity(double distance, int region_size, int s
  */
 void gfx_create_default_colors(void)
 {
-    colors[COLOR_CYAN_70].r = 0;
-    colors[COLOR_CYAN_70].g = 255;
-    colors[COLOR_CYAN_70].b = 255;
-    colors[COLOR_CYAN_70].a = 70;
+    colors[COLOR_CYAN_70] = (SDL_Color){0, 255, 255, 70};
+    colors[COLOR_CYAN_100] = (SDL_Color){0, 255, 255, 100};
+    colors[COLOR_CYAN_150] = (SDL_Color){0, 255, 255, 150};
 
-    colors[COLOR_CYAN_100].r = 0;
-    colors[COLOR_CYAN_100].g = 255;
-    colors[COLOR_CYAN_100].b = 255;
-    colors[COLOR_CYAN_100].a = 100;
+    colors[COLOR_MAGENTA_70] = (SDL_Color){255, 0, 255, 70};
+    colors[COLOR_MAGENTA_100] = (SDL_Color){255, 0, 255, 100};
+    colors[COLOR_MAGENTA_120] = (SDL_Color){255, 0, 255, 120};
 
-    colors[COLOR_CYAN_150].r = 0;
-    colors[COLOR_CYAN_150].g = 255;
-    colors[COLOR_CYAN_150].b = 255;
-    colors[COLOR_CYAN_150].a = 150;
+    colors[COLOR_ORANGE_32] = (SDL_Color){255, 165, 0, 32};
 
-    colors[COLOR_MAGENTA_70].r = 255;
-    colors[COLOR_MAGENTA_70].g = 0;
-    colors[COLOR_MAGENTA_70].b = 255;
-    colors[COLOR_MAGENTA_70].a = 70;
-
-    colors[COLOR_MAGENTA_100].r = 255;
-    colors[COLOR_MAGENTA_100].g = 0;
-    colors[COLOR_MAGENTA_100].b = 255;
-    colors[COLOR_MAGENTA_100].a = 100;
-
-    colors[COLOR_MAGENTA_120].r = 255;
-    colors[COLOR_MAGENTA_120].g = 0;
-    colors[COLOR_MAGENTA_120].b = 255;
-    colors[COLOR_MAGENTA_120].a = 120;
-
-    colors[COLOR_ORANGE_32].r = 255;
-    colors[COLOR_ORANGE_32].g = 165;
-    colors[COLOR_ORANGE_32].b = 0;
-    colors[COLOR_ORANGE_32].a = 32;
-
-    colors[COLOR_WHITE_100].r = 255;
-    colors[COLOR_WHITE_100].g = 255;
-    colors[COLOR_WHITE_100].b = 255;
-    colors[COLOR_WHITE_100].a = 100;
-
-    colors[COLOR_WHITE_140].r = 255;
-    colors[COLOR_WHITE_140].g = 255;
-    colors[COLOR_WHITE_140].b = 255;
-    colors[COLOR_WHITE_140].a = 140;
-
-    colors[COLOR_WHITE_180].r = 255;
-    colors[COLOR_WHITE_180].g = 255;
-    colors[COLOR_WHITE_180].b = 255;
-    colors[COLOR_WHITE_180].a = 180;
-
-    colors[COLOR_WHITE_255].r = 255;
-    colors[COLOR_WHITE_255].g = 255;
-    colors[COLOR_WHITE_255].b = 255;
-    colors[COLOR_WHITE_255].a = 255;
+    colors[COLOR_WHITE_100] = (SDL_Color){255, 255, 255, 100};
+    colors[COLOR_WHITE_140] = (SDL_Color){255, 255, 255, 140};
+    colors[COLOR_WHITE_180] = (SDL_Color){255, 255, 255, 180};
+    colors[COLOR_WHITE_255] = (SDL_Color){255, 255, 255, 255};
 
     // Stars
-    colors[COLOR_STAR_1].r = 255;
-    colors[COLOR_STAR_1].g = 165;
-    colors[COLOR_STAR_1].b = 165;
-    colors[COLOR_STAR_1].a = 255;
-
-    colors[COLOR_STAR_2].r = 255;
-    colors[COLOR_STAR_2].g = 192;
-    colors[COLOR_STAR_2].b = 128;
-    colors[COLOR_STAR_2].a = 255;
-
-    colors[COLOR_STAR_3].r = 255;
-    colors[COLOR_STAR_3].g = 255;
-    colors[COLOR_STAR_3].b = 192;
-    colors[COLOR_STAR_3].a = 255;
-
-    colors[COLOR_STAR_4].r = 192;
-    colors[COLOR_STAR_4].g = 255;
-    colors[COLOR_STAR_4].b = 192;
-    colors[COLOR_STAR_4].a = 255;
-
-    colors[COLOR_STAR_5].r = 192;
-    colors[COLOR_STAR_5].g = 192;
-    colors[COLOR_STAR_5].b = 255;
-    colors[COLOR_STAR_5].a = 255;
-
-    colors[COLOR_STAR_6].r = 224;
-    colors[COLOR_STAR_6].g = 176;
-    colors[COLOR_STAR_6].b = 255;
-    colors[COLOR_STAR_6].a = 255;
+    colors[COLOR_STAR_1] = (SDL_Color){255, 165, 165, 255};
+    colors[COLOR_STAR_2] = (SDL_Color){255, 192, 128, 255};
+    colors[COLOR_STAR_3] = (SDL_Color){255, 255, 192, 255};
+    colors[COLOR_STAR_4] = (SDL_Color){192, 255, 192, 255};
+    colors[COLOR_STAR_5] = (SDL_Color){192, 192, 255, 255};
+    colors[COLOR_STAR_6] = (SDL_Color){224, 176, 255, 255};
 
     // Terrestrial planet
-    colors[COLOR_PLANET_1].r = 150;
-    colors[COLOR_PLANET_1].g = 150;
-    colors[COLOR_PLANET_1].b = 150;
-    colors[COLOR_PLANET_1].a = 255;
+    colors[COLOR_PLANET_1] = (SDL_Color){150, 150, 150, 255};
 
     // Earth, Super-Earth
-    colors[COLOR_PLANET_2].r = 93;
-    colors[COLOR_PLANET_2].g = 148;
-    colors[COLOR_PLANET_2].b = 217;
-    colors[COLOR_PLANET_2].a = 255;
+    colors[COLOR_PLANET_2] = (SDL_Color){93, 148, 217, 255};
 
     // Sub-Neptune
-    colors[COLOR_PLANET_3].r = 221;
-    colors[COLOR_PLANET_3].g = 188;
-    colors[COLOR_PLANET_3].b = 157;
-    colors[COLOR_PLANET_3].a = 255;
+    colors[COLOR_PLANET_3] = (SDL_Color){221, 188, 157, 255};
 
     // Neptune-like
-    colors[COLOR_PLANET_4].r = 127;
-    colors[COLOR_PLANET_4].g = 193;
-    colors[COLOR_PLANET_4].b = 189;
-    colors[COLOR_PLANET_4].a = 255;
+    colors[COLOR_PLANET_4] = (SDL_Color){127, 193, 189, 255};
 
     // Ice giant
-    colors[COLOR_PLANET_5].r = 217;
-    colors[COLOR_PLANET_5].g = 195;
-    colors[COLOR_PLANET_5].b = 236;
-    colors[COLOR_PLANET_5].a = 255;
+    colors[COLOR_PLANET_5] = (SDL_Color){217, 195, 236, 255};
 
     // Gas giant
-    colors[COLOR_PLANET_6].r = 237;
-    colors[COLOR_PLANET_6].g = 179;
-    colors[COLOR_PLANET_6].b = 136;
-    colors[COLOR_PLANET_6].a = 255;
+    colors[COLOR_PLANET_6] = (SDL_Color){237, 179, 136, 255};
 
     // Rocky moon
-    colors[COLOR_MOON_1].r = 150;
-    colors[COLOR_MOON_1].g = 150;
-    colors[COLOR_MOON_1].b = 150;
-    colors[COLOR_MOON_1].a = 255;
+    colors[COLOR_MOON_1] = (SDL_Color){150, 150, 150, 255};
 
     // Icy moon
-    colors[COLOR_MOON_2].r = 179;
-    colors[COLOR_MOON_2].g = 229;
-    colors[COLOR_MOON_2].b = 252;
-    colors[COLOR_MOON_2].a = 255;
+    colors[COLOR_MOON_2] = (SDL_Color){179, 229, 252, 255};
 
     // Volcanic moon
-    colors[COLOR_MOON_3].r = 255;
-    colors[COLOR_MOON_3].g = 176;
-    colors[COLOR_MOON_3].b = 140;
-    colors[COLOR_MOON_3].a = 255;
+    colors[COLOR_MOON_3] = (SDL_Color){255, 176, 140, 255};
+}
+
+/**
+ * Draws a button with the specified text and color at the given position and size.
+ *
+ * @param text The text to display on the button (max size 64).
+ * @param font_size The font size to use for the text.
+ * @param rect The rectangle representing the position and size of the button.
+ * @param button_color The color to use for the button background.
+ * @param text_color The color to use for the text.
+ *
+ * @return void
+ */
+void gfx_draw_button(char *text, unsigned short font_size, SDL_Rect rect, SDL_Color button_color, SDL_Color text_color)
+{
+    // Text
+    SDL_SetRenderDrawColor(renderer, button_color.r, button_color.g, button_color.b, button_color.a);
+    char button_text[64];
+    memset(button_text, 0, sizeof(button_text));
+    sprintf(button_text, "%s", text);
+
+    // Draw button rect
+    SDL_RenderFillRect(renderer, &rect);
+
+    // Text texture
+    SDL_Surface *surface = TTF_RenderText_Blended(fonts[font_size], button_text, text_color);
+    SDL_Texture *texture = SDL_CreateTextureFromSurface(renderer, surface);
+    SDL_Rect texture_rect;
+    texture_rect.w = surface->w;
+    texture_rect.h = surface->h;
+    texture_rect.x = rect.x + (rect.w - texture_rect.w) / 2;
+    texture_rect.y = rect.y + (rect.h - texture_rect.h) / 2;
+
+    // Draw text
+    SDL_RenderCopy(renderer, texture, NULL, &texture_rect);
+
+    // Clean-up
+    SDL_FreeSurface(surface);
+    SDL_DestroyTexture(texture);
 }
 
 /**
@@ -287,7 +239,104 @@ void gfx_draw_circle_approximation(SDL_Renderer *renderer, const Camera *camera,
 }
 
 /**
- * Draws a diamond shape on the given SDL renderer with the specified parameters.
+ * Draws a diamond shape.
+ *
+ * @param renderer The renderer to draw the diamond on.
+ * @param x The x-coordinate of the center point of the diamond.
+ * @param y The y-coordinate of the center point of the diamond.
+ * @param size The size of the diamond (the distance from the center point to each corner).
+ * @param color The color of the diamond.
+ *
+ * @return void
+ */
+
+void gfx_draw_diamond(SDL_Renderer *renderer, int x, int y, int size, SDL_Color color)
+{
+    // Calculate the corner points of the diamond
+    SDL_Point points[5];
+    points[0].x = x;
+    points[0].y = y - size;
+    points[1].x = x + size;
+    points[1].y = y;
+    points[2].x = x;
+    points[2].y = y + size;
+    points[3].x = x - size;
+    points[3].y = y;
+    points[4].x = x;
+    points[4].y = y - size;
+
+    // Draw the outline of the diamond
+    SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a);
+    SDL_RenderDrawLines(renderer, points, 5);
+}
+
+/**
+ * Draws a cloud of stars for a given Galaxy structure, with optional high definition stars,
+ * using a provided Camera structure and scaling factor.
+ *
+ * @param galaxy A pointer to Galaxy struct.
+ * @param camera A pointer to the current Camera object.
+ * @param gstars_count Number of stars in the galaxy cloud.
+ * @param high_definition A boolean to indicate whether to use high definition stars or not.
+ * @param scale Scaling factor for the galaxy cloud.
+ *
+ * @return void
+ */
+void gfx_draw_galaxy_cloud(Galaxy *galaxy, const Camera *camera, int gstars_count, bool high_definition, long double scale)
+{
+    const double epsilon = ZOOM_EPSILON / GALAXY_SCALE;
+
+    for (int i = 0; i < gstars_count; i++)
+    {
+        int x, y;
+        float opacity, star_opacity;
+
+        if (high_definition)
+            star_opacity = galaxy->gstars_hd[i].opacity;
+        else
+            star_opacity = galaxy->gstars[i].opacity;
+
+        switch (galaxy->class)
+        {
+        case 1:
+            if (scale <= (ZOOM_UNIVERSE_MIN / GALAXY_SCALE) + epsilon)
+                opacity = 0.7 * star_opacity;
+            else if (scale <= 0.000002 + epsilon)
+                opacity = 0.8 * star_opacity;
+            else
+                opacity = star_opacity;
+            break;
+        case 2:
+            if (scale <= (ZOOM_UNIVERSE_MIN / GALAXY_SCALE) + epsilon)
+                opacity = 0.8 * star_opacity;
+            else
+                opacity = star_opacity;
+            break;
+        default:
+            opacity = star_opacity;
+        }
+
+        if (high_definition)
+        {
+            SDL_SetRenderDrawColor(renderer, galaxy->gstars_hd[i].color.r, galaxy->gstars_hd[i].color.g, galaxy->gstars_hd[i].color.b, (int)opacity);
+
+            x = (galaxy->position.x - camera->x + galaxy->gstars_hd[i].position.x / GALAXY_SCALE) * scale * GALAXY_SCALE;
+            y = (galaxy->position.y - camera->y + galaxy->gstars_hd[i].position.y / GALAXY_SCALE) * scale * GALAXY_SCALE;
+        }
+        else
+        {
+            SDL_SetRenderDrawColor(renderer, galaxy->gstars[i].color.r, galaxy->gstars[i].color.g, galaxy->gstars[i].color.b, (int)opacity);
+
+            x = (galaxy->position.x - camera->x + galaxy->gstars[i].position.x / GALAXY_SCALE) * scale * GALAXY_SCALE;
+            y = (galaxy->position.y - camera->y + galaxy->gstars[i].position.y / GALAXY_SCALE) * scale * GALAXY_SCALE;
+        }
+
+        SDL_RenderDrawPoint(renderer, x, y);
+    }
+}
+
+/**
+ * Draws a diamond shape and fills it with color.
  *
  * @param renderer The renderer to draw the diamond on.
  * @param x The x-coordinate of the center point of the diamond.
@@ -399,77 +448,6 @@ void gfx_draw_fill_circle(SDL_Renderer *renderer, int xc, int yc, int radius, SD
             y--;
         }
         x++;
-    }
-}
-
-/**
- * Draws a cloud of stars for a given Galaxy structure, with optional high definition stars,
- * using a provided Camera structure and scaling factor.
- *
- * @param galaxy A pointer to Galaxy struct.
- * @param camera A pointer to the current Camera object.
- * @param gstars_count Number of stars in the galaxy cloud.
- * @param high_definition A boolean to indicate whether to use high definition stars or not.
- * @param scale Scaling factor for the galaxy cloud.
- *
- * @return void
- */
-void gfx_draw_galaxy_cloud(Galaxy *galaxy, const Camera *camera, int gstars_count, bool high_definition, long double scale)
-{
-    // const double epsilon = ZOOM_EPSILON / GALAXY_SCALE;
-
-    for (int i = 0; i < gstars_count; i++)
-    {
-        int x, y;
-        float opacity, star_opacity;
-
-        if (high_definition)
-            star_opacity = galaxy->gstars_hd[i].opacity;
-        else
-            star_opacity = galaxy->gstars[i].opacity;
-
-        switch (galaxy->class)
-        {
-        // case 1:
-        //     if (scale <= (ZOOM_UNIVERSE_MIN / GALAXY_SCALE) + epsilon)
-        //         opacity = 0.35 * star_opacity;
-        //     else if (scale <= 0.000002 + epsilon)
-        //         opacity = 0.5 * star_opacity;
-        //     else
-        //         opacity = star_opacity;
-        //     break;
-        // case 2:
-        //     if (scale <= (ZOOM_UNIVERSE_MIN / GALAXY_SCALE) + epsilon)
-        //         opacity = 0.5 * star_opacity;
-        //     else
-        //         opacity = star_opacity;
-        //     break;
-        // case 3:
-        //     if (scale <= (ZOOM_UNIVERSE_MIN / GALAXY_SCALE) + epsilon)
-        //         opacity = 0.8 * star_opacity;
-        //     else
-        //         opacity = star_opacity;
-        //     break;
-        default:
-            opacity = star_opacity;
-        }
-
-        if (high_definition)
-        {
-            SDL_SetRenderDrawColor(renderer, galaxy->gstars_hd[i].color.r, galaxy->gstars_hd[i].color.g, galaxy->gstars_hd[i].color.b, (int)opacity);
-
-            x = (galaxy->position.x - camera->x + galaxy->gstars_hd[i].position.x / GALAXY_SCALE) * scale * GALAXY_SCALE;
-            y = (galaxy->position.y - camera->y + galaxy->gstars_hd[i].position.y / GALAXY_SCALE) * scale * GALAXY_SCALE;
-        }
-        else
-        {
-            SDL_SetRenderDrawColor(renderer, galaxy->gstars[i].color.r, galaxy->gstars[i].color.g, galaxy->gstars[i].color.b, (int)opacity);
-
-            x = (galaxy->position.x - camera->x + galaxy->gstars[i].position.x / GALAXY_SCALE) * scale * GALAXY_SCALE;
-            y = (galaxy->position.y - camera->y + galaxy->gstars[i].position.y / GALAXY_SCALE) * scale * GALAXY_SCALE;
-        }
-
-        SDL_RenderDrawPoint(renderer, x, y);
     }
 }
 
@@ -875,6 +853,54 @@ void gfx_draw_speed_lines(float velocity, const Camera *camera, Speed speed)
             if (line_start_y[row][col] >= camera->h / 2 + (num_lines / 2) * line_distance)
                 line_start_y[row][col] -= line_distance * num_lines;
         }
+    }
+}
+
+/**
+ * Draws a path between the current position and the waypoint star.
+ *
+ * @param game_state A pointer to the current GameState object.
+ * @param nav_state A pointer to the current NavigationState object.
+ * @param camera A pointer to the current Camera object.
+ *
+ * @return void
+ */
+void gfx_draw_waypoint_path(const GameState *game_state, const NavigationState *nav_state, const Camera *camera)
+{
+    double x1, y1;
+    double x2, y2;
+    bool direct_line_of_sight = false;
+
+    x1 = nav_state->navigate_offset.x;
+    y1 = nav_state->navigate_offset.y;
+    x2 = nav_state->waypoint_star->position.x;
+    y2 = nav_state->waypoint_star->position.y;
+
+    direct_line_of_sight = gfx_has_line_of_sight(nav_state, x1, y1, x2, y2);
+
+    if (direct_line_of_sight)
+    {
+        SDL_SetRenderDrawColor(renderer, 255, 255, 255, 50);
+
+        double x_1, y_1;
+        double x_2, y_2;
+
+        if (game_state->state == MAP)
+        {
+            x_1 = (nav_state->navigate_offset.x - camera->x) * game_state->game_scale;
+            y_1 = (nav_state->navigate_offset.y - camera->y) * game_state->game_scale;
+            x_2 = (nav_state->waypoint_star->position.x - camera->x) * game_state->game_scale;
+            y_2 = (nav_state->waypoint_star->position.y - camera->y) * game_state->game_scale;
+        }
+        else if (game_state->state == UNIVERSE)
+        {
+            x_1 = (nav_state->current_galaxy->position.x - camera->x + nav_state->navigate_offset.x / GALAXY_SCALE) * game_state->game_scale * GALAXY_SCALE;
+            y_1 = (nav_state->current_galaxy->position.y - camera->y + nav_state->navigate_offset.y / GALAXY_SCALE) * game_state->game_scale * GALAXY_SCALE;
+            x_2 = (nav_state->current_galaxy->position.x - camera->x + nav_state->waypoint_star->position.x / GALAXY_SCALE) * game_state->game_scale * GALAXY_SCALE;
+            y_2 = (nav_state->current_galaxy->position.y - camera->y + nav_state->waypoint_star->position.y / GALAXY_SCALE) * game_state->game_scale * GALAXY_SCALE;
+        }
+
+        SDL_RenderDrawLine(renderer, (int)x_1, (int)y_1, (int)x_2, (int)y_2);
     }
 }
 
@@ -1344,6 +1370,61 @@ void gfx_generate_menu_gstars(Galaxy *galaxy, Gstar *menustars)
 }
 
 /**
+ * Checks if there is a direct line-of-sight between two points (x1,y1) and (x2,y2)
+ * without intersecting any stars cutoff areas.
+ *
+ * @param nav_state A pointer to the current NavigationState object.
+ * @param x1 the x-coordinate of the first point.
+ * @param y1 the y-coordinate of the first point.
+ * @param x2 the x-coordinate of the second point.
+ * @param y2 the y-coordinate of the second point.
+ *
+ * @return True if there is line of sight between the two points, false otherwise.
+ */
+static bool gfx_has_line_of_sight(const NavigationState *nav_state, double x1, double y1, double x2, double y2)
+{
+    double dx = x2 - x1;
+    double dy = y2 - y1;
+    double m = dy / dx;
+    double b = y1 - m * x1;
+    double distance;
+    double x_c, y_c, r_c;
+
+    for (int i = 0; i < MAX_STARS; i++)
+    {
+        if (nav_state->stars[i] != NULL)
+        {
+            // Each index can have many entries, loop through all of them
+            StarEntry *entry = nav_state->stars[i];
+
+            while (entry != NULL)
+            {
+                if (strcmp(entry->star->name, nav_state->buffer_star->name) == 0 ||
+                    strcmp(entry->star->name, nav_state->waypoint_star->name) == 0)
+                {
+                    entry = entry->next;
+                    continue;
+                }
+
+                // Check if the star cutoff intersects the line segment connecting the two points
+                x_c = entry->star->position.x;
+                y_c = entry->star->position.y;
+                r_c = entry->star->cutoff;
+
+                distance = fabs(m * x_c - y_c + b) / sqrt(m * m + 1);
+
+                if (distance <= r_c && ((x_c - x1) * (x_c - x2) < 0 || (y_c - y1) * (y_c - y2) < 0))
+                    return false;
+
+                entry = entry->next;
+            }
+        }
+    }
+
+    return true;
+}
+
+/**
  * Checks if an object with a given position and radius is within the bounds of the camera.
  *
  * @param camera A pointer to the current Camera object.
@@ -1394,11 +1475,18 @@ void gfx_project_body_on_edge(const GameState *game_state, const NavigationState
 
     if (body->level == LEVEL_STAR)
     {
-        SDL_Color color = body->color;
-        int opacity = gfx_update_projection_opacity(distance, GALAXY_REGION_SIZE, GALAXY_SECTION_SIZE);
-        color.a = opacity;
+        SDL_Color color;
         int center_x = body->projection.x + PROJECTION_RADIUS;
         int center_y = body->projection.y + PROJECTION_RADIUS;
+        color = body->color;
+
+        if (strcmp(nav_state->waypoint_star->name, body->name) == 0)
+        {
+            color.a = 255;
+            gfx_draw_diamond(renderer, center_x, center_y, PROJECTION_RADIUS + 5, color);
+        }
+        else
+            color.a = gfx_update_projection_opacity(distance, GALAXY_REGION_SIZE, GALAXY_SECTION_SIZE);
 
         gfx_draw_fill_diamond(renderer, center_x, center_y, PROJECTION_RADIUS - 1, color);
     }
@@ -1522,8 +1610,8 @@ bool gfx_toggle_star_info_hover(InputState *input_state, const NavigationState *
     if (!nav_state->selected_star->is_selected)
         return false;
 
-    int padding = 20;
-    int width = 370;
+    int padding = INFO_BOX_PADDING;
+    int width = INFO_BOX_WIDTH;
 
     // Define rect of info box
     Point rect[4];
@@ -1550,6 +1638,109 @@ bool gfx_toggle_star_info_hover(InputState *input_state, const NavigationState *
     }
     else
         return false;
+}
+
+/**
+ * Checks if the mouse is over the star waypoint button in the current star info box.
+ *
+ * @param input_state A pointer to the current InputState object.
+ * @param button_rect The waypoint button rect.
+ *
+ * @return void.
+ */
+void gfx_toggle_star_waypoint_button_hover(InputState *input_state, SDL_Rect button_rect)
+{
+    // Get mouse position
+    Point mouse_position = {.x = input_state->mouse_position.x, .y = input_state->mouse_position.y};
+
+    // Define waypoint button rect
+    Point waypoint_button_rect[4];
+
+    waypoint_button_rect[0].x = button_rect.x;
+    waypoint_button_rect[0].y = button_rect.y;
+
+    waypoint_button_rect[1].x = button_rect.x + button_rect.w;
+    waypoint_button_rect[1].y = button_rect.y;
+
+    waypoint_button_rect[2].x = button_rect.x + button_rect.w;
+    waypoint_button_rect[2].y = button_rect.y + button_rect.h;
+
+    waypoint_button_rect[3].x = button_rect.x;
+    waypoint_button_rect[3].y = button_rect.y + button_rect.h;
+
+    if (maths_is_point_in_rectangle(mouse_position, waypoint_button_rect))
+    {
+        input_state->is_hovering_star_waypoint_button = true;
+        input_state->is_hovering_planet_waypoint_button = false;
+    }
+    else
+        input_state->is_hovering_star_waypoint_button = false;
+}
+
+/**
+ * Checks if the mouse is over a planet rect in the current star info box.
+ *
+ * @param input_state A pointer to the current InputState object.
+ * @param camera A pointer to the current Camera object.
+ * @param button_rect The planet waypoint button rect.
+ * @param index The index of the planet.
+ *
+ * @return void.
+ */
+void gfx_toggle_star_info_planet_hover(InputState *input_state, const Camera *camera, SDL_Rect button_rect, int index)
+{
+    int width = INFO_BOX_WIDTH;
+    int padding = INFO_BOX_PADDING;
+    int inner_padding = 5;
+
+    // Get mouse position
+    Point mouse_position = {.x = input_state->mouse_position.x, .y = input_state->mouse_position.y};
+
+    // Define planet rect
+    Point planet_rect[4];
+
+    planet_rect[0].x = camera->w - (width + padding);
+    planet_rect[0].y = button_rect.y - inner_padding;
+
+    planet_rect[1].x = camera->w - padding;
+    planet_rect[1].y = button_rect.y - inner_padding;
+
+    planet_rect[2].x = camera->w - padding;
+    planet_rect[2].y = button_rect.y + WAYPOINT_BUTTON_HEIGHT + 2 * inner_padding;
+
+    planet_rect[3].x = camera->w - (width + padding);
+    planet_rect[3].y = button_rect.y + WAYPOINT_BUTTON_HEIGHT + 2 * inner_padding;
+
+    input_state->is_hovering_star_info_planet = false;
+
+    if (maths_is_point_in_rectangle(mouse_position, planet_rect))
+    {
+        input_state->is_hovering_star_info_planet = true;
+        input_state->selected_star_info_planet_index = index;
+
+        // Define waypoint button rect
+        Point waypoint_button_rect[4];
+
+        waypoint_button_rect[0].x = button_rect.x;
+        waypoint_button_rect[0].y = button_rect.y;
+
+        waypoint_button_rect[1].x = button_rect.x + button_rect.w;
+        waypoint_button_rect[1].y = button_rect.y;
+
+        waypoint_button_rect[2].x = button_rect.x + button_rect.w;
+        waypoint_button_rect[2].y = button_rect.y + button_rect.h;
+
+        waypoint_button_rect[3].x = button_rect.x;
+        waypoint_button_rect[3].y = button_rect.y + button_rect.h;
+
+        if (maths_is_point_in_rectangle(mouse_position, waypoint_button_rect))
+        {
+            input_state->is_hovering_star_waypoint_button = false;
+            input_state->is_hovering_planet_waypoint_button = true;
+        }
+
+        return;
+    }
 }
 
 /**

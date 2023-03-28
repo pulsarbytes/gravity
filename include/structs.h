@@ -42,6 +42,12 @@ typedef struct
     double y;
 } Point;
 
+// Struct for a waypoint button
+typedef struct
+{
+    SDL_Rect rect;
+} WaypointButton;
+
 typedef struct
 {
     double x;
@@ -86,6 +92,7 @@ typedef struct CelestialBody
     unsigned short level;
     bool is_selected; // Whether the body is selected in Map
     char galaxy_name[MAX_OBJECT_NAME];
+    WaypointButton waypoint_button;
 } CelestialBody;
 
 typedef CelestialBody Planet;
@@ -201,10 +208,14 @@ typedef struct
     bool zoom_out;
     bool fps_on;
     bool orbits_on;
-    int selected_button_index;
+    unsigned short selected_menu_button_index;
     bool is_hovering_galaxy;
     bool is_hovering_star;
     bool is_hovering_star_info;
+    bool is_hovering_star_waypoint_button;
+    bool is_hovering_planet_waypoint_button;
+    bool is_hovering_star_info_planet;
+    unsigned short selected_star_info_planet_index;
 } InputState;
 
 typedef struct
@@ -238,6 +249,8 @@ typedef struct
     Galaxy *previous_galaxy;
     Star *current_star;
     Star *selected_star;
+    Star *waypoint_star;
+    int waypoint_planet_index;
     Star *buffer_star; // Stores star of current ship position
     PointState galaxy_offset;
     Point universe_cross_line; // Keep track of nearest line position

@@ -241,7 +241,7 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
                                 input_state->mouse_position.y >= game_state->menu[i].rect.y &&
                                 input_state->mouse_position.y <= game_state->menu[i].rect.y + game_state->menu[i].rect.h)
                             {
-                                input_state->selected_button_index = i;
+                                input_state->selected_menu_button_index = i;
 
                                 if (game_state->menu[i].state == RESUME)
                                     game_change_state(game_state, game_events, save_state);
@@ -250,6 +250,36 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
                                 break;
                             }
                         }
+                    }
+
+                    // Click waypoint button
+                    if (game_state->state == UNIVERSE || game_state->state == MAP)
+                    {
+                        if (input_state->is_hovering_star_info)
+                        {
+                            if (input_state->is_hovering_star_waypoint_button)
+                            {
+                                if (strcmp(nav_state->waypoint_star->name, nav_state->selected_star->name) != 0)
+                                    memcpy(nav_state->waypoint_star, nav_state->selected_star, sizeof(Star));
+                                else
+                                    stars_initialize_star(nav_state->waypoint_star);
+
+                                nav_state->waypoint_planet_index = -1;
+                            }
+
+                            if (input_state->is_hovering_planet_waypoint_button)
+                            {
+                                if (strcmp(nav_state->waypoint_star->name, nav_state->selected_star->name) != 0)
+                                    memcpy(nav_state->waypoint_star, nav_state->selected_star, sizeof(Star));
+
+                                if (nav_state->waypoint_planet_index != input_state->selected_star_info_planet_index)
+                                    nav_state->waypoint_planet_index = input_state->selected_star_info_planet_index;
+                                else
+                                    nav_state->waypoint_planet_index = -1;
+                            }
+                        }
+
+                        input_state->click_count = 0;
                     }
                 }
 
@@ -376,38 +406,48 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
                 input_state->mouse_position.y = event.motion.y;
 
                 // If left mouse button is held down, update the position
-                if (event.motion.state & SDL_BUTTON_LMASK && !input_state->is_hovering_star_info)
+                if (event.motion.state & SDL_BUTTON_LMASK)
                 {
-                    input_state->is_mouse_dragging = true;
-
-                    input_state->previous_cursor = SDL_GetCursor();
-                    SDL_SetCursor(input_state->drag_cursor);
-                    input_state->click_count = 0;
-                    input_state->clicked_inside_galaxy = false;
-                    input_state->clicked_inside_star = false;
-
-                    // Calculate the difference between the current mouse position and the initial mouse position
-                    int delta_x = input_state->mouse_position.x - input_state->mouse_down_position.x;
-                    int delta_y = input_state->mouse_position.y - input_state->mouse_down_position.y;
-
-                    if (game_state->state == UNIVERSE)
+                    if (!input_state->is_hovering_star_info)
                     {
-                        // Trigger star generation
-                        game_events->start_stars_preview = true;
+                        input_state->is_mouse_dragging = true;
+                        input_state->previous_cursor = SDL_GetCursor();
+                        SDL_SetCursor(input_state->drag_cursor);
+                        input_state->click_count = 0;
+                        input_state->clicked_inside_galaxy = false;
+                        input_state->clicked_inside_star = false;
 
-                        // Update the position
-                        nav_state->universe_offset.x -= delta_x / (game_state->game_scale * GALAXY_SCALE);
-                        nav_state->universe_offset.y -= delta_y / (game_state->game_scale * GALAXY_SCALE);
+                        // Calculate the difference between the current mouse position and the initial mouse position
+                        int delta_x = input_state->mouse_position.x - input_state->mouse_down_position.x;
+                        int delta_y = input_state->mouse_position.y - input_state->mouse_down_position.y;
+
+                        if (game_state->state == UNIVERSE)
+                        {
+                            // Trigger star generation
+                            game_events->start_stars_preview = true;
+
+                            // Update the position
+                            nav_state->universe_offset.x -= delta_x / (game_state->game_scale * GALAXY_SCALE);
+                            nav_state->universe_offset.y -= delta_y / (game_state->game_scale * GALAXY_SCALE);
+                        }
+                        else if (game_state->state == MAP)
+                        {
+                            nav_state->map_offset.x -= delta_x / game_state->game_scale;
+                            nav_state->map_offset.y -= delta_y / game_state->game_scale;
+                        }
+
+                        // Update the initial mouse position to the current mouse position for the next iteration
+                        input_state->mouse_down_position.x = input_state->mouse_position.x;
+                        input_state->mouse_down_position.y = input_state->mouse_position.y;
                     }
-                    else if (game_state->state == MAP)
+                    else
                     {
-                        nav_state->map_offset.x -= delta_x / game_state->game_scale;
-                        nav_state->map_offset.y -= delta_y / game_state->game_scale;
-                    }
+                        // Keep updating motion position until mouse out of info box area
+                        input_state->mouse_down_position.x = event.motion.x;
+                        input_state->mouse_down_position.y = event.motion.y;
 
-                    // Update the initial mouse position to the current mouse position for the next iteration
-                    input_state->mouse_down_position.x = input_state->mouse_position.x;
-                    input_state->mouse_down_position.y = input_state->mouse_position.y;
+                        input_state->is_mouse_dragging = false;
+                    }
                 }
             }
             break;
@@ -581,6 +621,57 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
                     input_state->camera_on = true;
                 }
                 break;
+            case SDL_SCANCODE_W:
+                // Center waypoint_star
+                if (nav_state->waypoint_star->initialized)
+                {
+                    nav_state->map_offset.x = nav_state->waypoint_star->position.x;
+                    nav_state->map_offset.y = nav_state->waypoint_star->position.y;
+
+                    if (game_state->state == UNIVERSE)
+                    {
+                        // Adjust game_scale to new star
+                        double new_scale;
+
+                        switch (nav_state->waypoint_star->class)
+                        {
+                        case 1:
+                            new_scale = ZOOM_MAP * 5;
+                            break;
+                        case 2:
+                            new_scale = ZOOM_MAP * 2 + 0.001;
+                            break;
+                        case 3:
+                        case 4:
+                            new_scale = ZOOM_MAP + 0.001;
+                            break;
+                        default:
+                            new_scale = ZOOM_MAP;
+                            break;
+                        }
+
+                        if (game_state->game_scale > new_scale - epsilon)
+                        {
+                            input_state->zoom_in = false;
+                            input_state->zoom_out = true;
+                        }
+                        else
+                        {
+                            input_state->zoom_in = true;
+                            input_state->zoom_out = false;
+                        }
+
+                        game_state->game_scale_override = new_scale;
+
+                        game_events->switch_to_map = true;
+                        game_events->is_entering_map = true;
+                        game_change_state(game_state, game_events, MAP);
+                    }
+
+                    memcpy(nav_state->selected_star, nav_state->waypoint_star, sizeof(Star));
+                    input_state->camera_on = true;
+                }
+                break;
             case SDL_SCANCODE_LEFT:
                 // Scroll left / Rotate left
                 input_state->right_on = false;
@@ -600,8 +691,8 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
 
                     do
                     {
-                        input_state->selected_button_index = (input_state->selected_button_index + MENU_BUTTON_COUNT - 1) % MENU_BUTTON_COUNT;
-                    } while (game_state->menu[input_state->selected_button_index].disabled);
+                        input_state->selected_menu_button_index = (input_state->selected_menu_button_index + MENU_BUTTON_COUNT - 1) % MENU_BUTTON_COUNT;
+                    } while (game_state->menu[input_state->selected_menu_button_index].disabled);
                 }
                 else if (game_state->state == CONTROLS)
                 {
@@ -628,8 +719,8 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
 
                     do
                     {
-                        input_state->selected_button_index = (input_state->selected_button_index + 1) % MENU_BUTTON_COUNT;
-                    } while (game_state->menu[input_state->selected_button_index].disabled);
+                        input_state->selected_menu_button_index = (input_state->selected_menu_button_index + 1) % MENU_BUTTON_COUNT;
+                    } while (game_state->menu[input_state->selected_menu_button_index].disabled);
                 }
                 else if (game_state->state == CONTROLS)
                 {
@@ -651,10 +742,10 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
                 // Select menu button
                 if (game_state->state == MENU || game_state->state == CONTROLS)
                 {
-                    if (game_state->menu[input_state->selected_button_index].state == RESUME)
+                    if (game_state->menu[input_state->selected_menu_button_index].state == RESUME)
                         game_change_state(game_state, game_events, save_state);
                     else
-                        game_change_state(game_state, game_events, game_state->menu[input_state->selected_button_index].state);
+                        game_change_state(game_state, game_events, game_state->menu[input_state->selected_menu_button_index].state);
                 }
                 break;
             case SDL_SCANCODE_SPACE:
@@ -733,6 +824,47 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
                 break;
             }
             break;
+        }
+    }
+}
+
+/**
+ * Sets the cursor to the appropriate type based on the current game state and input state.
+ *
+ * @param game_state A pointer to the current GameState object.
+ * @param input_state A pointer to the current InputState object.
+ *
+ * @return void
+ */
+void events_set_cursor(GameState *game_state, InputState *input_state)
+{
+    if (game_state->state == MENU || game_state->state == CONTROLS)
+    {
+        if (menu_is_hovering_menu(game_state, input_state))
+            SDL_SetCursor(input_state->pointing_cursor);
+        else
+            SDL_SetCursor(input_state->default_cursor);
+    }
+    else if (game_state->state == NAVIGATE)
+    {
+        SDL_SetCursor(input_state->default_cursor);
+    }
+    else if (game_state->state == MAP || game_state->state == UNIVERSE)
+    {
+        if (!input_state->is_mouse_dragging && !input_state->is_hovering_star_info)
+        {
+            if (input_state->is_hovering_star)
+                SDL_SetCursor(input_state->pointing_cursor);
+            else
+                SDL_SetCursor(input_state->default_cursor);
+        }
+
+        if (input_state->is_hovering_star_info)
+        {
+            if (input_state->is_hovering_planet_waypoint_button || input_state->is_hovering_star_waypoint_button)
+                SDL_SetCursor(input_state->pointing_cursor);
+            else
+                SDL_SetCursor(input_state->default_cursor);
         }
     }
 }

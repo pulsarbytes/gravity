@@ -80,7 +80,7 @@ void utils_cleanup_resources(GameState *game_state, InputState *input_state, Nav
     galaxies_clear_table(nav_state->galaxies);
 
     // Clean up stars
-    stars_clear_table(nav_state->stars, NULL);
+    stars_clear_table(nav_state->stars, nav_state, true);
 
     // Clean up ship
     SDL_DestroyTexture(ship->projection->texture);
@@ -107,4 +107,20 @@ void utils_cleanup_resources(GameState *game_state, InputState *input_state, Nav
 
     // Clean up bstars
     free(bstars);
+}
+
+/**
+ * Converts a number of seconds into a time string of the format HH:MM:SS and stores it in the provided char array.
+ *
+ * @param seconds The number of seconds to convert.
+ * @param timeString The char array to store the resulting time string in.
+ *
+ * @return void
+ */
+void utils_convert_seconds_to_time_string(int seconds, char timeString[])
+{
+    int hours = seconds / 3600;
+    int minutes = (seconds % 3600) / 60;
+    int secs = seconds % 60;
+    sprintf(timeString, "%02d:%02d:%02d", hours, minutes, secs);
 }

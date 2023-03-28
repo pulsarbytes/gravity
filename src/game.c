@@ -183,10 +183,14 @@ void game_reset(GameState *game_state, InputState *input_state, GameEvents *game
     input_state->zoom_out = false;
     input_state->fps_on = true;
     input_state->orbits_on = SHOW_ORBITS;
-    input_state->selected_button_index = 0;
+    input_state->selected_menu_button_index = 0;
     input_state->is_hovering_galaxy = false;
     input_state->is_hovering_star = false;
     input_state->is_hovering_star_info = false;
+    input_state->is_hovering_star_info_planet = false;
+    input_state->is_hovering_star_waypoint_button = false;
+    input_state->is_hovering_planet_waypoint_button = false;
+    input_state->selected_star_info_planet_index = 0;
 
     // GameEvents
     if (reset)
@@ -266,7 +270,7 @@ void game_reset(GameState *game_state, InputState *input_state, GameEvents *game
     }
 
     if (reset)
-        stars_clear_table(nav_state->stars, NULL);
+        stars_clear_table(nav_state->stars, nav_state, true);
 
     // Initialize galaxies hash table to NULL pointers
     for (int i = 0; i < MAX_GALAXIES; i++)
@@ -327,7 +331,6 @@ void game_reset(GameState *game_state, InputState *input_state, GameEvents *game
             return;
         }
 
-        // Initialize current_star
         stars_initialize_star(nav_state->current_star);
 
         // Allocate memory for selected_star
@@ -339,8 +342,18 @@ void game_reset(GameState *game_state, InputState *input_state, GameEvents *game
             return;
         }
 
-        // Initialize selected_star
         stars_initialize_star(nav_state->selected_star);
+
+        // Allocate memory for waypoint_star
+        nav_state->waypoint_star = (Star *)malloc(sizeof(Star));
+
+        if (nav_state->waypoint_star == NULL)
+        {
+            fprintf(stderr, "Error: Could not allocate memory for waypoint_star.\n");
+            return;
+        }
+
+        stars_initialize_star(nav_state->waypoint_star);
 
         // Allocate memory for buffer_star
         nav_state->buffer_star = (Star *)malloc(sizeof(Star));
@@ -351,9 +364,10 @@ void game_reset(GameState *game_state, InputState *input_state, GameEvents *game
             return;
         }
 
-        // Initialize buffer_star
         stars_initialize_star(nav_state->buffer_star);
     }
+
+    nav_state->waypoint_planet_index = -1;
 
     // Copy current_galaxy_copy to current_galaxy
     memcpy(nav_state->current_galaxy, current_galaxy_copy, sizeof(Galaxy));
@@ -386,7 +400,7 @@ void game_run_map_state(GameState *game_state, InputState *input_state, GameEven
 {
     if (game_events->is_entering_map || game_events->is_centering_map)
     {
-        stars_clear_table(nav_state->stars, nav_state->buffer_star);
+        stars_clear_table(nav_state->stars, nav_state, false);
         game_events->start_stars_generation = true;
 
         if (game_events->is_entering_map)
@@ -518,6 +532,24 @@ void game_run_map_state(GameState *game_state, InputState *input_state, GameEven
         }
     }
 
+    // Waypoint star
+    if (nav_state->waypoint_star->initialized &&
+        !game_events->switch_to_universe &&
+        !input_state->zoom_in && !input_state->zoom_out)
+    {
+        // Don't show waypoint_star if in another galaxy
+        if (strcmp(nav_state->current_galaxy->name, nav_state->waypoint_star->galaxy_name) == 0)
+        {
+            // Draw waypoint circle
+            int waypoint_x = (nav_state->waypoint_star->position.x - camera->x) * game_state->game_scale;
+            int waypoint_y = (nav_state->waypoint_star->position.y - camera->y) * game_state->game_scale;
+            double star_waypoint_radius = nav_state->waypoint_star->cutoff * game_state->game_scale;
+            SDL_Color waypoint_circle_color = nav_state->waypoint_star->color;
+            waypoint_circle_color.a = 150;
+            gfx_draw_circle(renderer, camera, waypoint_x, waypoint_y, star_waypoint_radius, waypoint_circle_color);
+        }
+    }
+
     // Check if mouse is over star info box
     input_state->is_hovering_star_info = gfx_toggle_star_info_hover(input_state, nav_state, camera);
 
@@ -525,13 +557,12 @@ void game_run_map_state(GameState *game_state, InputState *input_state, GameEven
     if (!input_state->is_hovering_star_info)
         gfx_toggle_star_hover(input_state, nav_state, camera, game_state->game_scale, MAP);
 
-    // Change mouse cursor
-    if (!input_state->is_mouse_dragging)
+    // Draw waypoint path
+    if (nav_state->waypoint_star->initialized &&
+        !input_state->zoom_in && !input_state->zoom_out &&
+        strcmp(nav_state->current_galaxy->name, nav_state->waypoint_star->galaxy_name) == 0)
     {
-        if (input_state->is_hovering_star)
-            SDL_SetCursor(input_state->pointing_cursor);
-        else
-            SDL_SetCursor(input_state->default_cursor);
+        gfx_draw_waypoint_path(game_state, nav_state, camera);
     }
 
     // Draw ship projection
@@ -565,16 +596,16 @@ void game_run_map_state(GameState *game_state, InputState *input_state, GameEven
     if (nav_state->selected_star->is_selected)
     {
         // Draw star info box
-        stars_draw_info_box(nav_state->selected_star, camera);
+        stars_draw_info_box(nav_state, nav_state->selected_star, camera);
 
         // Draw planets info box
-        stars_draw_planets_info_box(nav_state->selected_star, camera);
+        stars_draw_planets_info_box(input_state, nav_state, nav_state->selected_star, camera);
     }
     else if (input_state->is_hovering_star &&
              gfx_is_object_in_camera(camera, nav_state->current_star->position.x, nav_state->current_star->position.y, nav_state->current_star->cutoff, game_state->game_scale))
     {
         // Draw star info box
-        stars_draw_info_box(nav_state->current_star, camera);
+        stars_draw_info_box(nav_state, nav_state->current_star, camera);
     }
 
     console_draw_position_console(game_state, nav_state, camera);
@@ -605,8 +636,6 @@ void game_run_navigate_state(GameState *game_state, InputState *input_state, Gam
 {
     const double epsilon = ZOOM_EPSILON;
 
-    SDL_SetCursor(input_state->default_cursor);
-
     if (game_events->is_centering_navigate)
     {
         game_state->game_scale = ZOOM_NAVIGATE + ZOOM_STEP;
@@ -619,7 +648,6 @@ void game_run_navigate_state(GameState *game_state, InputState *input_state, Gam
         // Reset stars and galaxy to current position
         if (!maths_points_equal(nav_state->current_galaxy->position, nav_state->buffer_galaxy->position))
         {
-            stars_clear_table(nav_state->stars, nav_state->buffer_star);
             memcpy(nav_state->current_galaxy, nav_state->buffer_galaxy, sizeof(Galaxy));
 
             // Reset galaxy_offset
@@ -634,11 +662,7 @@ void game_run_navigate_state(GameState *game_state, InputState *input_state, Gam
         ship->position.x = ship->previous_position.x;
         ship->position.y = ship->previous_position.y;
 
-        // Delete stars that end up outside the region
-        double bx = maths_get_nearest_section_line(ship->position.x, GALAXY_SECTION_SIZE);
-        double by = maths_get_nearest_section_line(ship->position.y, GALAXY_SECTION_SIZE);
-
-        stars_delete_outside_region(nav_state->stars, nav_state->buffer_star, bx, by, GALAXY_REGION_SIZE);
+        stars_clear_table(nav_state->stars, nav_state, false);
 
         // Reset saved game_scale
         if (game_state->save_scale)
@@ -835,7 +859,9 @@ void game_run_navigate_state(GameState *game_state, InputState *input_state, Gam
         // Get distance from current_star
         double distance_star = maths_distance_between_points(nav_state->current_star->position.x, nav_state->current_star->position.y, nav_state->navigate_offset.x, nav_state->navigate_offset.y);
 
-        if (distance_star < nav_state->current_star->cutoff)
+        if (nav_state->waypoint_star->initialized)
+            console_draw_waypoint_console(nav_state, camera);
+        else if (distance_star < nav_state->current_star->cutoff)
             console_draw_star_console(nav_state->current_star, camera);
     }
 
@@ -872,7 +898,7 @@ void game_run_universe_state(GameState *game_state, InputState *input_state, Gam
     {
         // Reset stars
         if (!maths_points_equal(nav_state->current_galaxy->position, nav_state->buffer_galaxy->position))
-            stars_clear_table(nav_state->stars, nav_state->buffer_star);
+            stars_clear_table(nav_state->stars, nav_state, false);
 
         // Reset galaxy_offset
         nav_state->galaxy_offset.current_x = nav_state->galaxy_offset.buffer_x;
@@ -886,7 +912,7 @@ void game_run_universe_state(GameState *game_state, InputState *input_state, Gam
         double bx = maths_get_nearest_section_line(ship->position.x, GALAXY_SECTION_SIZE);
         double by = maths_get_nearest_section_line(ship->position.y, GALAXY_SECTION_SIZE);
 
-        stars_delete_outside_region(nav_state->stars, nav_state->buffer_star, bx, by, GALAXY_REGION_SIZE);
+        stars_delete_outside_region(nav_state->stars, nav_state, bx, by, GALAXY_REGION_SIZE);
     }
 
     if (game_events->is_entering_universe || game_events->is_centering_universe)
@@ -903,7 +929,7 @@ void game_run_universe_state(GameState *game_state, InputState *input_state, Gam
         }
 
         if (game_events->is_centering_universe)
-            stars_clear_table(nav_state->stars, nav_state->buffer_star);
+            stars_clear_table(nav_state->stars, nav_state, false);
 
         nav_state->current_galaxy->is_selected = true;
 
@@ -1086,7 +1112,8 @@ void game_run_universe_state(GameState *game_state, InputState *input_state, Gam
                         pcg32_srandom_r(&rng, seed, seed);
 
                         // Draw star cutoff circle
-                        if (strcmp(entry->star->name, nav_state->selected_star->name) != 0 || !nav_state->selected_star->is_selected)
+                        if ((strcmp(nav_state->selected_star->name, entry->star->name) != 0 || !nav_state->selected_star->is_selected) &&
+                            strcmp(nav_state->waypoint_star->name, entry->star->name) != 0)
                             gfx_draw_circle(renderer, camera, x, y, star_cutoff, colors[COLOR_MAGENTA_120]);
 
                         stars_populate_body(entry->star, entry->star->position, rng, game_state->game_scale);
@@ -1120,6 +1147,16 @@ void game_run_universe_state(GameState *game_state, InputState *input_state, Gam
                 }
             }
         }
+    }
+
+    // Draw waypoint path
+    if (nav_state->waypoint_star->initialized &&
+        game_state->game_scale >= zoom_generate_preview_stars - epsilon &&
+        !input_state->zoom_in && !input_state->zoom_out &&
+        strcmp(nav_state->current_galaxy->name, nav_state->waypoint_star->galaxy_name) == 0 &&
+        !game_events->start_stars_preview && !game_events->lazy_load_started)
+    {
+        gfx_draw_waypoint_path(game_state, nav_state, camera);
     }
 
     // Draw ship projection
@@ -1173,7 +1210,7 @@ void game_run_universe_state(GameState *game_state, InputState *input_state, Gam
                     {
                         // Draw star info box
                         if (!nav_state->selected_star->is_selected)
-                            stars_draw_info_box(entry->star, camera);
+                            stars_draw_info_box(nav_state, entry->star, camera);
                     }
 
                     entry = entry->next;
@@ -1188,32 +1225,45 @@ void game_run_universe_state(GameState *game_state, InputState *input_state, Gam
     else
         input_state->is_hovering_star = false;
 
+    // Waypoint star
+    if (nav_state->waypoint_star->initialized && !game_events->switch_to_map &&
+        game_state->game_scale > zoom_generate_preview_stars - epsilon &&
+        !input_state->zoom_in && !input_state->zoom_out)
+    {
+        // Don't show waypoint_star if in another galaxy
+        if (strcmp(nav_state->current_galaxy->name, nav_state->waypoint_star->galaxy_name) == 0)
+        {
+            // Draw waypoint circle
+            int waypoint_x = (nav_state->current_galaxy->position.x - camera->x + nav_state->waypoint_star->position.x / GALAXY_SCALE) * game_state->game_scale * GALAXY_SCALE;
+            int waypoint_y = (nav_state->current_galaxy->position.y - camera->y + nav_state->waypoint_star->position.y / GALAXY_SCALE) * game_state->game_scale * GALAXY_SCALE;
+            double star_waypoint_radius = nav_state->waypoint_star->cutoff * game_state->game_scale;
+            SDL_Color waypoint_circle_color = nav_state->waypoint_star->color;
+            waypoint_circle_color.a = 150;
+            gfx_draw_circle(renderer, camera, waypoint_x, waypoint_y, star_waypoint_radius, waypoint_circle_color);
+        }
+    }
+
     // Selected star
     if (game_state->game_scale > zoom_generate_preview_stars - epsilon &&
         nav_state->selected_star->is_selected &&
         !input_state->zoom_in && !input_state->zoom_out)
     {
-        // Don't show buffer_star if in another galaxy
+        // Don't show selected_star if in another galaxy
+        // Don't show selected_star if is waypoint_star
         if (strcmp(nav_state->current_galaxy->name, nav_state->selected_star->galaxy_name) == 0)
         {
             // Draw star cutoff circle
-            int x = (nav_state->current_galaxy->position.x - camera->x + nav_state->selected_star->position.x / GALAXY_SCALE) * game_state->game_scale * GALAXY_SCALE;
-            int y = (nav_state->current_galaxy->position.y - camera->y + nav_state->selected_star->position.y / GALAXY_SCALE) * game_state->game_scale * GALAXY_SCALE;
-            double star_cutoff = nav_state->selected_star->cutoff * game_state->game_scale;
-            gfx_draw_circle(renderer, camera, x, y, star_cutoff, colors[COLOR_CYAN_100]);
+            if (strcmp(nav_state->selected_star->name, nav_state->waypoint_star->name) != 0)
+            {
+                int x = (nav_state->current_galaxy->position.x - camera->x + nav_state->selected_star->position.x / GALAXY_SCALE) * game_state->game_scale * GALAXY_SCALE;
+                int y = (nav_state->current_galaxy->position.y - camera->y + nav_state->selected_star->position.y / GALAXY_SCALE) * game_state->game_scale * GALAXY_SCALE;
+                double star_cutoff = nav_state->selected_star->cutoff * game_state->game_scale;
+                gfx_draw_circle(renderer, camera, x, y, star_cutoff, colors[COLOR_CYAN_100]);
+            }
 
-            stars_draw_info_box(nav_state->selected_star, camera);
-            stars_draw_planets_info_box(nav_state->selected_star, camera);
+            stars_draw_info_box(nav_state, nav_state->selected_star, camera);
+            stars_draw_planets_info_box(input_state, nav_state, nav_state->selected_star, camera);
         }
-    }
-
-    // Change mouse cursor
-    if (!input_state->is_mouse_dragging)
-    {
-        if (input_state->is_hovering_star)
-            SDL_SetCursor(input_state->pointing_cursor);
-        else
-            SDL_SetCursor(input_state->default_cursor);
     }
 
     // Define zoom threshold (for displaying galaxy info box)
@@ -1492,7 +1542,7 @@ static void game_zoom_map(GameState *game_state, InputState *input_state, GameEv
                 double bx = maths_get_nearest_section_line(nav_state->map_offset.x, GALAXY_SECTION_SIZE);
                 double by = maths_get_nearest_section_line(nav_state->map_offset.y, GALAXY_SECTION_SIZE);
 
-                stars_delete_outside_region(nav_state->stars, nav_state->buffer_star, bx, by, GALAXY_REGION_SIZE);
+                stars_delete_outside_region(nav_state->stars, nav_state, bx, by, GALAXY_REGION_SIZE);
             }
         }
         else if (game_state->game_scale_override)
@@ -1580,7 +1630,7 @@ static void game_zoom_universe(GameState *game_state, InputState *input_state, G
                 game_events->is_entering_map = true;
                 game_change_state(game_state, game_events, MAP);
 
-                stars_clear_table(nav_state->stars, nav_state->buffer_star);
+                stars_clear_table(nav_state->stars, nav_state, false);
 
                 // Update map_offset
                 nav_state->map_offset.x = (nav_state->universe_offset.x - nav_state->current_galaxy->position.x) * GALAXY_SCALE;
@@ -1619,7 +1669,7 @@ static void game_zoom_universe(GameState *game_state, InputState *input_state, G
         else if (game_state->game_scale_override)
             game_state->game_scale = game_state->game_scale_override;
 
-        stars_clear_table(nav_state->stars, nav_state->buffer_star);
+        stars_clear_table(nav_state->stars, nav_state, false);
 
         game_events->zoom_preview = true;
         input_state->zoom_out = false;

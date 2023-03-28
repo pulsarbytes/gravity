@@ -62,7 +62,7 @@ void controls_create_table(GameState *game_state, const Camera *camera)
 
     // Map mode
     sprintf(game_state->controls_groups[1].title, "%s", "Map mode");
-    game_state->controls_groups[1].num_controls = 12;
+    game_state->controls_groups[1].num_controls = 13;
 
     sprintf(game_state->controls_groups[1].controls[0].key, "%s", "Up");
     sprintf(game_state->controls_groups[1].controls[1].key, "%s", "Down");
@@ -71,11 +71,12 @@ void controls_create_table(GameState *game_state, const Camera *camera)
     sprintf(game_state->controls_groups[1].controls[4].key, "%s", "N");
     sprintf(game_state->controls_groups[1].controls[5].key, "%s", "O");
     sprintf(game_state->controls_groups[1].controls[6].key, "%s", "U");
-    sprintf(game_state->controls_groups[1].controls[7].key, "%s", "[ or Mouse Wheel Backward");
-    sprintf(game_state->controls_groups[1].controls[8].key, "%s", "] or Mouse Wheel Forward");
-    sprintf(game_state->controls_groups[1].controls[9].key, "%s", "Space");
-    sprintf(game_state->controls_groups[1].controls[10].key, "%s", "Left Mouse Button Click");
-    sprintf(game_state->controls_groups[1].controls[11].key, "%s", "Left Mouse Button Double Click");
+    sprintf(game_state->controls_groups[1].controls[7].key, "%s", "W");
+    sprintf(game_state->controls_groups[1].controls[8].key, "%s", "[ or Mouse Wheel Backward");
+    sprintf(game_state->controls_groups[1].controls[9].key, "%s", "] or Mouse Wheel Forward");
+    sprintf(game_state->controls_groups[1].controls[10].key, "%s", "Space");
+    sprintf(game_state->controls_groups[1].controls[11].key, "%s", "Left Mouse Button Click");
+    sprintf(game_state->controls_groups[1].controls[12].key, "%s", "Left Mouse Button Double Click");
 
     sprintf(game_state->controls_groups[1].controls[0].description, "%s", "Scroll up");
     sprintf(game_state->controls_groups[1].controls[1].description, "%s", "Scroll down");
@@ -84,15 +85,16 @@ void controls_create_table(GameState *game_state, const Camera *camera)
     sprintf(game_state->controls_groups[1].controls[4].description, "%s", "Enter Navigate mode");
     sprintf(game_state->controls_groups[1].controls[5].description, "%s", "Show orbits");
     sprintf(game_state->controls_groups[1].controls[6].description, "%s", "Enter Universe mode");
-    sprintf(game_state->controls_groups[1].controls[7].description, "%s", "Zoom out");
-    sprintf(game_state->controls_groups[1].controls[8].description, "%s", "Zoom in");
-    sprintf(game_state->controls_groups[1].controls[9].description, "%s", "Reset zoom scale");
-    sprintf(game_state->controls_groups[1].controls[10].description, "%s", "Select star");
-    sprintf(game_state->controls_groups[1].controls[11].description, "%s", "Center star");
+    sprintf(game_state->controls_groups[1].controls[7].description, "%s", "Center waypoint star");
+    sprintf(game_state->controls_groups[1].controls[8].description, "%s", "Zoom out");
+    sprintf(game_state->controls_groups[1].controls[9].description, "%s", "Zoom in");
+    sprintf(game_state->controls_groups[1].controls[10].description, "%s", "Reset zoom scale");
+    sprintf(game_state->controls_groups[1].controls[11].description, "%s", "Select star");
+    sprintf(game_state->controls_groups[1].controls[12].description, "%s", "Center star");
 
     // Universe mode
     sprintf(game_state->controls_groups[2].title, "%s", "Universe mode");
-    game_state->controls_groups[2].num_controls = 10;
+    game_state->controls_groups[2].num_controls = 11;
 
     sprintf(game_state->controls_groups[2].controls[0].key, "%s", "Up");
     sprintf(game_state->controls_groups[2].controls[1].key, "%s", "Down");
@@ -100,10 +102,11 @@ void controls_create_table(GameState *game_state, const Camera *camera)
     sprintf(game_state->controls_groups[2].controls[3].key, "%s", "Left");
     sprintf(game_state->controls_groups[2].controls[4].key, "%s", "M");
     sprintf(game_state->controls_groups[2].controls[5].key, "%s", "N");
-    sprintf(game_state->controls_groups[2].controls[6].key, "%s", "[ or Mouse Wheel Backward");
-    sprintf(game_state->controls_groups[2].controls[7].key, "%s", "] or Mouse Wheel Forward");
-    sprintf(game_state->controls_groups[2].controls[8].key, "%s", "Space");
-    sprintf(game_state->controls_groups[2].controls[9].key, "%s", "Left Mouse Button Double Click");
+    sprintf(game_state->controls_groups[2].controls[6].key, "%s", "W");
+    sprintf(game_state->controls_groups[2].controls[7].key, "%s", "[ or Mouse Wheel Backward");
+    sprintf(game_state->controls_groups[2].controls[8].key, "%s", "] or Mouse Wheel Forward");
+    sprintf(game_state->controls_groups[2].controls[9].key, "%s", "Space");
+    sprintf(game_state->controls_groups[2].controls[10].key, "%s", "Left Mouse Button Double Click");
 
     sprintf(game_state->controls_groups[2].controls[0].description, "%s", "Scroll up");
     sprintf(game_state->controls_groups[2].controls[1].description, "%s", "Scroll down");
@@ -111,10 +114,11 @@ void controls_create_table(GameState *game_state, const Camera *camera)
     sprintf(game_state->controls_groups[2].controls[3].description, "%s", "Scroll left");
     sprintf(game_state->controls_groups[2].controls[4].description, "%s", "Enter Map mode");
     sprintf(game_state->controls_groups[2].controls[5].description, "%s", "Enter Navigate mode");
-    sprintf(game_state->controls_groups[2].controls[6].description, "%s", "Zoom out");
-    sprintf(game_state->controls_groups[2].controls[7].description, "%s", "Zoom in");
-    sprintf(game_state->controls_groups[2].controls[8].description, "%s", "Reset zoom scale");
-    sprintf(game_state->controls_groups[2].controls[9].description, "%s", "Center star");
+    sprintf(game_state->controls_groups[2].controls[6].description, "%s", "Center waypoint star");
+    sprintf(game_state->controls_groups[2].controls[7].description, "%s", "Zoom out");
+    sprintf(game_state->controls_groups[2].controls[8].description, "%s", "Zoom in");
+    sprintf(game_state->controls_groups[2].controls[9].description, "%s", "Reset zoom scale");
+    sprintf(game_state->controls_groups[2].controls[10].description, "%s", "Center star");
 
     // General Controls
     sprintf(game_state->controls_groups[3].title, "%s", "General controls");
@@ -290,10 +294,4 @@ void controls_run_state(GameState *game_state, InputState *input_state, bool is_
 
     // Draw controls table
     controls_draw_table(game_state, camera);
-
-    // Check if mouse is over menu buttons
-    if (menu_is_hovering_menu(game_state, input_state))
-        SDL_SetCursor(input_state->pointing_cursor);
-    else
-        SDL_SetCursor(input_state->default_cursor);
 }

@@ -78,11 +78,12 @@ static void stars_cleanup_planets(CelestialBody *body)
  * Clears the hash table of stars, except for the buffer_star.
  *
  * @param stars An array of StarEntry pointers.
- * @param buffer_star A pointer to the Star of the current ship position.
+ * @param nav_state A pointer to the current NavigationState object.
+ * @param delete_all A boolean that designates whether to preserve buffer and waypoint stars.
  *
  * @return void
  */
-void stars_clear_table(StarEntry *stars[], Star *buffer_star)
+void stars_clear_table(StarEntry *stars[], const NavigationState *nav_state, bool delete_all)
 {
     // Loop through hash table
     for (int s = 0; s < MAX_STARS; s++)
@@ -94,7 +95,8 @@ void stars_clear_table(StarEntry *stars[], Star *buffer_star)
             Point position = {.x = entry->x, .y = entry->y};
             StarEntry *next_entry = entry->next;
 
-            if (buffer_star == NULL || strcmp(buffer_star->name, entry->star->name) != 0)
+            if (delete_all || (strcmp(nav_state->buffer_star->name, entry->star->name) != 0 &&
+                               strcmp(nav_state->waypoint_star->name, entry->star->name) != 0))
                 stars_delete_entry(stars, position);
 
             entry = next_entry;
@@ -204,6 +206,12 @@ static Star *stars_create_star(const NavigationState *nav_state, Point position,
     star->is_selected = false;
     sprintf(star->galaxy_name, "%s", nav_state->current_galaxy->name);
 
+    star->waypoint_button = (WaypointButton){
+        .rect = (SDL_Rect){.x = 0,
+                           .y = 0,
+                           .w = 0,
+                           .h = 0}};
+
     return star;
 }
 
@@ -253,14 +261,14 @@ static void stars_delete_entry(StarEntry *stars[], Point position)
  * Delete all stars outside a given region, except for the buffer_star.
  *
  * @param stars An array of pointers to StarEntry structures.
- * @param buffer_star A pointer to the Star of the current ship position.
+ * @param nav_state A pointer to the current NavigationState object.
  * @param bx The x coordinate of the center of the region.
  * @param by The y coordinate of the center of the region.
  * @param region_size The size of the region (in number of sections).
  *
  * @return void
  */
-void stars_delete_outside_region(StarEntry *stars[], const Star *buffer_star, double bx, double by, int region_size)
+void stars_delete_outside_region(StarEntry *stars[], const NavigationState *nav_state, double bx, double by, int region_size)
 {
     for (int s = 0; s < MAX_STARS; s++)
     {
@@ -268,10 +276,13 @@ void stars_delete_outside_region(StarEntry *stars[], const Star *buffer_star, do
 
         while (entry != NULL)
         {
-            // Skip buffer star
-            bool is_buffer_star = strcmp(buffer_star->name, entry->star->name) == 0;
+            // Skip buffer star / waypoint_star
+            bool is_buffer_star = strcmp(nav_state->buffer_star->name, entry->star->name) == 0;
+            bool is_waypoint_star = strcmp(nav_state->waypoint_star->name, entry->star->name) == 0;
 
-            if (!is_buffer_star)
+            StarEntry *next_entry = entry->next;
+
+            if (!is_buffer_star && !is_waypoint_star)
             {
                 Point position = {.x = entry->x, .y = entry->y};
 
@@ -284,7 +295,7 @@ void stars_delete_outside_region(StarEntry *stars[], const Star *buffer_star, do
                     stars_delete_entry(stars, position);
             }
 
-            entry = entry->next;
+            entry = next_entry;
         }
     }
 }
@@ -292,19 +303,20 @@ void stars_delete_outside_region(StarEntry *stars[], const Star *buffer_star, do
 /**
  * Draws a box on the screen that displays information about a star.
  *
- * @param galaxy A pointer to the Star for which to display info.
+ * @param nav_state A pointer to the current NavigationState object.
+ * @param star A pointer to the Star for which to display info.
  * @param camera A pointer to the current Camera object.
  *
  * @return void
  */
-void stars_draw_info_box(const Star *star, const Camera *camera)
+void stars_draw_info_box(NavigationState *nav_state, const Star *star, const Camera *camera)
 {
     // Draw background box
     SDL_SetRenderDrawColor(renderer, 12, 12, 12, 230);
-    int width = 370;
-    int padding = 20;
+    int width = INFO_BOX_WIDTH;
+    int padding = INFO_BOX_PADDING;
     int inner_padding = 40;
-    int height = 280;
+    int height = STAR_INFO_BOX_HEIGHT;
 
     SDL_Rect info_box_rect;
     info_box_rect.x = camera->w - (width + padding);
@@ -368,7 +380,7 @@ void stars_draw_info_box(const Star *star, const Camera *camera)
     }
 
     // Name
-    int name_height = 100;
+    int name_height = 90;
     entries[STAR_INFO_NAME].rect.w = width;
     entries[STAR_INFO_NAME].rect.h = name_height;
     entries[STAR_INFO_NAME].rect.x = camera->w - (width - 2.5 * padding);
@@ -406,6 +418,14 @@ void stars_draw_info_box(const Star *star, const Camera *camera)
     int y_star = padding - 2 + name_height / 2;
     gfx_draw_fill_circle(renderer, x_star, y_star, 8, star->color);
 
+    // Draw waypoint circle
+    if (strcmp(nav_state->waypoint_star->name, star->name) == 0)
+    {
+        SDL_Color waypoint_circle_color = nav_state->waypoint_star->color;
+        waypoint_circle_color.a = 150;
+        gfx_draw_circle(renderer, camera, x_star, y_star, 18, waypoint_circle_color);
+    }
+
     // Draw line
     SDL_SetRenderDrawColor(renderer, 255, 255, 255, 30);
     SDL_RenderDrawLine(renderer, x_star, y_star, x_star, padding + height);
@@ -421,21 +441,47 @@ void stars_draw_info_box(const Star *star, const Camera *camera)
 /**
  * Draws a box on the screen that displays information about the planets of a star.
  *
- * @param galaxy A pointer to the Star for which to display info.
+ * @param input_state A pointer to the current InputState object.
+ * @param nav_state A pointer to the current NavigationState object.
+ * @param star A pointer to the Star for which to display info.
  * @param camera A pointer to the current Camera object.
  *
  * @return void
  */
-void stars_draw_planets_info_box(const Star *star, const Camera *camera)
+void stars_draw_planets_info_box(InputState *input_state, NavigationState *nav_state, Star *star, const Camera *camera)
 {
-    // Draw background box
-    SDL_SetRenderDrawColor(renderer, 17, 17, 17, 255);
-    int width = 370;
-    int padding = 20;
-    int inner_padding = 40;
-    int info_box_height = 280;
+    int width = INFO_BOX_WIDTH;
+    int padding = INFO_BOX_PADDING;
+    int inner_padding = 2 * padding;
+    int info_box_height = STAR_INFO_BOX_HEIGHT;
     int height = camera->h - 2 * padding - info_box_height;
 
+    input_state->is_hovering_planet_waypoint_button = false;
+
+    // Create star waypoint button
+    if (strcmp(nav_state->buffer_galaxy->name, star->galaxy_name) == 0 &&
+        strcmp(nav_state->buffer_star->name, nav_state->selected_star->name) != 0)
+    {
+        star->waypoint_button = (WaypointButton){
+            .rect = (SDL_Rect){.x = camera->w - (width - 4.4 * padding),
+                               .y = info_box_height - padding,
+                               .w = WAYPOINT_BUTTON_WIDTH,
+                               .h = WAYPOINT_BUTTON_HEIGHT}};
+
+        char star_button_text[64];
+        memset(star_button_text, 0, sizeof(star_button_text));
+
+        if (strcmp(nav_state->waypoint_star->name, star->name) == 0)
+            sprintf(star_button_text, "%s", "REMOVE WAYPOINT");
+        else
+            sprintf(star_button_text, "%s", "SET WAYPOINT");
+
+        gfx_draw_button(star_button_text, FONT_SIZE_12, star->waypoint_button.rect, (SDL_Color){35, 35, 35, 255}, colors[COLOR_WHITE_140]);
+        gfx_toggle_star_waypoint_button_hover(input_state, star->waypoint_button.rect);
+    }
+
+    // Draw background box
+    SDL_SetRenderDrawColor(renderer, 17, 17, 17, 255);
     SDL_Rect info_box_rect;
     info_box_rect.x = camera->w - (width + padding);
     info_box_rect.y = padding + info_box_height;
@@ -482,12 +528,11 @@ void stars_draw_planets_info_box(const Star *star, const Camera *camera)
 
     int y1_line = padding + info_box_height + 1; // + 1 line
     int y2_line = camera->h - padding;
-    int line_height = y2_line - y1_line;
+    int line_height = y2_line - y1_line - padding; // Decrease by <padding> so that last planet does not overflow box
     SDL_RenderDrawLine(renderer, x, y1_line, x, y2_line);
 
-    // Draw planets
-    // Line represents star cutoff distance
-    float y_so_far = y1_line;
+    // Planets
+    float y_so_far = y1_line; // Line represents star cutoff distance
 
     for (int i = 0; i < MAX_PLANETS && star->planets[i] != NULL; i++)
     {
@@ -495,9 +540,18 @@ void stars_draw_planets_info_box(const Star *star, const Camera *camera)
         float planet_radius = star->planets[i]->radius / planets_scaling_factor;
         y_so_far += planet_orbit;
 
+        // Draw planet
         gfx_draw_fill_circle(renderer, x, y_so_far, planet_radius, star->planets[i]->color);
 
-        // Draw moons
+        // Draw waypoint circle
+        if (strcmp(nav_state->waypoint_star->name, star->name) == 0 && i == nav_state->waypoint_planet_index)
+        {
+            SDL_Color waypoint_circle_color = nav_state->waypoint_star->color;
+            waypoint_circle_color.a = 150;
+            gfx_draw_circle(renderer, camera, x, y_so_far, planet_radius + 10, waypoint_circle_color);
+        }
+
+        // Moons
         if (star->planets[i]->num_planets > 0)
         {
             int line_width = planet_orbit;
@@ -505,12 +559,40 @@ void stars_draw_planets_info_box(const Star *star, const Camera *camera)
 
             for (int j = 0; j < MAX_MOONS && star->planets[i]->planets[j] != NULL; j++)
             {
+                // Draw moon and orbit
                 float moon_orbit = star->planets[i]->planets[j]->orbit_radius * line_width / star->planets[i]->cutoff;
                 float moon_radius = star->planets[i]->planets[j]->radius / planets_scaling_factor;
                 SDL_SetRenderDrawColor(renderer, 255, 255, 255, 30);
                 SDL_RenderDrawLine(renderer, x_so_far, y_so_far, x_so_far + moon_orbit, y_so_far);
                 x_so_far += moon_orbit + 2 * moon_radius;
                 gfx_draw_fill_circle(renderer, x_so_far - moon_radius, y_so_far, moon_radius, star->planets[i]->planets[j]->color);
+            }
+        }
+
+        // Create planet waypoint button
+        if (strcmp(nav_state->buffer_galaxy->name, star->galaxy_name) == 0 &&
+            strcmp(nav_state->buffer_star->name, nav_state->selected_star->name) != 0)
+        {
+            star->planets[i]->waypoint_button = (WaypointButton){
+                .rect = (SDL_Rect){.x = camera->w - (width - 4.4 * padding),
+                                   .y = y_so_far - WAYPOINT_BUTTON_HEIGHT / 2,
+                                   .w = WAYPOINT_BUTTON_WIDTH,
+                                   .h = WAYPOINT_BUTTON_HEIGHT}};
+
+            // Check if mouse is over planet info rect
+            gfx_toggle_star_info_planet_hover(input_state, camera, star->planets[i]->waypoint_button.rect, i);
+
+            if (input_state->is_hovering_star_info_planet && i == input_state->selected_star_info_planet_index)
+            {
+                char planet_button_text[64];
+                memset(planet_button_text, 0, sizeof(planet_button_text));
+
+                if (strcmp(nav_state->waypoint_star->name, star->name) == 0 && i == nav_state->waypoint_planet_index)
+                    sprintf(planet_button_text, "%s", "REMOVE WAYPOINT");
+                else
+                    sprintf(planet_button_text, "%s", "SET WAYPOINT");
+
+                gfx_draw_button(planet_button_text, FONT_SIZE_12, star->planets[i]->waypoint_button.rect, (SDL_Color){35, 35, 35, 255}, colors[COLOR_WHITE_140]);
             }
         }
     }
@@ -584,6 +666,23 @@ void stars_draw_star_system(GameState *game_state, const InputState *input_state
                 gfx_draw_circle(renderer, camera, x, y, (int)radius, orbit_color);
         }
 
+        // Draw waypoint circle
+        if (strcmp(nav_state->waypoint_star->name, body->parent->name) == 0 &&
+            nav_state->waypoint_planet_index == body->initialized)
+        {
+            float cutoff_radius = body->cutoff * game_state->game_scale;
+            int body_x = (body->position.x - camera->x) * game_state->game_scale;
+            int body_y = (body->position.y - camera->y) * game_state->game_scale;
+
+            SDL_Color waypoint_circle_color = nav_state->waypoint_star->color;
+            waypoint_circle_color.a = 150;
+
+            if (2 * cutoff_radius > camera->h)
+                gfx_draw_circle_approximation(renderer, camera, body_x, body_y, (int)cutoff_radius, waypoint_circle_color);
+            else
+                gfx_draw_circle(renderer, camera, body_x, body_y, (int)cutoff_radius, waypoint_circle_color);
+        }
+
         // Draw moons
         int max_planets = MAX_MOONS;
 
@@ -651,7 +750,7 @@ void stars_draw_star_system(GameState *game_state, const InputState *input_state
                 else
                     color_code = COLOR_MAGENTA_100;
 
-                if (input_state->orbits_on)
+                if (input_state->orbits_on && strcmp(nav_state->waypoint_star->name, body->name) != 0)
                 {
                     if (2 * radius * game_state->game_scale > camera->h)
                         gfx_draw_circle_approximation(renderer, camera, x, y, radius, colors[color_code]);
@@ -740,10 +839,17 @@ void stars_draw_star_system(GameState *game_state, const InputState *input_state
                     // Get selected star distance from position
                     distance = maths_distance_between_points(nav_state->selected_star->position.x, nav_state->selected_star->position.y, position.x, position.y);
 
-                    if (distance > nav_state->selected_star->cutoff || strcmp(nav_state->selected_star->name, body->name) == 0)
-                        gfx_project_body_on_edge(game_state, nav_state, body, camera);
+                    if (distance > nav_state->selected_star->cutoff ||
+                        strcmp(nav_state->selected_star->name, body->name) == 0 ||
+                        strcmp(nav_state->waypoint_star->name, body->name) == 0)
+                    {
+                        if (strcmp(nav_state->current_galaxy->name, body->galaxy_name) == 0)
+                            gfx_project_body_on_edge(game_state, nav_state, body, camera);
+                    }
                 }
             }
+            else if (body->level == LEVEL_PLANET)
+                gfx_project_body_on_edge(game_state, nav_state, body, camera);
         }
     }
 }
@@ -785,6 +891,20 @@ void stars_draw_universe_star_system(GameState *game_state, const InputState *in
                 orbit_opacity};
 
             gfx_draw_circle(renderer, camera, x, y, (int)radius, orbit_color);
+        }
+
+        // Draw waypoint circle
+        if (strcmp(nav_state->waypoint_star->name, body->parent->name) == 0 &&
+            nav_state->waypoint_planet_index == body->initialized)
+        {
+            float cutoff_radius = body->cutoff * game_state->game_scale;
+            int body_x = (nav_state->current_galaxy->position.x - camera->x + body->position.x / GALAXY_SCALE) * game_state->game_scale * GALAXY_SCALE;
+            int body_y = (nav_state->current_galaxy->position.y - camera->y + body->position.y / GALAXY_SCALE) * game_state->game_scale * GALAXY_SCALE;
+
+            SDL_Color waypoint_circle_color = nav_state->waypoint_star->color;
+            waypoint_circle_color.a = 150;
+
+            gfx_draw_circle(renderer, camera, body_x, body_y, (int)cutoff_radius, waypoint_circle_color);
         }
 
         // Draw moons
@@ -953,7 +1073,7 @@ void stars_generate(GameState *game_state, GameEvents *game_events, NavigationSt
                 memcpy(nav_state->buffer_galaxy, nav_state->current_galaxy, sizeof(Galaxy));
 
                 // Delete stars from previous galaxy
-                stars_clear_table(nav_state->stars, NULL);
+                stars_clear_table(nav_state->stars, nav_state, true);
 
                 // Create new background stars
                 game_events->generate_bstars = true;
@@ -978,7 +1098,7 @@ void stars_generate(GameState *game_state, GameEvents *game_events, NavigationSt
                 ship->position.y = dest_ship_position_y;
 
                 // Delete stars from previous galaxy
-                stars_clear_table(nav_state->stars, nav_state->buffer_star);
+                stars_clear_table(nav_state->stars, nav_state, false);
             }
 
             return;
@@ -1049,7 +1169,7 @@ void stars_generate(GameState *game_state, GameEvents *game_events, NavigationSt
     }
 
     // Delete stars that end up outside the region
-    stars_delete_outside_region(nav_state->stars, nav_state->buffer_star, bx, by, GALAXY_REGION_SIZE);
+    stars_delete_outside_region(nav_state->stars, nav_state, bx, by, GALAXY_REGION_SIZE);
 
     // First star generation complete
     game_events->start_stars_generation = false;
@@ -1196,7 +1316,7 @@ void stars_generate_preview(GameEvents *game_events, NavigationState *nav_state,
             {
                 // Delete stars that end up outside the region
                 int region_size = sections_in_camera_x;
-                stars_delete_outside_region(nav_state->stars, nav_state->buffer_star, bx, by, region_size);
+                stars_delete_outside_region(nav_state->stars, nav_state, bx, by, region_size);
 
                 return;
             }
@@ -1208,7 +1328,7 @@ void stars_generate_preview(GameEvents *game_events, NavigationState *nav_state,
 
     // Delete stars that end up outside the region
     int region_size = sections_in_camera_x;
-    stars_delete_outside_region(nav_state->stars, nav_state->buffer_star, bx, by, region_size);
+    stars_delete_outside_region(nav_state->stars, nav_state, bx, by, region_size);
 }
 
 /**
@@ -1244,6 +1364,12 @@ void stars_initialize_star(Star *star)
     star->level = 0;
     star->is_selected = false;
     memset(star->galaxy_name, 0, sizeof(star->galaxy_name));
+
+    star->waypoint_button = (WaypointButton){
+        .rect = (SDL_Rect){.x = 0,
+                           .y = 0,
+                           .w = 0,
+                           .h = 0}};
 }
 
 /**
@@ -1465,7 +1591,7 @@ void stars_populate_body(CelestialBody *body, Point position, pcg32_random_t rng
                     return;
                 }
 
-                planet->initialized = 0;
+                planet->initialized = i;
                 memset(planet->name, 0, sizeof(planet->name));
                 strcpy(planet->name, body->name);                               // Copy star name to planet name
                 sprintf(planet->name + strlen(planet->name), "-%s-%d", "P", i); // Append to planet name
@@ -1636,7 +1762,7 @@ void stars_populate_body(CelestialBody *body, Point position, pcg32_random_t rng
                     return;
                 }
 
-                moon->initialized = 0;
+                moon->initialized = i;
                 memset(moon->name, 0, sizeof(moon->name));
                 strcpy(moon->name, body->name);                             // Copy planet name to moon name
                 sprintf(moon->name + strlen(moon->name), "-%s-%d", "M", i); // Append to moon name

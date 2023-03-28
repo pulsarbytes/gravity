@@ -52,7 +52,7 @@
 #define UNIVERSE_SPEED_MIN 4      // Zoom out. Default: 4
 #define MOUSE_SCROLL_DISTANCE 20  // Distance from the edge of the screen where scrolling starts. Default: 20
 #define MAX_CONTROLS_GROUPS 4
-#define MAX_CONTROLS_ENTRIES 12
+#define MAX_CONTROLS_ENTRIES 13
 
 // Menu
 #define MENU_GALAXY_CLOUD_DENSITY 300  // Default: 300 (max 500)
@@ -105,7 +105,7 @@
                                 // Class 4: -100000, -40000
                                 // Class 5: -110000, -120000
                                 // Class 6: -250000, -60000
-#define GALAXY_START_X -134000  // Default: 0
+#define GALAXY_START_X -109000  // Default: 0
 #define GALAXY_START_Y -60000   // Default: 0
 
 // Galaxies
@@ -195,5 +195,15 @@
 #define PLANET_4_MOON_RADIUS_MAX 48  // Default: 48
 #define PLANET_5_MOON_RADIUS_MAX 72  // Default: 72
 #define PLANET_6_MOON_RADIUS_MAX 100 // Default: 100
+
+// Info box
+#define INFO_BOX_WIDTH 370         // Default: 370
+#define STAR_INFO_BOX_HEIGHT 290   // Default: 290
+#define GALAXY_INFO_BOX_HEIGHT 300 // Default: 300
+#define INFO_BOX_PADDING 20        // Default: 20
+
+// Buttons
+#define WAYPOINT_BUTTON_WIDTH 130 // Default: 130
+#define WAYPOINT_BUTTON_HEIGHT 26 // Default: 26
 
 #endif /* CONSTANTS_H */

@@ -68,7 +68,7 @@ void console_draw_position_console(const GameState *game_state, const Navigation
     SDL_SetRenderDrawColor(renderer, 12, 12, 12, 230);
     int box_width = 300;
     int box_height = 70;
-    int padding = 20;
+    int padding = INFO_BOX_PADDING;
     int inner_padding = 10;
 
     SDL_Rect box_rect;
@@ -252,7 +252,7 @@ void console_draw_ship_console(const GameState *game_state, const NavigationStat
     SDL_SetRenderDrawColor(renderer, 12, 12, 12, 230);
     int box_width = 400;
     int box_height = 70;
-    int padding = 20;
+    int padding = INFO_BOX_PADDING;
     int inner_padding = 10;
 
     SDL_Rect box_rect;
@@ -398,9 +398,9 @@ void console_draw_star_console(const Star *star, const Camera *camera)
 {
     // Draw background box
     SDL_SetRenderDrawColor(renderer, 12, 12, 12, 230);
-    int box_width = 370;
+    int box_width = INFO_BOX_WIDTH;
     int box_height = 70;
-    int padding = 20;
+    int padding = INFO_BOX_PADDING;
     int inner_padding = 40;
 
     SDL_Rect box_rect;
@@ -415,7 +415,7 @@ void console_draw_star_console(const Star *star, const Camera *camera)
     char star_name[128];
     memset(star_name, 0, sizeof(star_name));
     sprintf(star_name, "%s", star->name);
-    SDL_Surface *star_name_surface = TTF_RenderText_Blended(fonts[FONT_SIZE_22], star_name, colors[COLOR_WHITE_100]);
+    SDL_Surface *star_name_surface = TTF_RenderText_Blended(fonts[FONT_SIZE_18], star_name, colors[COLOR_WHITE_140]);
     SDL_Texture *star_name_texture = SDL_CreateTextureFromSurface(renderer, star_name_surface);
     SDL_Rect star_name_texture_rect;
     star_name_texture_rect.w = star_name_surface->w;
@@ -429,7 +429,7 @@ void console_draw_star_console(const Star *star, const Camera *camera)
 
     // Star circle
     int x_star = camera->w - (box_width + padding) + inner_padding + 5;
-    int y_star = star_name_texture_rect.y - 1 + padding / 2;
+    int y_star = star_name_texture_rect.y - 2 + padding / 2;
     gfx_draw_fill_circle(renderer, x_star, y_star, 8, star->color);
 }
 
@@ -480,6 +480,100 @@ static void console_draw_velocity_vector(const Ship *ship, Point center, const C
 
     // Draw circle around vector
     gfx_draw_circle(renderer, camera, center.x, center.y, 20, colors[COLOR_CYAN_70]);
+}
+
+/**
+ * Draws a console displaying information about waypoint star.
+ *
+ * @param nav_state A pointer to the current NavigationState object.
+ * @param camera A pointer to the current Camera object.
+ *
+ * @return void
+ */
+void console_draw_waypoint_console(const NavigationState *nav_state, const Camera *camera)
+{
+    // Draw background box
+    SDL_SetRenderDrawColor(renderer, 12, 12, 12, 230);
+    int box_width = INFO_BOX_WIDTH;
+    int box_height = 130;
+    int padding = INFO_BOX_PADDING;
+    int inner_padding = 40;
+    int star_name_height = 70;
+    int entry_height = 25;
+
+    SDL_Rect box_rect;
+    box_rect.x = camera->w - (box_width + padding);
+    box_rect.y = camera->h - (box_height + padding);
+    box_rect.w = box_width;
+    box_rect.h = box_height;
+
+    SDL_RenderFillRect(renderer, &box_rect);
+
+    // Star name
+    char star_name[128];
+    memset(star_name, 0, sizeof(star_name));
+    sprintf(star_name, "%s", nav_state->waypoint_star->name);
+    SDL_Surface *star_name_surface = TTF_RenderText_Blended(fonts[FONT_SIZE_18], star_name, colors[COLOR_WHITE_140]);
+    SDL_Texture *star_name_texture = SDL_CreateTextureFromSurface(renderer, star_name_surface);
+    SDL_Rect star_name_texture_rect;
+    star_name_texture_rect.w = star_name_surface->w;
+    star_name_texture_rect.h = star_name_surface->h;
+    star_name_texture_rect.x = camera->w - (box_width + padding) + 1.5 * padding + inner_padding;
+    star_name_texture_rect.y = camera->h - (box_height + padding) + (star_name_height - star_name_texture_rect.h) / 2 + 1;
+    SDL_RenderCopy(renderer, star_name_texture, NULL, &star_name_texture_rect);
+    SDL_FreeSurface(star_name_surface);
+    SDL_DestroyTexture(star_name_texture);
+    star_name_texture = NULL;
+
+    // Star diamond
+    int x_star = camera->w - (box_width + padding) + inner_padding + 5;
+    int y_star = star_name_texture_rect.y - 2 + padding / 2;
+    gfx_draw_diamond(renderer, x_star, y_star, PROJECTION_RADIUS + 6, nav_state->waypoint_star->color);
+    gfx_draw_fill_diamond(renderer, x_star, y_star, PROJECTION_RADIUS, nav_state->waypoint_star->color);
+
+    // Distance
+    double distance_star = maths_distance_between_points(nav_state->waypoint_star->position.x, nav_state->waypoint_star->position.y, nav_state->navigate_offset.x, nav_state->navigate_offset.y);
+    char distance_text[16];
+    memset(distance_text, 0, sizeof(distance_text));
+    utils_add_thousand_separators((int)distance_star, distance_text, sizeof(distance_text));
+
+    char distance_row_text[64];
+    memset(distance_row_text, 0, sizeof(distance_row_text));
+    sprintf(distance_row_text, "Distance: %*s%s", 4, "", distance_text);
+
+    SDL_Surface *distance_surface = TTF_RenderText_Blended(fonts[FONT_SIZE_15], distance_row_text, colors[COLOR_WHITE_140]);
+    SDL_Texture *distance_texture = SDL_CreateTextureFromSurface(renderer, distance_surface);
+    SDL_Rect distance_texture_rect = {.x = camera->w - (box_width - 2.5 * padding),
+                                      .y = camera->h - (box_height + padding) + star_name_height,
+                                      .w = distance_surface->w,
+                                      .h = distance_surface->h};
+
+    SDL_FreeSurface(distance_surface);
+    SDL_RenderCopy(renderer, distance_texture, NULL, &distance_texture_rect);
+    SDL_DestroyTexture(distance_texture);
+
+    // Time
+    if (nav_state->velocity.magnitude > 5)
+    {
+        int seconds = distance_star / nav_state->velocity.magnitude;
+        char time_row_text[64];
+        memset(time_row_text, 0, sizeof(time_row_text));
+        char time_text[32];
+        memset(time_text, 0, sizeof(time_text));
+        utils_convert_seconds_to_time_string(seconds, time_text);
+        sprintf(time_row_text, "%*s%s", 14, "", time_text);
+
+        SDL_Surface *time_surface = TTF_RenderText_Blended(fonts[FONT_SIZE_14], time_row_text, colors[COLOR_WHITE_140]);
+        SDL_Texture *time_texture = SDL_CreateTextureFromSurface(renderer, time_surface);
+        SDL_Rect time_texture_rect = {.x = camera->w - (box_width - 2.5 * padding),
+                                      .y = camera->h - (box_height + padding) + star_name_height + entry_height,
+                                      .w = time_surface->w,
+                                      .h = time_surface->h};
+
+        SDL_FreeSurface(time_surface);
+        SDL_RenderCopy(renderer, time_texture, NULL, &time_texture_rect);
+        SDL_DestroyTexture(time_texture);
+    }
 }
 
 /**

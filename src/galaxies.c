@@ -247,7 +247,7 @@ void galaxies_draw_galaxy(const InputState *input_state, NavigationState *nav_st
         // Reset stars and update current_galaxy
         if (strcmp(nav_state->current_galaxy->name, galaxy->name) != 0)
         {
-            stars_clear_table(nav_state->stars, nav_state->buffer_star);
+            stars_clear_table(nav_state->stars, nav_state, false);
             memcpy(nav_state->current_galaxy, galaxy, sizeof(Galaxy));
         }
 
@@ -342,9 +342,9 @@ void galaxies_draw_info_box(const Galaxy *galaxy, const Camera *camera)
 {
     // Draw background box
     SDL_SetRenderDrawColor(renderer, 12, 12, 12, 230);
-    int width = 370;
-    int height = 310;
-    int padding = 20;
+    int width = INFO_BOX_WIDTH;
+    int height = GALAXY_INFO_BOX_HEIGHT;
+    int padding = INFO_BOX_PADDING;
 
     SDL_Rect info_box_rect;
     info_box_rect.x = camera->w - (width + padding);
@@ -360,7 +360,7 @@ void galaxies_draw_info_box(const Galaxy *galaxy, const Camera *camera)
     char galaxy_name[128];
     strcpy(galaxy_name, galaxy->name);
     sprintf(entries[GALAXY_INFO_NAME].text, "%s", galaxy_name);
-    entries[GALAXY_INFO_NAME].font_size = FONT_SIZE_22;
+    entries[GALAXY_INFO_NAME].font_size = FONT_SIZE_18;
 
     char entity_type[32];
     strcpy(entity_type, "GALAXY");
@@ -409,7 +409,7 @@ void galaxies_draw_info_box(const Galaxy *galaxy, const Camera *camera)
     }
 
     // Name
-    int name_height = 100;
+    int name_height = 90;
     int entry_height = 30;
     int inner_padding = 40;
     entries[GALAXY_INFO_NAME].rect.w = width;
