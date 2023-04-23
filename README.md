@@ -43,6 +43,7 @@ make
 |            | `Down`                           | Reverse thrust       |
 |            | `Right`                          | Rotate right         |
 |            | `Left`                           | Rotate left          |
+|            | `A`                              | Engage autopilot     |
 |            | `C`                              | Toggle camera        |
 |            | `M`                              | Enter Map mode       |
 |            | `O`                              | Show orbits          |

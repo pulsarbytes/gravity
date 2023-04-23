@@ -21,11 +21,253 @@ extern SDL_Renderer *renderer;
 extern SDL_Color colors[];
 
 // Static function prototypes
-static bool gfx_has_line_of_sight(const NavigationState *, double x1, double y1, double x2, double y2);
-static void gfx_update_projection_position(const NavigationState *, void *ptr, int entity_type, const Camera *, int state, long double scale);
+static void gfx_calculate_path_segment(double cx, double cy, double px, double py, double radius, int direction, double *x, double *y);
+static bool gfx_has_line_of_sight(NavigationState *, double x1, double y1, double x2, double y2, Star *stars[], int max_stars);
+static void gfx_move_point_on_circumference(NavigationState *, Point *, Star *stars[], int max_stars);
+static void gfx_normalize_waypoint_path(NavigationState *, PathPoint path[], int total_points);
+static void gfx_shift_path_segment(NavigationState *, Point, Star *stars[], int max_stars, double *x, double *y);
 static int gfx_update_projection_opacity(double distance, int region_size, int section_size);
+static void gfx_update_projection_position(const NavigationState *, void *ptr, int entity_type, const Camera *, int state, long double scale);
 
 /**
+ * Takes a point outside a circle and calculates a new point at <step> distance that is closer to the circle
+ * in a clockwise or counter-clockwise direction.
+ *
+ * @param cx The x-coordinate of the star's center.
+ * @param cy The y-coordinate of the star's center.
+ * @param px The x-coordinate of the point outside the star.
+ * @param py The y-coordinate of the point outside the star.
+ * @param radius The cutoff of the star.
+ * @param direction Whether the direction of the new point is clockwise to the original point or counter-clockwise.
+ * @param x The x-coordinate of the new point.
+ * @param y The y-coordinate of the new point.
+ *
+ * @return void
+ */
+static void gfx_calculate_path_segment(double cx, double cy, double px, double py, double radius, int direction, double *x, double *y)
+{
+    double step = radius * 0.1;
+    double dist = sqrt((px - cx) * (px - cx) + (py - cy) * (py - cy));
+    double mx = (px + cx) / 2.0;
+    double my = (py + cy) / 2.0;
+    double d = sqrt(radius * radius - dist * dist / 4.0);
+    double dx = cx - px;
+    double dy = cy - py;
+    double perpendicular_x = dy / dist * d;
+    double perpendicular_y = -dx / dist * d;
+
+    if (direction == 1)
+    {
+        *x = mx + perpendicular_x;
+        *y = my + perpendicular_y;
+    }
+    else
+    {
+        *x = mx - perpendicular_x;
+        *y = my - perpendicular_y;
+    }
+
+    double scale = step / sqrt((*x - px) * (*x - px) + (*y - py) * (*y - py));
+    *x = px + (*x - px) * scale;
+    *y = py + (*y - py) * scale;
+}
+
+/**
+ * Calculates a path between the current position and the waypoint star.
+ *
+ * @param nav_state A pointer to the current NavigationState object.
+ *
+ * @return void
+ */
+void gfx_calculate_waypoint_path(NavigationState *nav_state)
+{
+    if (nav_state->waypoint_star->waypoint_points > 0 && nav_state->waypoint_planet_index >= 0)
+    {
+        // Update last point in path (planet)
+        if (nav_state->waypoint_star->waypoint_path != NULL)
+            nav_state->waypoint_star->waypoint_path[nav_state->waypoint_star->waypoint_points - 1].position =
+                nav_state->waypoint_star->planets[nav_state->waypoint_planet_index]->position;
+
+        return;
+    }
+    else if (nav_state->waypoint_star->waypoint_points > 0)
+        return;
+
+    double buffer_x = nav_state->buffer_star->position.x;
+    double buffer_y = nav_state->buffer_star->position.y;
+    double start_x = nav_state->navigate_offset.x;
+    double start_y = nav_state->navigate_offset.y;
+    double dest_x;
+    double dest_y;
+
+    if (nav_state->waypoint_planet_index >= 0)
+    {
+        dest_x = nav_state->waypoint_star->planets[nav_state->waypoint_planet_index]->position.x;
+        dest_y = nav_state->waypoint_star->planets[nav_state->waypoint_planet_index]->position.y;
+    }
+    else
+    {
+        dest_x = nav_state->waypoint_star->position.x;
+        dest_y = nav_state->waypoint_star->position.y;
+    }
+
+    double dest_cutoff = nav_state->waypoint_star->cutoff;
+    double x = start_x;
+    double y = start_y;
+    int direction;
+    double degrees;
+    int total_points = 0;
+
+    // 1. Add starting position to path
+    PathPoint *raw_path;
+
+    raw_path = (PathPoint *)malloc(sizeof(PathPoint));
+    raw_path[total_points].type = PATH_POINT_STRAIGHT;
+    raw_path[total_points].position.x = start_x;
+    raw_path[total_points].position.y = start_y;
+    total_points++;
+
+    // 2. Move starting position outside star cutoff if needed
+    if (maths_is_point_in_circle((Point){start_x, start_y},
+                                 (Point){buffer_x, buffer_y},
+                                 nav_state->buffer_star->cutoff))
+    {
+        degrees = 0;
+
+        direction = maths_get_rotation_direction(buffer_x, buffer_y,
+                                                 start_x, start_y,
+                                                 dest_x, dest_y);
+
+        // Move Starting position just outside the cutoff
+        double radius_ratio = 1.01;
+        maths_closest_point_outside_circle(buffer_x, buffer_y,
+                                           nav_state->buffer_star->cutoff,
+                                           radius_ratio,
+                                           start_x, start_y,
+                                           &x, &y,
+                                           degrees);
+
+        // Check for nearest star in nav_state->stars, so that the starting position does not end up in another star
+        Star *nearest_star = stars_nearest_star_in_nav_state(nav_state, (Point){x, y}, true);
+
+        if (nearest_star != NULL && strcmp(nearest_star->name, nav_state->waypoint_star->name) != 0)
+        {
+            // Check if new starting position is inside nearest star
+            while (maths_is_point_in_circle((Point){x, y}, (Point){nearest_star->position.x, nearest_star->position.y}, nearest_star->cutoff))
+            {
+                degrees = degrees + (direction * 30);
+
+                // Move Starting position by <degrees>
+                maths_closest_point_outside_circle(buffer_x, buffer_y, nav_state->buffer_star->cutoff, radius_ratio,
+                                                   start_x, start_y,
+                                                   &x, &y,
+                                                   degrees);
+            }
+        }
+
+        if (x != start_x && y != start_y)
+        {
+            // Add new starting position outside circle to path
+            raw_path = (PathPoint *)realloc(raw_path, (total_points + 1) * sizeof(PathPoint));
+            raw_path[total_points].type = PATH_POINT_STRAIGHT;
+            raw_path[total_points].position.x = x;
+            raw_path[total_points].position.y = y;
+            total_points++;
+        }
+    }
+
+    // 3. Calculate path
+    double _x = x;
+    double _y = y;
+    double bx, by;
+
+    bool path_reached_waypoint = maths_is_point_in_circle((Point){_x, _y}, (Point){dest_x, dest_y}, dest_cutoff) ||
+                                 maths_line_intersects_circle(x, y, _x, _y, dest_x, dest_y, dest_cutoff);
+
+    while (!path_reached_waypoint)
+    {
+        unsigned short segment_type = PATH_POINT_STRAIGHT;
+
+        // Move point (_x,_y) closer to waypoint
+        double step = GALAXY_SECTION_SIZE * 0.5;
+        maths_move_point_along_line(x, y, dest_x, dest_y, step, &_x, &_y);
+
+        // Find nearest stars to (_x,_y)
+        Star *nearest_stars[MAX_NEAREST_STARS];
+
+        for (int i = 0; i < MAX_NEAREST_STARS; i++)
+            nearest_stars[i] = NULL;
+
+        bx = maths_get_nearest_section_line(_x, GALAXY_SECTION_SIZE);
+        by = maths_get_nearest_section_line(_y, GALAXY_SECTION_SIZE);
+        int nearest_stars_count = stars_nearest_stars_to_point(nav_state, (Point){bx, by}, nearest_stars);
+
+        if (nearest_stars_count > 0)
+        {
+            for (int s = 0; s < nearest_stars_count; s++)
+            {
+                if (nearest_stars[s] != NULL && strcmp(nearest_stars[s]->name, nav_state->waypoint_star->name) != 0)
+                {
+                    direction = maths_get_rotation_direction(nearest_stars[s]->position.x, nearest_stars[s]->position.y,
+                                                             x, y,
+                                                             dest_x, dest_y);
+
+                    bool star_obstructs_path = maths_is_point_in_circle((Point){_x, _y},
+                                                                        (Point){nearest_stars[s]->position.x, nearest_stars[s]->position.y},
+                                                                        nearest_stars[s]->cutoff) ||
+                                               maths_line_intersects_circle(x, y,
+                                                                            _x, _y,
+                                                                            nearest_stars[s]->position.x, nearest_stars[s]->position.y,
+                                                                            nearest_stars[s]->cutoff);
+
+                    if (star_obstructs_path)
+                    {
+                        segment_type = PATH_POINT_TURN;
+
+                        gfx_calculate_path_segment(nearest_stars[s]->position.x, nearest_stars[s]->position.y,
+                                                   x, y,
+                                                   nearest_stars[s]->cutoff,
+                                                   direction,
+                                                   &_x, &_y);
+
+                        gfx_shift_path_segment(nav_state, (Point){x, y}, nearest_stars, nearest_stars_count, &_x, &_y);
+
+                        x = _x;
+                        y = _y;
+                    }
+                }
+            }
+        }
+
+        x = _x;
+        y = _y;
+
+        // Add point to path
+        raw_path = (PathPoint *)realloc(raw_path, (total_points + 1) * sizeof(PathPoint));
+        raw_path[total_points].type = segment_type;
+        raw_path[total_points].position.x = x;
+        raw_path[total_points].position.y = y;
+        total_points++;
+
+        path_reached_waypoint = maths_is_point_in_circle((Point){_x, _y}, (Point){dest_x, dest_y}, dest_cutoff) ||
+                                maths_line_intersects_circle(x, y, _x, _y, dest_x, dest_y, dest_cutoff);
+    }
+
+    // 4. Add waypoint star position to path
+    raw_path = (PathPoint *)realloc(raw_path, (total_points + 1) * sizeof(PathPoint));
+    raw_path[total_points].type = PATH_POINT_STRAIGHT;
+    raw_path[total_points].position.x = dest_x;
+    raw_path[total_points].position.y = dest_y;
+    total_points++;
+
+    // 5. Normalize path
+    gfx_normalize_waypoint_path(nav_state, raw_path, total_points);
+
+    // 6. Clean up raw path
+    free(raw_path);
+}
+
+/*
  * Sets the default color values for the color array.
  *
  * @return void
@@ -81,6 +323,12 @@ void gfx_create_default_colors(void)
 
     // Volcanic moon
     colors[COLOR_MOON_3] = (SDL_Color){255, 176, 140, 255};
+
+    // Green
+    colors[COLOR_GREEN] = (SDL_Color){0, 255, 0, 150};
+
+    // Red
+    colors[COLOR_RED] = (SDL_Color){255, 99, 71, 150};
 }
 
 /**
@@ -336,6 +584,51 @@ void gfx_draw_galaxy_cloud(Galaxy *galaxy, const Camera *camera, int gstars_coun
 }
 
 /**
+ * Draws and fills a circle on an SDL renderer using the Midpoint Circle Algorithm.
+ *
+ * @param renderer The SDL renderer to draw the circle on.
+ * @param xc The x-coordinate of the circle's center.
+ * @param yc The y-coordinate of the circle's center.
+ * @param radius The radius of the circle.
+ * @param color And SDL color object.
+ *
+ * @return None
+ */
+void gfx_draw_fill_circle(SDL_Renderer *renderer, int xc, int yc, int radius, SDL_Color color)
+{
+    int x = 0;
+    int y = radius;
+    int d = 1 - radius;
+    int deltaE = 3;
+    int deltaSE = -2 * radius + 5;
+
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+    SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a);
+
+    while (y >= x)
+    {
+        SDL_RenderDrawLine(renderer, xc - x, yc + y, xc + x, yc + y);
+        SDL_RenderDrawLine(renderer, xc - x, yc - y, xc + x, yc - y);
+        SDL_RenderDrawLine(renderer, xc - y, yc + x, xc + y, yc + x);
+        SDL_RenderDrawLine(renderer, xc - y, yc - x, xc + y, yc - x);
+        if (d < 0)
+        {
+            d += deltaE;
+            deltaE += 2;
+            deltaSE += 2;
+        }
+        else
+        {
+            d += deltaSE;
+            deltaE += 2;
+            deltaSE += 4;
+            y--;
+        }
+        x++;
+    }
+}
+
+/**
  * Draws a diamond shape and fills it with color.
  *
  * @param renderer The renderer to draw the diamond on.
@@ -403,51 +696,6 @@ void gfx_draw_fill_diamond(SDL_Renderer *renderer, int x, int y, int size, SDL_C
             SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a);
             SDL_RenderDrawLine(renderer, x_left, y, x_right, y);
         }
-    }
-}
-
-/**
- * Draws and fills a circle on an SDL renderer using the Midpoint Circle Algorithm.
- *
- * @param renderer The SDL renderer to draw the circle on.
- * @param xc The x-coordinate of the circle's center.
- * @param yc The y-coordinate of the circle's center.
- * @param radius The radius of the circle.
- * @param color And SDL color object.
- *
- * @return None
- */
-void gfx_draw_fill_circle(SDL_Renderer *renderer, int xc, int yc, int radius, SDL_Color color)
-{
-    int x = 0;
-    int y = radius;
-    int d = 1 - radius;
-    int deltaE = 3;
-    int deltaSE = -2 * radius + 5;
-
-    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
-    SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a);
-
-    while (y >= x)
-    {
-        SDL_RenderDrawLine(renderer, xc - x, yc + y, xc + x, yc + y);
-        SDL_RenderDrawLine(renderer, xc - x, yc - y, xc + x, yc - y);
-        SDL_RenderDrawLine(renderer, xc - y, yc + x, xc + y, yc + x);
-        SDL_RenderDrawLine(renderer, xc - y, yc - x, xc + y, yc - x);
-        if (d < 0)
-        {
-            d += deltaE;
-            deltaE += 2;
-            deltaSE += 2;
-        }
-        else
-        {
-            d += deltaSE;
-            deltaE += 2;
-            deltaSE += 4;
-            y--;
-        }
-        x++;
     }
 }
 
@@ -857,7 +1105,7 @@ void gfx_draw_speed_lines(float velocity, const Camera *camera, Speed speed)
 }
 
 /**
- * Draws a path between the current position and the waypoint star.
+ * Draws the waypoint path for a star.
  *
  * @param game_state A pointer to the current GameState object.
  * @param nav_state A pointer to the current NavigationState object.
@@ -867,47 +1115,72 @@ void gfx_draw_speed_lines(float velocity, const Camera *camera, Speed speed)
  */
 void gfx_draw_waypoint_path(const GameState *game_state, const NavigationState *nav_state, const Camera *camera)
 {
-    double x1, y1;
-    double x2, y2;
-    bool direct_line_of_sight = false;
+    if (game_state->state == MAP || game_state->state == UNIVERSE)
+        SDL_SetRenderDrawColor(renderer, nav_state->waypoint_star->color.r, nav_state->waypoint_star->color.g, nav_state->waypoint_star->color.b, 80);
+    else if (game_state->state == NAVIGATE)
+        SDL_SetRenderDrawColor(renderer, nav_state->waypoint_star->color.r, nav_state->waypoint_star->color.g, nav_state->waypoint_star->color.b, 50);
 
-    x1 = nav_state->navigate_offset.x;
-    y1 = nav_state->navigate_offset.y;
-    x2 = nav_state->waypoint_star->position.x;
-    y2 = nav_state->waypoint_star->position.y;
+    if (nav_state->waypoint_star->waypoint_points < 1)
+        return;
 
-    direct_line_of_sight = gfx_has_line_of_sight(nav_state, x1, y1, x2, y2);
-
-    if (direct_line_of_sight)
+    for (int i = 1; i < nav_state->waypoint_star->waypoint_points; i++)
     {
-        SDL_SetRenderDrawColor(renderer, 255, 255, 255, 50);
+        double x1, y1;
+        double x2, y2;
 
-        double x_1, y_1;
-        double x_2, y_2;
-
-        if (game_state->state == MAP)
+        if (game_state->state == MAP || game_state->state == NAVIGATE)
         {
-            x_1 = (nav_state->navigate_offset.x - camera->x) * game_state->game_scale;
-            y_1 = (nav_state->navigate_offset.y - camera->y) * game_state->game_scale;
-            x_2 = (nav_state->waypoint_star->position.x - camera->x) * game_state->game_scale;
-            y_2 = (nav_state->waypoint_star->position.y - camera->y) * game_state->game_scale;
+            x1 = (nav_state->waypoint_star->waypoint_path[i - 1].position.x - camera->x) * game_state->game_scale;
+            y1 = (nav_state->waypoint_star->waypoint_path[i - 1].position.y - camera->y) * game_state->game_scale;
+            x2 = (nav_state->waypoint_star->waypoint_path[i].position.x - camera->x) * game_state->game_scale;
+            y2 = (nav_state->waypoint_star->waypoint_path[i].position.y - camera->y) * game_state->game_scale;
         }
         else if (game_state->state == UNIVERSE)
         {
-            x_1 = (nav_state->current_galaxy->position.x - camera->x + nav_state->navigate_offset.x / GALAXY_SCALE) * game_state->game_scale * GALAXY_SCALE;
-            y_1 = (nav_state->current_galaxy->position.y - camera->y + nav_state->navigate_offset.y / GALAXY_SCALE) * game_state->game_scale * GALAXY_SCALE;
-            x_2 = (nav_state->current_galaxy->position.x - camera->x + nav_state->waypoint_star->position.x / GALAXY_SCALE) * game_state->game_scale * GALAXY_SCALE;
-            y_2 = (nav_state->current_galaxy->position.y - camera->y + nav_state->waypoint_star->position.y / GALAXY_SCALE) * game_state->game_scale * GALAXY_SCALE;
+            x1 = (nav_state->current_galaxy->position.x - camera->x + nav_state->waypoint_star->waypoint_path[i - 1].position.x / GALAXY_SCALE) * game_state->game_scale * GALAXY_SCALE;
+            y1 = (nav_state->current_galaxy->position.y - camera->y + nav_state->waypoint_star->waypoint_path[i - 1].position.y / GALAXY_SCALE) * game_state->game_scale * GALAXY_SCALE;
+            x2 = (nav_state->current_galaxy->position.x - camera->x + nav_state->waypoint_star->waypoint_path[i].position.x / GALAXY_SCALE) * game_state->game_scale * GALAXY_SCALE;
+            y2 = (nav_state->current_galaxy->position.y - camera->y + nav_state->waypoint_star->waypoint_path[i].position.y / GALAXY_SCALE) * game_state->game_scale * GALAXY_SCALE;
         }
 
-        SDL_RenderDrawLine(renderer, (int)x_1, (int)y_1, (int)x_2, (int)y_2);
+        if (maths_line_intersects_camera(camera, x1, y1, x2, y2))
+            SDL_RenderDrawLine(renderer, (int)x1, (int)y1, (int)x2, (int)y2);
     }
+
+    // Highlight next path point
+    if (nav_state->waypoint_star->waypoint_points)
+        gfx_draw_circle(renderer, camera,
+                        (nav_state->waypoint_star->waypoint_path[nav_state->next_path_point].position.x - camera->x) * game_state->game_scale,
+                        (nav_state->waypoint_star->waypoint_path[nav_state->next_path_point].position.y - camera->y) * game_state->game_scale,
+                        WAYPOINT_CIRCLE_RADIUS * game_state->game_scale, colors[COLOR_CYAN_70]);
+
+    // Draw perpendicular line at path point
+    double x1 = (nav_state->waypoint_star->waypoint_path[nav_state->next_path_point - 1].position.x - camera->x) * game_state->game_scale;
+    double y1 = (nav_state->waypoint_star->waypoint_path[nav_state->next_path_point - 1].position.y - camera->y) * game_state->game_scale;
+    double x2 = (nav_state->waypoint_star->waypoint_path[nav_state->next_path_point].position.x - camera->x) * game_state->game_scale;
+    double y2 = (nav_state->waypoint_star->waypoint_path[nav_state->next_path_point].position.y - camera->y) * game_state->game_scale;
+
+    double slope = (y2 - y1) / (x2 - x1);
+    float angle = atan(slope);
+    float perp_angle = angle + M_PI / 2;
+
+    float dx = WAYPOINT_LINE_WIDTH * game_state->game_scale * cos(perp_angle) / 2;
+    float dy = WAYPOINT_LINE_WIDTH * game_state->game_scale * sin(perp_angle) / 2;
+
+    int px1 = round(x2 + dx);
+    int py1 = round(y2 + dy);
+    int px2 = round(x2 - dx);
+    int py2 = round(y2 - dy);
+
+    SDL_SetRenderDrawColor(renderer, colors[COLOR_CYAN_70].r, colors[COLOR_CYAN_70].g, colors[COLOR_CYAN_70].b, colors[COLOR_CYAN_70].a);
+    SDL_RenderDrawLine(renderer, px1, py1, px2, py2);
 }
 
 /**
  * Generates a set of randomly placed and sized stars on a given camera view.
  * The function implements lazy initialization of bstars in batches.
  *
+ * @param game_state A pointer to the current GameState object.
  * @param nav_state A pointer to the current NavigationState object.
  * @param bstars Array of Bstar objects to populate with generated stars.
  * @param camera A pointer to the current Camera object.
@@ -1167,7 +1440,7 @@ void gfx_generate_gstars(Galaxy *galaxy, bool high_definition)
                 star.position.y = iy;
 
                 // Calculate opacity
-                double distance = stars_nearest_center_distance(position, galaxy, initseq, GALAXY_CLOUD_DENSITY);
+                double distance = stars_nearest_star_distance(position, galaxy, initseq, GALAXY_CLOUD_DENSITY);
                 unsigned short class = stars_size_class(distance);
                 float class_opacity_max = class * (255 / 6);
                 class_opacity_max = class_opacity_max > 255 ? 255 : class_opacity_max;
@@ -1323,7 +1596,7 @@ void gfx_generate_menu_gstars(Galaxy *galaxy, Gstar *menustars)
                 star.position.y = iy;
 
                 // Calculate opacity
-                double distance = stars_nearest_center_distance(position, galaxy, initseq, MENU_GALAXY_CLOUD_DENSITY);
+                double distance = stars_nearest_star_distance(position, galaxy, initseq, MENU_GALAXY_CLOUD_DENSITY);
                 unsigned short class = stars_size_class(distance);
                 float class_opacity_max = class * (255 / 6) + 20; // There are only a few Class 6 galaxies, increase max value by 20
                 class_opacity_max = class_opacity_max > 255 ? 255 : class_opacity_max;
@@ -1378,46 +1651,32 @@ void gfx_generate_menu_gstars(Galaxy *galaxy, Gstar *menustars)
  * @param y1 the y-coordinate of the first point.
  * @param x2 the x-coordinate of the second point.
  * @param y2 the y-coordinate of the second point.
+ * @param stars An array of pointers to stars.
+ * @param max_stars The number of stars in the stars array.
  *
  * @return True if there is line of sight between the two points, false otherwise.
  */
-static bool gfx_has_line_of_sight(const NavigationState *nav_state, double x1, double y1, double x2, double y2)
+static bool gfx_has_line_of_sight(NavigationState *nav_state, double x1, double y1, double x2, double y2, Star *stars[], int max_stars)
 {
-    double dx = x2 - x1;
-    double dy = y2 - y1;
-    double m = dy / dx;
-    double b = y1 - m * x1;
-    double distance;
-    double x_c, y_c, r_c;
-
-    for (int i = 0; i < MAX_STARS; i++)
+    for (int i = 0; i < max_stars; i++)
     {
-        if (nav_state->stars[i] != NULL)
+        if (stars[i] != NULL)
         {
-            // Each index can have many entries, loop through all of them
-            StarEntry *entry = nav_state->stars[i];
+            if (strcmp(stars[i]->name, nav_state->waypoint_star->name) == 0)
+                continue;
 
-            while (entry != NULL)
-            {
-                if (strcmp(entry->star->name, nav_state->buffer_star->name) == 0 ||
-                    strcmp(entry->star->name, nav_state->waypoint_star->name) == 0)
-                {
-                    entry = entry->next;
-                    continue;
-                }
+            bool star_obstructs_path = maths_is_point_in_circle((Point){x2, y2},
+                                                                (Point){stars[i]->position.x, stars[i]->position.y},
+                                                                stars[i]->cutoff) ||
+                                       maths_line_intersects_circle(x1, y1,
+                                                                    x2, y2,
+                                                                    stars[i]->position.x, stars[i]->position.y,
+                                                                    stars[i]->cutoff);
 
-                // Check if the star cutoff intersects the line segment connecting the two points
-                x_c = entry->star->position.x;
-                y_c = entry->star->position.y;
-                r_c = entry->star->cutoff;
-
-                distance = fabs(m * x_c - y_c + b) / sqrt(m * m + 1);
-
-                if (distance <= r_c && ((x_c - x1) * (x_c - x2) < 0 || (y_c - y1) * (y_c - y2) < 0))
-                    return false;
-
-                entry = entry->next;
-            }
+            if (!star_obstructs_path)
+                continue;
+            else
+                return false;
         }
     }
 
@@ -1453,6 +1712,140 @@ bool gfx_is_object_in_camera(const Camera *camera, double x, double y, float rad
 bool gfx_is_relative_position_in_camera(const Camera *camera, int x, int y)
 {
     return x >= 0 && x < camera->w && y >= 0 && y < camera->h;
+}
+
+/**
+ * Takes a point inside a circle and calculates the closest point on the circumference.
+ *
+ * @param nav_state A pointer to the current NavigationState object.
+ * @param position The point inside the circle.
+ * @param stars An array of pointers to nearest stars.
+ * @param max_stars The number of nearest stars.
+ *
+ * @return void
+ */
+
+static void gfx_move_point_on_circumference(NavigationState *nav_state, Point *position, Star *stars[], int max_stars)
+{
+    double radius_ratio = 1.0;
+
+    for (int i = 0; i < max_stars; i++)
+    {
+        if (stars[i] != NULL && strcmp(stars[i]->name, nav_state->waypoint_star->name) != 0)
+        {
+            if (maths_is_point_in_circle(*position, (Point){stars[i]->position.x, stars[i]->position.y}, stars[i]->cutoff))
+            {
+                maths_closest_point_outside_circle(stars[i]->position.x, stars[i]->position.y, stars[i]->cutoff, radius_ratio,
+                                                   position->x, position->y,
+                                                   &position->x, &position->y,
+                                                   0);
+            }
+        }
+    }
+}
+
+/**
+ * Normalizes the waypoint path by moving points that are inside circles and by omitting
+ * in-between points when there is a direct line of sight between distant points.
+ *
+ * @param nav_state A pointer to the current NavigationState object.
+ * @param path The array of path points.
+ * @param total_points The number of points.
+ *
+ * @return void
+ */
+
+static void gfx_normalize_waypoint_path(NavigationState *nav_state, PathPoint path[], int total_points)
+{
+    if (total_points < 3)
+        return;
+
+    // Add first point to path
+    nav_state->waypoint_star->waypoint_path = (PathPoint *)malloc(sizeof(PathPoint));
+    nav_state->waypoint_star->waypoint_path[0].type = PATH_POINT_TURN;
+    nav_state->waypoint_star->waypoint_path[0].position = path[0].position;
+    nav_state->waypoint_star->waypoint_points = 1;
+
+    int point_offset = 3;
+
+    for (int i = 1; i < total_points - 1 && i + point_offset < total_points; i++)
+    {
+        Point point = path[i].position;
+
+        // Find nearest stars to (_x,_y)
+        Star *nearest_stars[MAX_NEAREST_STARS];
+
+        for (int s = 0; s < MAX_NEAREST_STARS; s++)
+            nearest_stars[s] = NULL;
+
+        double bx = maths_get_nearest_section_line(point.x, GALAXY_SECTION_SIZE);
+        double by = maths_get_nearest_section_line(point.y, GALAXY_SECTION_SIZE);
+        int nearest_stars_count = stars_nearest_stars_to_point(nav_state, (Point){bx, by}, nearest_stars);
+
+        if (nearest_stars_count > 1)
+            gfx_move_point_on_circumference(nav_state, &point, nearest_stars, nearest_stars_count);
+
+        int j = 1;
+
+        // If point is a turn point, check for line of sight
+        if (nearest_stars_count > 0 &&
+            path[i + point_offset].type == PATH_POINT_TURN && path[i + point_offset - 1].type == PATH_POINT_STRAIGHT)
+        {
+            PathPoint start = path[i];
+
+            if (start.type == PATH_POINT_STRAIGHT)
+            {
+                while (path[i + point_offset + j].type == PATH_POINT_TURN)
+                {
+                    point = path[i + point_offset + j].position;
+
+                    if (nearest_stars_count > 1)
+                        gfx_move_point_on_circumference(nav_state, &point, nearest_stars, nearest_stars_count);
+
+                    if (gfx_has_line_of_sight(nav_state, start.position.x, start.position.y,
+                                              point.x, point.y, nearest_stars, nearest_stars_count))
+                    {
+                        j++;
+                        continue;
+                    }
+                    else
+                        break;
+                }
+            }
+        }
+
+        if (j > 1)
+        {
+            // Add starting point to path
+            Point start_point = path[i].position;
+            nav_state->waypoint_star->waypoint_path = (PathPoint *)realloc(nav_state->waypoint_star->waypoint_path, (nav_state->waypoint_star->waypoint_points + 1) * sizeof(PathPoint));
+            nav_state->waypoint_star->waypoint_path[nav_state->waypoint_star->waypoint_points].type = PATH_POINT_TURN;
+            nav_state->waypoint_star->waypoint_path[nav_state->waypoint_star->waypoint_points].position = start_point;
+            nav_state->waypoint_star->waypoint_points++;
+
+            // Bypass omitted points
+            i = i + point_offset + j - 2;
+        }
+        else
+        {
+            // Add point to the new path
+            point = path[i].position;
+
+            if (nearest_stars_count > 1)
+                gfx_move_point_on_circumference(nav_state, &point, nearest_stars, nearest_stars_count);
+
+            nav_state->waypoint_star->waypoint_path = (PathPoint *)realloc(nav_state->waypoint_star->waypoint_path, (nav_state->waypoint_star->waypoint_points + 1) * sizeof(PathPoint));
+            nav_state->waypoint_star->waypoint_path[nav_state->waypoint_star->waypoint_points].type = PATH_POINT_TURN;
+            nav_state->waypoint_star->waypoint_path[nav_state->waypoint_star->waypoint_points].position = point;
+            nav_state->waypoint_star->waypoint_points++;
+        }
+    }
+
+    // Add last point to path
+    nav_state->waypoint_star->waypoint_path = (PathPoint *)realloc(nav_state->waypoint_star->waypoint_path, (nav_state->waypoint_star->waypoint_points + 1) * sizeof(PathPoint));
+    nav_state->waypoint_star->waypoint_path[nav_state->waypoint_star->waypoint_points].type = PATH_POINT_TURN;
+    nav_state->waypoint_star->waypoint_path[nav_state->waypoint_star->waypoint_points].position = path[total_points - 1].position;
+    nav_state->waypoint_star->waypoint_points++;
 }
 
 /**
@@ -1567,6 +1960,39 @@ void gfx_project_ship_on_edge(int state, const InputState *input_state, const Na
 }
 
 /**
+ * Takes a point and an array of nearest stars and checks whether the point is inside any of the stars.
+ * It then moves the point just outside the star.
+ *
+ * @param nav_state A pointer to the current NavigationState object.
+ * @param position The starting point outside the star.
+ * @param stars An array of pointers to nearest stars.
+ * @param max_stars The number of stars in the stars array.
+ * @param x The x-coordinate of the new point.
+ * @param y The y-coordinate of the new point.
+ *
+ * @return void
+ */
+
+static void gfx_shift_path_segment(NavigationState *nav_state, Point position, Star *stars[], int max_stars, double *x, double *y)
+{
+    double radius_ratio = 1.01;
+
+    for (int i = 0; i < max_stars; i++)
+    {
+        if (stars[i] != NULL && strcmp(stars[i]->name, nav_state->waypoint_star->name) != 0)
+        {
+            while (maths_is_point_in_circle((Point){*x, *y}, (Point){stars[i]->position.x, stars[i]->position.y}, stars[i]->cutoff))
+            {
+                maths_closest_point_outside_circle(stars[i]->position.x, stars[i]->position.y, stars[i]->cutoff, radius_ratio,
+                                                   *x, *y,
+                                                   x, y,
+                                                   0);
+            }
+        }
+    }
+}
+
+/**
  * Checks if the mouse is over the current galaxy and toggles the variable input_state.is_hovering_galaxy.
  *
  * @param input_state A pointer to the current InputState object.
@@ -1597,6 +2023,49 @@ void gfx_toggle_galaxy_hover(InputState *input_state, const NavigationState *nav
 }
 
 /**
+ * Checks if the mouse is over the current_star and toggles the variable input_state.is_hovering_star.
+ *
+ * @param input_state A pointer to the current InputState object.
+ * @param nav_state A pointer to the current NavigationState object.
+ * @param camera A pointer to the current Camera object.
+ * @param scale The scaling factor applied to the camera view.
+ * @param state The current state.
+ *
+ * @return void
+ */
+void gfx_toggle_star_hover(InputState *input_state, const NavigationState *nav_state, const Camera *camera, long double scale, int state)
+{
+    // Get relative position of current star in game_scale
+    int current_cutoff = nav_state->current_star->cutoff * scale;
+    int current_x = 0;
+    int current_y = 0;
+
+    if (state == MAP)
+    {
+        current_x = (nav_state->current_star->position.x - camera->x) * scale;
+        current_y = (nav_state->current_star->position.y - camera->y) * scale;
+    }
+    else if (state == UNIVERSE)
+    {
+        current_x = (nav_state->current_galaxy->position.x - camera->x + nav_state->current_star->position.x / GALAXY_SCALE) * scale * GALAXY_SCALE;
+        current_y = (nav_state->current_galaxy->position.y - camera->y + nav_state->current_star->position.y / GALAXY_SCALE) * scale * GALAXY_SCALE;
+    }
+
+    // Get star distance from mouse position
+    double current_distance = maths_distance_between_points(current_x, current_y, input_state->mouse_position.x, input_state->mouse_position.y);
+
+    if (current_distance <= current_cutoff)
+    {
+        input_state->is_hovering_star = true;
+
+        if (state == UNIVERSE)
+            input_state->is_hovering_galaxy = false;
+    }
+    else
+        input_state->is_hovering_star = false;
+}
+
+/**
  * Checks if the mouse is over the current star info box.
  *
  * @param input_state A pointer to the current InputState object.
@@ -1607,7 +2076,7 @@ void gfx_toggle_galaxy_hover(InputState *input_state, const NavigationState *nav
  */
 bool gfx_toggle_star_info_hover(InputState *input_state, const NavigationState *nav_state, const Camera *camera)
 {
-    if (!nav_state->selected_star->is_selected)
+    if (!nav_state->selected_star->initialized || !nav_state->selected_star->is_selected)
         return false;
 
     int padding = INFO_BOX_PADDING;
@@ -1638,43 +2107,6 @@ bool gfx_toggle_star_info_hover(InputState *input_state, const NavigationState *
     }
     else
         return false;
-}
-
-/**
- * Checks if the mouse is over the star waypoint button in the current star info box.
- *
- * @param input_state A pointer to the current InputState object.
- * @param button_rect The waypoint button rect.
- *
- * @return void.
- */
-void gfx_toggle_star_waypoint_button_hover(InputState *input_state, SDL_Rect button_rect)
-{
-    // Get mouse position
-    Point mouse_position = {.x = input_state->mouse_position.x, .y = input_state->mouse_position.y};
-
-    // Define waypoint button rect
-    Point waypoint_button_rect[4];
-
-    waypoint_button_rect[0].x = button_rect.x;
-    waypoint_button_rect[0].y = button_rect.y;
-
-    waypoint_button_rect[1].x = button_rect.x + button_rect.w;
-    waypoint_button_rect[1].y = button_rect.y;
-
-    waypoint_button_rect[2].x = button_rect.x + button_rect.w;
-    waypoint_button_rect[2].y = button_rect.y + button_rect.h;
-
-    waypoint_button_rect[3].x = button_rect.x;
-    waypoint_button_rect[3].y = button_rect.y + button_rect.h;
-
-    if (maths_is_point_in_rectangle(mouse_position, waypoint_button_rect))
-    {
-        input_state->is_hovering_star_waypoint_button = true;
-        input_state->is_hovering_planet_waypoint_button = false;
-    }
-    else
-        input_state->is_hovering_star_waypoint_button = false;
 }
 
 /**
@@ -1744,46 +2176,40 @@ void gfx_toggle_star_info_planet_hover(InputState *input_state, const Camera *ca
 }
 
 /**
- * Checks if the mouse is over the current_star and toggles the variable input_state.is_hovering_star.
+ * Checks if the mouse is over the star waypoint button in the current star info box.
  *
  * @param input_state A pointer to the current InputState object.
- * @param nav_state A pointer to the current NavigationState object.
- * @param camera A pointer to the current Camera object.
- * @param scale The scaling factor applied to the camera view.
- * @param state The current state.
+ * @param button_rect The waypoint button rect.
  *
- * @return void
+ * @return void.
  */
-void gfx_toggle_star_hover(InputState *input_state, const NavigationState *nav_state, const Camera *camera, long double scale, int state)
+void gfx_toggle_star_waypoint_button_hover(InputState *input_state, SDL_Rect button_rect)
 {
-    // Get relative position of current star in game_scale
-    int current_cutoff = nav_state->current_star->cutoff * scale;
-    int current_x = 0;
-    int current_y = 0;
+    // Get mouse position
+    Point mouse_position = {.x = input_state->mouse_position.x, .y = input_state->mouse_position.y};
 
-    if (state == MAP)
+    // Define waypoint button rect
+    Point waypoint_button_rect[4];
+
+    waypoint_button_rect[0].x = button_rect.x;
+    waypoint_button_rect[0].y = button_rect.y;
+
+    waypoint_button_rect[1].x = button_rect.x + button_rect.w;
+    waypoint_button_rect[1].y = button_rect.y;
+
+    waypoint_button_rect[2].x = button_rect.x + button_rect.w;
+    waypoint_button_rect[2].y = button_rect.y + button_rect.h;
+
+    waypoint_button_rect[3].x = button_rect.x;
+    waypoint_button_rect[3].y = button_rect.y + button_rect.h;
+
+    if (maths_is_point_in_rectangle(mouse_position, waypoint_button_rect))
     {
-        current_x = (nav_state->current_star->position.x - camera->x) * scale;
-        current_y = (nav_state->current_star->position.y - camera->y) * scale;
-    }
-    else if (state == UNIVERSE)
-    {
-        current_x = (nav_state->current_galaxy->position.x - camera->x + nav_state->current_star->position.x / GALAXY_SCALE) * scale * GALAXY_SCALE;
-        current_y = (nav_state->current_galaxy->position.y - camera->y + nav_state->current_star->position.y / GALAXY_SCALE) * scale * GALAXY_SCALE;
-    }
-
-    // Get star distance from mouse position
-    double current_distance = maths_distance_between_points(current_x, current_y, input_state->mouse_position.x, input_state->mouse_position.y);
-
-    if (current_distance <= current_cutoff)
-    {
-        input_state->is_hovering_star = true;
-
-        if (state == UNIVERSE)
-            input_state->is_hovering_galaxy = false;
+        input_state->is_hovering_star_waypoint_button = true;
+        input_state->is_hovering_planet_waypoint_button = false;
     }
     else
-        input_state->is_hovering_star = false;
+        input_state->is_hovering_star_waypoint_button = false;
 }
 
 /**

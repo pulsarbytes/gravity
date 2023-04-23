@@ -15,6 +15,7 @@
         "stars.h": "c",
         "math.h": "c",
         "sdl.h": "c",
-        "typeinfo": "c"
+        "typeinfo": "c",
+        "graphics.h": "c"
     }
 }

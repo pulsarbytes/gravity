@@ -2,11 +2,12 @@
 #define GRAPHICS_H
 
 // Function prototypes
+void gfx_calculate_waypoint_path(NavigationState *);
 void gfx_create_default_colors(void);
 void gfx_draw_button(char *text, unsigned short font_size, SDL_Rect, SDL_Color, SDL_Color);
 void gfx_draw_circle(SDL_Renderer *, const Camera *, int xc, int yc, int radius, SDL_Color);
 void gfx_draw_circle_approximation(SDL_Renderer *, const Camera *, int x, int y, int r, SDL_Color);
-void gfx_draw_diamond(SDL_Renderer *renderer, int x, int y, int size, SDL_Color);
+void gfx_draw_diamond(SDL_Renderer *, int x, int y, int size, SDL_Color);
 void gfx_draw_galaxy_cloud(Galaxy *, const Camera *, int gstars_count, bool high_definition, long double scale);
 void gfx_draw_fill_circle(SDL_Renderer *, int xc, int yc, int radius, SDL_Color);
 void gfx_draw_fill_diamond(SDL_Renderer *, int x, int y, int size, SDL_Color);
@@ -34,14 +35,22 @@ void gfx_update_camera(Camera *, Point, long double scale);
 void gfx_update_gstars_position(Galaxy *, Point, const Camera *, double distance, double limit);
 
 // External function prototypes
+void maths_closest_point_outside_circle(double cx, double cy, double radius, double radius_ratio, double px, double py, double *x, double *y, double degrees);
 double maths_distance_between_points(double x1, double y1, double x2, double y2);
 double maths_get_nearest_section_line(double offset, int size);
+int maths_get_rotation_direction(double cx, double cy, double px, double py, double dest_x, double dest_y);
 uint64_t maths_hash_position_to_uint64(Point);
 uint64_t maths_hash_position_to_uint64_2(Point);
+bool maths_is_point_in_circle(Point, Point, double radius);
 bool maths_is_point_in_rectangle(Point, Point rect[]);
+void maths_move_point_along_line(double x1, double y1, double x2, double y2, double step, double *x, double *y);
 bool maths_line_intersects_camera(const Camera *, double x1, double y1, double x2, double y2);
+bool maths_line_intersects_circle(double x1, double y1, double x2, double y2, double cx, double cy, double radius);
 bool maths_points_equal(Point, Point);
-double stars_nearest_center_distance(Point, Galaxy *, uint64_t initseq, int galaxy_density);
+void stars_initialize_star(Star *);
+double stars_nearest_star_distance(Point, Galaxy *, uint64_t initseq, int galaxy_density);
+Star *stars_nearest_star_in_nav_state(const NavigationState *, Point, bool exclude);
+int stars_nearest_stars_to_point(const NavigationState *, Point, Star *stars[]);
 unsigned short stars_size_class(float distance);
 
 #endif

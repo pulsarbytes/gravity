@@ -16,7 +16,7 @@
  * Apply gravity and handle collision with a celestial body to update the state of the ship.
  *
  * @param game_state A pointer to the current GameState object.
- * @param thrust_on boolean indicating whether the ship is currently being thrust forward.
+ * @param input_state A pointer to the current InputState object.
  * @param nav_state A pointer to the current NavigationState object.
  * @param body A pointer to the CelestialBody struct representing the celestial body that the ship is interacting with.
  * @param ship A pointer to the Ship struct representing the ship whose state is being updated.
@@ -24,7 +24,7 @@
  *
  * @return void
  */
-void phys_apply_gravity_to_ship(GameState *game_state, bool thrust_on, NavigationState *nav_state, CelestialBody *body, Ship *ship, unsigned short star_class)
+void phys_apply_gravity_to_ship(GameState *game_state, const InputState *input_state, NavigationState *nav_state, CelestialBody *body, Ship *ship, unsigned short star_class)
 {
     double delta_x = body->position.x - ship->position.x;
     double delta_y = body->position.y - ship->position.y;
@@ -110,7 +110,7 @@ void phys_apply_gravity_to_ship(GameState *game_state, bool thrust_on, Navigatio
         }
 
         // Apply thrust
-        if (thrust_on)
+        if (input_state->thrust_on)
         {
             ship->vx -= G_LAUNCH * delta_x / distance;
             ship->vy -= G_LAUNCH * delta_y / distance;
@@ -126,15 +126,18 @@ void phys_apply_gravity_to_ship(GameState *game_state, bool thrust_on, Navigatio
         ship->vy += g_body * delta_y / distance;
 
         // Enforce star speed limit
-        game_state->speed_limit = BASE_SPEED_LIMIT + (star_class - 1) * (GALAXY_SPEED_LIMIT - BASE_SPEED_LIMIT) / 6;
-
-        if (nav_state->velocity.magnitude >= game_state->speed_limit)
+        if (!input_state->autopilot_on)
         {
-            ship->vx = game_state->speed_limit * ship->vx / nav_state->velocity.magnitude;
-            ship->vy = game_state->speed_limit * ship->vy / nav_state->velocity.magnitude;
+            game_state->speed_limit = BASE_SPEED_LIMIT + (star_class - 1) * (GALAXY_SPEED_LIMIT - BASE_SPEED_LIMIT) / 6;
 
-            // Update velocity
-            phys_update_velocity(&nav_state->velocity, ship);
+            if (nav_state->velocity.magnitude >= game_state->speed_limit)
+            {
+                ship->vx = game_state->speed_limit * ship->vx / nav_state->velocity.magnitude;
+                ship->vy = game_state->speed_limit * ship->vy / nav_state->velocity.magnitude;
+
+                // Update velocity
+                phys_update_velocity(&nav_state->velocity, ship);
+            }
         }
     }
 }
@@ -155,7 +158,7 @@ void phys_apply_gravity_to_ship(GameState *game_state, bool thrust_on, Navigatio
  * v = sqrt(G_CONSTANT * R^2 / distance);
  *
  * @param distance The distance between the orbiting object and the object being orbited (in meters).
- * @param angle The angle (in degrees) at which the orbiting object is orbiting around the object being orbited.
+ * @param angle The angle (in degrees) at which the orbiting object is orbiting around the object.
  * @param radius The radius of the object being orbited (in meters).
  * @param vx A pointer to the horizontal component of the orbital velocity (in meters per second).
  * @param vy A pointer to the vertical component of the orbital velocity (in meters per second).

@@ -12,17 +12,18 @@ long double game_zoom_generate_preview_stars(unsigned short galaxy_class);
 
 // External function prototypes
 void console_draw_position_console(const GameState *, const NavigationState *, const Camera *);
-void console_draw_ship_console(const GameState *, const NavigationState *, const Ship *, const Camera *);
+void console_draw_ship_console(const GameState *, const InputState *, const NavigationState *, const Ship *, const Camera *);
 void console_draw_star_console(const Star *, const Camera *);
-void console_draw_waypoint_console(const NavigationState *, const Camera *);
+void console_draw_waypoint_console(const NavigationState *, const Ship *, const Camera *);
 void galaxies_clear_table(GalaxyEntry *galaxies[]);
 void galaxies_draw_galaxy(const InputState *, NavigationState *, Galaxy *, const Camera *, int state, long double scale);
+void galaxies_draw_info_box(const Galaxy *, const Camera *);
 void galaxies_generate(GameEvents *, NavigationState *, Point);
 Galaxy *galaxies_get_entry(GalaxyEntry *galaxies[], Point);
 Galaxy *galaxies_nearest_circumference(const NavigationState *, Point, int exclude);
+void gfx_calculate_waypoint_path(NavigationState *);
 void gfx_draw_circle(SDL_Renderer *, const Camera *, int xc, int yc, int radius, SDL_Color);
 void gfx_draw_circle_approximation(SDL_Renderer *, const Camera *, int x, int y, int r, SDL_Color color);
-void galaxies_draw_info_box(const Galaxy *, const Camera *);
 void gfx_draw_screen_frame(Camera *);
 void gfx_draw_section_lines(Camera *, int state, SDL_Color color, long double scale);
 void gfx_draw_speed_arc(const Ship *, const Camera *, long double scale);
@@ -42,8 +43,11 @@ void gfx_update_gstars_position(Galaxy *, Point, const Camera *, double distance
 double maths_distance_between_points(double x1, double y1, double x2, double y2);
 double maths_get_nearest_section_line(double offset, int size);
 uint64_t maths_hash_position_to_uint64(Point);
+bool maths_is_point_in_circle(Point, Point, double radius);
+bool maths_is_point_on_line(Point, Point, Point);
 bool maths_points_equal(Point, Point);
 void menu_update_menu_entries(GameState *, GameEvents *);
+void phys_calculate_orbital_velocity(float distance, float angle, float radius, float *vx, float *vy);
 void phys_update_velocity(Vector *velocity, const Ship *);
 void stars_clear_table(StarEntry *stars[], const NavigationState *, bool delete_all);
 void stars_delete_outside_region(StarEntry *stars[], const NavigationState *, double bx, double by, int region_size);

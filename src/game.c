@@ -21,6 +21,8 @@ extern SDL_Color colors[];
 
 // Static function prototypes
 static void game_draw_ship(GameState *, const InputState *, const NavigationState *, Ship *, const Camera *);
+static void game_engage_autopilot(InputState *, GameEvents *, NavigationState *, Ship *, double distance);
+static void game_put_ship_in_orbit(CelestialBody *, Ship *, int radii);
 static void game_scroll_map(const GameState *, const InputState *, NavigationState *, const Camera *);
 static void game_scroll_universe(const GameState *, const InputState *, GameEvents *, NavigationState *, const Camera *);
 static void game_update_ship_position(GameState *, const InputState *, Ship *, const Camera *);
@@ -128,6 +130,264 @@ static void game_draw_ship(GameState *game_state, const InputState *input_state,
 }
 
 /**
+ * Engages the autopilot and navigates the ship to the waypoint.
+ *
+ * @param input_state A pointer to the current InputState object.
+ * @param game_events A pointer to the current GameEvents object.
+ * @param nav_state A pointer to the current NavigationState object.
+ * @param ship A pointer to the current ship.
+ * @param distance The distance between ship and waypoint.
+ *
+ * @return void
+ */
+static void game_engage_autopilot(InputState *input_state, GameEvents *game_events, NavigationState *nav_state, Ship *ship, double distance)
+{
+    game_events->deccelerate_to_waypoint = false;
+
+    // Ship must point to next path point
+    double segment_dx = nav_state->waypoint_star->waypoint_path[nav_state->next_path_point - 1].position.x - nav_state->waypoint_star->waypoint_path[nav_state->next_path_point].position.x;
+    double segment_dy = nav_state->waypoint_star->waypoint_path[nav_state->next_path_point - 1].position.y - nav_state->waypoint_star->waypoint_path[nav_state->next_path_point].position.y;
+    double segment_angle = atan2(-segment_dx, segment_dy) * 180.0 / M_PI;
+
+    double ship_to_point_dx = ship->position.x - nav_state->waypoint_star->waypoint_path[nav_state->next_path_point].position.x;
+    double ship_to_point_dy = ship->position.y - nav_state->waypoint_star->waypoint_path[nav_state->next_path_point].position.y;
+    double ship_to_point_angle = atan2(-ship_to_point_dx, ship_to_point_dy) * 180.0 / M_PI;
+
+    // Check whether ship is on the segment line
+    bool ship_on_segment = maths_is_point_on_line(nav_state->waypoint_star->waypoint_path[nav_state->next_path_point - 1].position,
+                                                  nav_state->waypoint_star->waypoint_path[nav_state->next_path_point].position,
+                                                  ship->position);
+
+    if (ship_on_segment && nav_state->velocity.magnitude > GALAXY_SPEED_LIMIT - 1)
+        ship->angle = segment_angle;
+    else
+    {
+        float delta_01 = 0.1;
+        float delta_1 = 1.0;
+        float delta_2 = 2.0;
+        float delta_3 = 3.0;
+        float delta_4 = 4.0;
+        float delta_5 = 5.0;
+
+        if (ship_to_point_angle < 0)
+            ship_to_point_angle += 360.0;
+
+        double angle_diff = fmod(ship_to_point_angle - ship->angle + 360.0, 360.0);
+
+        if (angle_diff > 180.0)
+            angle_diff -= 360.0;
+        else if (angle_diff < -180.0)
+            angle_diff += 360.0;
+
+        if (!game_events->autopilot_rotated_ship)
+        {
+            if (angle_diff > 3)
+                ship->angle += delta_3;
+            else if (angle_diff < -3)
+                ship->angle -= delta_3;
+        }
+        else
+        {
+            if (angle_diff > 135.0)
+                ship->angle += delta_5;
+            else if (angle_diff < -135.0)
+                ship->angle -= delta_5;
+            else if (angle_diff > 90.0)
+                ship->angle += delta_4;
+            else if (angle_diff < -90.0)
+                ship->angle -= delta_4;
+            else if (angle_diff > 45.0)
+                ship->angle += delta_3;
+            else if (angle_diff < -45.0)
+                ship->angle -= delta_3;
+            else if (angle_diff > 22.5)
+                ship->angle += delta_2;
+            else if (angle_diff < -22.5)
+                ship->angle -= delta_2;
+            else if (angle_diff > 1)
+                ship->angle += delta_1;
+            else if (angle_diff < -1)
+                ship->angle -= delta_1;
+            else if (angle_diff > 0.1)
+                ship->angle += delta_01;
+            else if (angle_diff < -0.1)
+                ship->angle -= delta_01;
+        }
+    }
+
+    // Keep ship on path
+    double diff;
+
+    if (segment_angle < 0)
+        segment_angle += 360.0;
+
+    if (segment_angle > ship->angle)
+    {
+        diff = ceil(segment_angle - ship->angle);
+
+        if (segment_angle - ship->angle < 1)
+            diff = 1;
+    }
+    else
+    {
+        diff = ceil(ship->angle - segment_angle);
+
+        if (ship->angle - segment_angle < 1)
+            diff = 1;
+    }
+
+    if (diff >= 360)
+        diff -= 360;
+
+    int speed_limit = GALAXY_SPEED_LIMIT;
+    double ship_velocity = sqrt((ship->vx * ship->vx) + (ship->vy * ship->vy));
+
+    if (game_events->autopilot_rotated_ship)
+    {
+        double radians = ship->angle * M_PI / 180;
+
+        bool ship_in_start_cutoff = maths_is_point_in_circle(ship->position,
+                                                             nav_state->buffer_star->position,
+                                                             nav_state->buffer_star->cutoff);
+
+        if ((ship_in_start_cutoff && distance < nav_state->buffer_star->cutoff) || speed_limit - ship_velocity > 1)
+        {
+            ship->vx += diff * G_THRUST * sin(radians);
+            ship->vy -= diff * G_THRUST * cos(radians);
+        }
+        else
+        {
+            ship->vx += 10 * diff * G_THRUST * sin(radians);
+            ship->vy -= 10 * diff * G_THRUST * cos(radians);
+        }
+
+        ship_velocity = sqrt((ship->vx * ship->vx) + (ship->vy * ship->vy));
+    }
+
+    if (!game_events->autopilot_rotated_ship && fabs(ship_to_point_angle - ship->angle) < 3)
+        game_events->autopilot_rotated_ship = true;
+
+    // Deccelerate when approaching last point in path
+    bool ship_in_waypoint_cutoff = false;
+    bool ship_in_planet_cutoff = false;
+
+    if (nav_state->waypoint_star->initialized)
+        ship_in_waypoint_cutoff = maths_is_point_in_circle(ship->position,
+                                                           nav_state->waypoint_star->position,
+                                                           nav_state->waypoint_star->cutoff);
+
+    if (nav_state->waypoint_planet_index >= 0)
+        ship_in_planet_cutoff = maths_is_point_in_circle(ship->position,
+                                                         nav_state->waypoint_star->planets[nav_state->waypoint_planet_index]->position,
+                                                         nav_state->waypoint_star->planets[nav_state->waypoint_planet_index]->cutoff);
+
+    if (nav_state->waypoint_star->initialized &&
+        ((nav_state->waypoint_planet_index < 0 && ship_in_waypoint_cutoff && distance < 10 * nav_state->waypoint_star->radius) ||
+         (nav_state->waypoint_planet_index >= 0 && ship_in_planet_cutoff && distance < 10 * nav_state->waypoint_star->planets[nav_state->waypoint_planet_index]->radius)))
+    {
+        // Star
+        if (nav_state->waypoint_planet_index < 0)
+        {
+            speed_limit = 20 + GALAXY_SPEED_LIMIT * (distance - 3 * nav_state->waypoint_star->radius) / (7 * nav_state->waypoint_star->radius);
+        }
+        // Planet
+        else
+        {
+            speed_limit = 20 + GALAXY_SPEED_LIMIT * (distance - 3 * nav_state->waypoint_star->planets[nav_state->waypoint_planet_index]->radius) / (7 * nav_state->waypoint_star->planets[nav_state->waypoint_planet_index]->radius);
+        }
+
+        if (ship_velocity >= speed_limit)
+        {
+            game_events->deccelerate_to_waypoint = true;
+
+            // Draw reverse thrust
+            SDL_RenderCopyEx(renderer, ship->texture, &ship->reverse_img_rect, &ship->rect, ship->angle, &ship->rotation_pt, SDL_FLIP_NONE);
+        }
+    }
+
+    // Limit speed to speed_limit
+    if (ship_velocity >= speed_limit)
+    {
+        ship->vx = speed_limit * ship->vx / ship_velocity;
+        ship->vy = speed_limit * ship->vy / ship_velocity;
+    }
+
+    // Draw ship thrust
+    if (game_events->autopilot_rotated_ship && !game_events->deccelerate_to_waypoint)
+    {
+        double velocity_angle = 90 + atan2(ship->vy, ship->vx) * 180 / M_PI;
+
+        if (velocity_angle < 0)
+            velocity_angle += 360.0;
+
+        if (fabs(ship_to_point_angle - velocity_angle) > 1 || speed_limit - ship_velocity > 1)
+            SDL_RenderCopyEx(renderer, ship->texture, &ship->thrust_img_rect, &ship->rect, ship->angle, &ship->rotation_pt, SDL_FLIP_NONE);
+    }
+
+    // Disengage autopilot
+    if (nav_state->next_path_point > nav_state->waypoint_star->waypoint_points)
+        input_state->autopilot_on = false;
+
+    double arrived_at_waypoint = false;
+
+    // Star
+    if (nav_state->waypoint_planet_index < 0)
+    {
+        arrived_at_waypoint = maths_distance_between_points(ship->position.x, ship->position.y,
+                                                            nav_state->waypoint_star->position.x,
+                                                            nav_state->waypoint_star->position.y) <= WAYPOINT_ORBIT_RADII * nav_state->waypoint_star->radius;
+    }
+    // Planet
+    else
+    {
+        arrived_at_waypoint = maths_distance_between_points(ship->position.x, ship->position.y,
+                                                            nav_state->waypoint_star->planets[nav_state->waypoint_planet_index]->position.x,
+                                                            nav_state->waypoint_star->planets[nav_state->waypoint_planet_index]->position.y) <= WAYPOINT_ORBIT_RADII * nav_state->waypoint_star->planets[nav_state->waypoint_planet_index]->radius;
+    }
+
+    if (arrived_at_waypoint)
+    {
+        input_state->autopilot_on = false;
+        ship->vx = 0;
+        ship->vy = 0;
+
+        game_events->arrived_at_waypoint = true;
+    }
+}
+
+/**
+ * Puts ship in orbit around a celestial body.
+ *
+ * @param body The celestial body to be orbited.
+ * @param ship A pointer to the current Ship object.
+ * @param radii Distance of ship from body in radii.
+ *
+ * @return void
+ */
+static void game_put_ship_in_orbit(CelestialBody *body, Ship *ship, int radii)
+{
+    float vx, vy;
+    double radius = body->radius;
+    double dx = ship->position.x - body->position.x;
+    double dy = ship->position.y - body->position.y;
+    double angle = atan2(dy, dx);
+    double angle_degrees = angle * 180 / M_PI;
+
+    phys_calculate_orbital_velocity(radii * radius, angle_degrees, radius, &vx, &vy);
+
+    if (body->level == LEVEL_STAR)
+    {
+        ship->vx = vx;
+        ship->vy = vy;
+    }
+    else if (body->level == LEVEL_PLANET)
+    {
+        ship->vx = vx + body->vx;
+        ship->vy = vy + body->vy;
+    }
+}
+
+/**
  * Resets the game state to the initial state.
  *
  * @param game_state A pointer to the current GameState object.
@@ -183,6 +443,7 @@ void game_reset(GameState *game_state, InputState *input_state, GameEvents *game
     input_state->zoom_out = false;
     input_state->fps_on = true;
     input_state->orbits_on = SHOW_ORBITS;
+    input_state->autopilot_on = false;
     input_state->selected_menu_button_index = 0;
     input_state->is_hovering_galaxy = false;
     input_state->is_hovering_star = false;
@@ -215,6 +476,10 @@ void game_reset(GameState *game_state, InputState *input_state, GameEvents *game
     game_events->is_centering_universe = false;
     game_events->zoom_preview = false;
     game_events->lazy_load_started = false;
+    game_events->arrived_at_waypoint = false;
+    game_events->autopilot_rotated_ship = false;
+    game_events->deccelerate_to_waypoint = false;
+    game_events->is_centering_waypoint = false;
 
     // Galaxy position
     // Retrieved from saved game or use default values if this is a new game
@@ -366,8 +631,19 @@ void game_reset(GameState *game_state, InputState *input_state, GameEvents *game
 
         stars_initialize_star(nav_state->buffer_star);
     }
+    else
+    {
+        if (nav_state->waypoint_star->waypoint_path != NULL)
+        {
+            free(nav_state->waypoint_star->waypoint_path);
+            nav_state->waypoint_star->waypoint_path = NULL;
+            nav_state->waypoint_star->waypoint_points = 0;
+            stars_initialize_star(nav_state->waypoint_star);
+        }
+    }
 
     nav_state->waypoint_planet_index = -1;
+    nav_state->next_path_point = 1;
 
     // Copy current_galaxy_copy to current_galaxy
     memcpy(nav_state->current_galaxy, current_galaxy_copy, sizeof(Galaxy));
@@ -449,6 +725,29 @@ void game_run_map_state(GameState *game_state, InputState *input_state, GameEven
                     }
                 }
             }
+        }
+
+        if (game_events->is_centering_waypoint)
+        {
+            // Reset current_star, selected_star
+            if (maths_points_equal(nav_state->current_galaxy->position, nav_state->buffer_galaxy->position))
+            {
+                if (nav_state->current_star != NULL && nav_state->waypoint_star != NULL)
+                {
+                    if (strcmp(nav_state->current_star->name, nav_state->waypoint_star->name) != 0)
+                        memcpy(nav_state->current_star, nav_state->waypoint_star, sizeof(Star));
+                }
+
+                if (nav_state->waypoint_star != NULL)
+                {
+                    if (strcmp(nav_state->selected_star->name, nav_state->waypoint_star->name) != 0)
+                        memcpy(nav_state->selected_star, nav_state->waypoint_star, sizeof(Star));
+                }
+
+                nav_state->selected_star->is_selected = true;
+            }
+
+            game_events->is_centering_waypoint = false;
         }
 
         gfx_update_camera(camera, nav_state->map_offset, game_state->game_scale);
@@ -557,12 +856,15 @@ void game_run_map_state(GameState *game_state, InputState *input_state, GameEven
     if (!input_state->is_hovering_star_info)
         gfx_toggle_star_hover(input_state, nav_state, camera, game_state->game_scale, MAP);
 
-    // Draw waypoint path
+    // Calculate and draw waypoint path
     if (nav_state->waypoint_star->initialized &&
         !input_state->zoom_in && !input_state->zoom_out &&
         strcmp(nav_state->current_galaxy->name, nav_state->waypoint_star->galaxy_name) == 0)
     {
-        gfx_draw_waypoint_path(game_state, nav_state, camera);
+        gfx_calculate_waypoint_path(nav_state);
+
+        if (nav_state->waypoint_star->waypoint_path != NULL && nav_state->waypoint_star->waypoint_points > 0)
+            gfx_draw_waypoint_path(game_state, nav_state, camera);
     }
 
     // Draw ship projection
@@ -593,7 +895,7 @@ void game_run_map_state(GameState *game_state, InputState *input_state, GameEven
     SDL_RenderDrawLine(renderer, (camera->w / 2) - 7, camera->h / 2, (camera->w / 2) + 7, camera->h / 2);
     SDL_RenderDrawLine(renderer, camera->w / 2, (camera->h / 2) - 7, camera->w / 2, (camera->h / 2) + 7);
 
-    if (nav_state->selected_star->is_selected)
+    if (nav_state->selected_star->initialized && nav_state->selected_star->is_selected)
     {
         // Draw star info box
         stars_draw_info_box(nav_state, nav_state->selected_star, camera);
@@ -601,7 +903,7 @@ void game_run_map_state(GameState *game_state, InputState *input_state, GameEven
         // Draw planets info box
         stars_draw_planets_info_box(input_state, nav_state, nav_state->selected_star, camera);
     }
-    else if (input_state->is_hovering_star &&
+    else if (nav_state->current_star->initialized && input_state->is_hovering_star &&
              gfx_is_object_in_camera(camera, nav_state->current_star->position.x, nav_state->current_star->position.y, nav_state->current_star->cutoff, game_state->game_scale))
     {
         // Draw star info box
@@ -619,7 +921,7 @@ void game_run_map_state(GameState *game_state, InputState *input_state, GameEven
 }
 
 /**
- * This function handles the navigation state of the game, including resetting game elements when exiting the
+ * Handles the navigation state of the game, including resetting game elements when exiting the
  * navigation state, zooming in and out, updating the camera position, generating stars, and drawing the galaxy cloud.
  *
  * @param game_state A pointer to the current GameState object.
@@ -795,6 +1097,97 @@ void game_run_navigate_state(GameState *game_state, InputState *input_state, Gam
         }
     }
 
+    if (game_events->arrived_at_waypoint)
+    {
+        CelestialBody *body = NULL;
+
+        // Star
+        if (nav_state->waypoint_planet_index < 0)
+        {
+            body = nav_state->waypoint_star;
+        }
+        // Planet
+        else if (nav_state->waypoint_planet_index >= 0)
+        {
+            body = nav_state->waypoint_star->planets[nav_state->waypoint_planet_index];
+        }
+
+        game_put_ship_in_orbit(body, ship, WAYPOINT_ORBIT_RADII);
+
+        // Clean up waypoint
+        free(nav_state->waypoint_star->waypoint_path);
+        nav_state->waypoint_star->waypoint_path = NULL;
+        nav_state->waypoint_star->waypoint_points = 0;
+        nav_state->waypoint_planet_index = -1;
+        stars_initialize_star(nav_state->waypoint_star);
+
+        game_events->arrived_at_waypoint = false;
+    }
+
+    bool waypoint_path_exists = nav_state->waypoint_star->initialized &&
+                                nav_state->waypoint_star->waypoint_points > 0 &&
+                                !input_state->zoom_in && !input_state->zoom_out &&
+                                strcmp(nav_state->current_galaxy->name, nav_state->waypoint_star->galaxy_name) == 0;
+
+    if (waypoint_path_exists)
+    {
+        bool ship_in_waypoint_cutoff = maths_is_point_in_circle(ship->position,
+                                                                nav_state->waypoint_star->position,
+                                                                nav_state->waypoint_star->cutoff);
+
+        if (ship_in_waypoint_cutoff)
+            gfx_calculate_waypoint_path(nav_state);
+
+        // Draw waypoint path
+        gfx_draw_waypoint_path(game_state, nav_state, camera);
+
+        double distance_ship_to_waypoint = maths_distance_between_points(ship->position.x, ship->position.y,
+                                                                         nav_state->waypoint_star->waypoint_path[nav_state->waypoint_star->waypoint_points - 1].position.x,
+                                                                         nav_state->waypoint_star->waypoint_path[nav_state->waypoint_star->waypoint_points - 1].position.y);
+
+        // Autopilot
+        if (input_state->autopilot_on)
+            game_engage_autopilot(input_state, game_events, nav_state, ship, distance_ship_to_waypoint);
+        else
+            game_events->autopilot_rotated_ship = false;
+
+        // Increment next point in path
+        double distance_ship_to_next_point = maths_distance_between_points(nav_state->waypoint_star->waypoint_path[nav_state->next_path_point].position.x,
+                                                                           nav_state->waypoint_star->waypoint_path[nav_state->next_path_point].position.y,
+                                                                           ship->position.x,
+                                                                           ship->position.y);
+
+        if (distance_ship_to_next_point < WAYPOINT_CIRCLE_RADIUS)
+            nav_state->next_path_point++;
+
+        // Make sure that the closest point to ship is set as next_path_point
+        if (distance_ship_to_waypoint > nav_state->buffer_star->cutoff)
+        {
+            double min_dist = INFINITY;
+            int closest_point_index = -1;
+
+            for (int i = nav_state->next_path_point; i < nav_state->waypoint_star->waypoint_points; i++)
+            {
+                double distance = sqrt(pow(nav_state->waypoint_star->waypoint_path[i].position.x - ship->position.x, 2) +
+                                       pow(nav_state->waypoint_star->waypoint_path[i].position.y - ship->position.y, 2));
+
+                if (distance < min_dist)
+                {
+                    min_dist = distance;
+                    closest_point_index = i;
+                }
+            }
+
+            if (closest_point_index > nav_state->next_path_point)
+                nav_state->next_path_point = closest_point_index;
+        }
+    }
+    else
+    {
+        if (input_state->autopilot_on)
+            input_state->autopilot_on = false;
+    }
+
     // Enforce speed limits
     if (distance_galaxy_center < nav_state->current_galaxy->radius * GALAXY_SCALE)
     {
@@ -859,13 +1252,13 @@ void game_run_navigate_state(GameState *game_state, InputState *input_state, Gam
         // Get distance from current_star
         double distance_star = maths_distance_between_points(nav_state->current_star->position.x, nav_state->current_star->position.y, nav_state->navigate_offset.x, nav_state->navigate_offset.y);
 
-        if (nav_state->waypoint_star->initialized)
-            console_draw_waypoint_console(nav_state, camera);
+        if (nav_state->waypoint_star->initialized && nav_state->waypoint_star->waypoint_points > 0)
+            console_draw_waypoint_console(nav_state, ship, camera);
         else if (distance_star < nav_state->current_star->cutoff)
             console_draw_star_console(nav_state->current_star, camera);
     }
 
-    console_draw_ship_console(game_state, nav_state, ship, camera);
+    console_draw_ship_console(game_state, input_state, nav_state, ship, camera);
     gfx_draw_screen_frame(camera);
 
     if (game_events->is_exiting_map)
@@ -1149,14 +1542,17 @@ void game_run_universe_state(GameState *game_state, InputState *input_state, Gam
         }
     }
 
-    // Draw waypoint path
+    // Calculate waypoint path
     if (nav_state->waypoint_star->initialized &&
         game_state->game_scale >= zoom_generate_preview_stars - epsilon &&
+        !game_events->start_stars_preview && !game_events->lazy_load_started &&
         !input_state->zoom_in && !input_state->zoom_out &&
-        strcmp(nav_state->current_galaxy->name, nav_state->waypoint_star->galaxy_name) == 0 &&
-        !game_events->start_stars_preview && !game_events->lazy_load_started)
+        strcmp(nav_state->current_galaxy->name, nav_state->waypoint_star->galaxy_name) == 0)
     {
-        gfx_draw_waypoint_path(game_state, nav_state, camera);
+        gfx_calculate_waypoint_path(nav_state);
+
+        if (nav_state->waypoint_star->waypoint_points > 0)
+            gfx_draw_waypoint_path(game_state, nav_state, camera);
     }
 
     // Draw ship projection
@@ -1423,6 +1819,8 @@ static void game_update_ship_position(GameState *game_state, const InputState *i
 
     if (ship->angle > 360)
         ship->angle -= 360;
+    else if (ship->angle < 0)
+        ship->angle += 360;
 
     // Apply thrust
     if (input_state->thrust_on)

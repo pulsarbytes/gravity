@@ -262,13 +262,58 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
                                 if (strcmp(nav_state->waypoint_star->name, nav_state->selected_star->name) != 0)
                                     memcpy(nav_state->waypoint_star, nav_state->selected_star, sizeof(Star));
                                 else
-                                    stars_initialize_star(nav_state->waypoint_star);
+                                {
+                                    if (nav_state->waypoint_star->waypoint_points > 0)
+                                    {
+                                        if (nav_state->waypoint_star->waypoint_path != NULL)
+                                            free(nav_state->waypoint_star->waypoint_path);
+
+                                        if (nav_state->waypoint_star->planets[0] != NULL)
+                                            stars_cleanup_planets(nav_state->waypoint_star);
+
+                                        if (nav_state->waypoint_star != NULL)
+                                            free(nav_state->waypoint_star);
+
+                                        nav_state->waypoint_star = (Star *)malloc(sizeof(Star));
+
+                                        if (nav_state->waypoint_star == NULL)
+                                        {
+                                            fprintf(stderr, "Error: Could not allocate memory for waypoint_star.\n");
+                                            return;
+                                        }
+
+                                        stars_initialize_star(nav_state->waypoint_star);
+                                    }
+                                }
 
                                 nav_state->waypoint_planet_index = -1;
+                                nav_state->next_path_point = 1;
                             }
 
                             if (input_state->is_hovering_planet_waypoint_button)
                             {
+                                if (nav_state->waypoint_star->waypoint_points > 0)
+                                {
+                                    if (nav_state->waypoint_star->waypoint_path != NULL)
+                                        free(nav_state->waypoint_star->waypoint_path);
+
+                                    if (nav_state->waypoint_star->planets[0] != NULL)
+                                        stars_cleanup_planets(nav_state->waypoint_star);
+
+                                    if (nav_state->waypoint_star != NULL)
+                                        free(nav_state->waypoint_star);
+
+                                    nav_state->waypoint_star = (Star *)malloc(sizeof(Star));
+
+                                    if (nav_state->waypoint_star == NULL)
+                                    {
+                                        fprintf(stderr, "Error: Could not allocate memory for waypoint_star.\n");
+                                        return;
+                                    }
+
+                                    stars_initialize_star(nav_state->waypoint_star);
+                                }
+
                                 if (strcmp(nav_state->waypoint_star->name, nav_state->selected_star->name) != 0)
                                     memcpy(nav_state->waypoint_star, nav_state->selected_star, sizeof(Star));
 
@@ -276,10 +321,12 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
                                     nav_state->waypoint_planet_index = input_state->selected_star_info_planet_index;
                                 else
                                     nav_state->waypoint_planet_index = -1;
-                            }
-                        }
 
-                        input_state->click_count = 0;
+                                nav_state->next_path_point = 1;
+                            }
+
+                            input_state->click_count = 0;
+                        }
                     }
                 }
 
@@ -566,6 +613,19 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
         case SDL_KEYDOWN:
             switch (event.key.keysym.scancode)
             {
+            case SDL_SCANCODE_A:
+                // Toggle autopilot
+                if (game_state->state == NAVIGATE)
+                {
+                    bool waypoint_path_exists = nav_state->waypoint_star->initialized &&
+                                                nav_state->waypoint_star->waypoint_points > 0 &&
+                                                !input_state->zoom_in && !input_state->zoom_out &&
+                                                strcmp(nav_state->current_galaxy->name, nav_state->waypoint_star->galaxy_name) == 0;
+
+                    if (waypoint_path_exists)
+                        input_state->autopilot_on = !input_state->autopilot_on;
+                }
+                break;
             case SDL_SCANCODE_C:
                 // Toggle camera
                 if (game_state->state == NAVIGATE)
@@ -608,7 +668,10 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
             case SDL_SCANCODE_S:
                 // Stop ship
                 if (game_state->state == NAVIGATE)
+                {
                     input_state->stop_on = true;
+                    input_state->autopilot_on = false;
+                }
                 break;
             case SDL_SCANCODE_U:
                 // Enter Universe
@@ -665,10 +728,10 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
 
                         game_events->switch_to_map = true;
                         game_events->is_entering_map = true;
+                        game_events->is_centering_waypoint = true;
                         game_change_state(game_state, game_events, MAP);
                     }
 
-                    memcpy(nav_state->selected_star, nav_state->waypoint_star, sizeof(Star));
                     input_state->camera_on = true;
                 }
                 break;
@@ -676,11 +739,13 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
                 // Scroll left / Rotate left
                 input_state->right_on = false;
                 input_state->left_on = true;
+                input_state->autopilot_on = false;
                 break;
             case SDL_SCANCODE_RIGHT:
                 // Scroll right / Rotate right
                 input_state->left_on = false;
                 input_state->right_on = true;
+                input_state->autopilot_on = false;
                 break;
             case SDL_SCANCODE_UP:
                 // Menu up
@@ -708,6 +773,7 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
                     input_state->down_on = false;
                     input_state->thrust_on = true;
                     input_state->up_on = true;
+                    input_state->autopilot_on = false;
                 }
                 break;
             case SDL_SCANCODE_DOWN:
@@ -736,6 +802,7 @@ void events_loop(GameState *game_state, InputState *input_state, GameEvents *gam
                     input_state->up_on = false;
                     input_state->reverse_on = true;
                     input_state->down_on = true;
+                    input_state->autopilot_on = false;
                 }
                 break;
             case SDL_SCANCODE_RETURN:

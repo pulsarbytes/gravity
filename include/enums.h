@@ -41,6 +41,8 @@ enum
     COLOR_MOON_1,
     COLOR_MOON_2,
     COLOR_MOON_3,
+    COLOR_GREEN,
+    COLOR_RED,
     COLOR_COUNT
 };
 
@@ -147,6 +149,12 @@ enum
     STAR_INFO_RADIUS,
     STAR_INFO_PLANETS,
     STAR_INFO_COUNT
+};
+
+enum
+{
+    PATH_POINT_STRAIGHT,
+    PATH_POINT_TURN
 };
 
 #endif /* ENUMS_H */

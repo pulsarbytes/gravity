@@ -240,17 +240,18 @@ void console_draw_position_console(const GameState *game_state, const Navigation
  * Draws a console displaying the ship's velocity vector and position.
  *
  * @param game_state A pointer to the current GameState object.
+ * @param input_state A pointer to the current InputState object.
  * @param nav_state A pointer to the current NavigationState object.
  * @param ship A pointer to the Ship struct containing the ship's current state.
  * @param camera A pointer to the current Camera object.
  *
  * @return void
  */
-void console_draw_ship_console(const GameState *game_state, const NavigationState *nav_state, const Ship *ship, const Camera *camera)
+void console_draw_ship_console(const GameState *game_state, const InputState *input_state, const NavigationState *nav_state, const Ship *ship, const Camera *camera)
 {
     // Draw background box
     SDL_SetRenderDrawColor(renderer, 12, 12, 12, 230);
-    int box_width = 400;
+    int box_width = 500;
     int box_height = 70;
     int padding = INFO_BOX_PADDING;
     int inner_padding = 10;
@@ -267,15 +268,17 @@ void console_draw_ship_console(const GameState *game_state, const NavigationStat
     SDL_SetRenderDrawColor(renderer, 255, 255, 255, 20);
 
     int section_width = 100;
-    int separator_1_x = (camera->w / 2) - section_width;
-    int separator_2_x = (camera->w / 2);
-    int separator_3_x = (camera->w / 2) + section_width;
+    int separator_1_x = (camera->w / 2) - 1.5 * section_width;
+    int separator_2_x = (camera->w / 2) - 0.5 * section_width;
+    int separator_3_x = (camera->w / 2) + 0.5 * section_width;
+    int separator_4_x = (camera->w / 2) + 1.5 * section_width;
     int separator_y1 = camera->h - (box_height + padding);
     int separator_y2 = separator_y1 + box_height;
 
     SDL_RenderDrawLine(renderer, separator_1_x, separator_y1, separator_1_x, separator_y2);
     SDL_RenderDrawLine(renderer, separator_2_x, separator_y1, separator_2_x, separator_y2);
     SDL_RenderDrawLine(renderer, separator_3_x, separator_y1, separator_3_x, separator_y2);
+    SDL_RenderDrawLine(renderer, separator_4_x, separator_y1, separator_4_x, separator_y2);
 
     // Zoom
     char *zoom_title = "ZOOM";
@@ -284,7 +287,7 @@ void console_draw_ship_console(const GameState *game_state, const NavigationStat
     SDL_Rect zoom_title_texture_rect;
     zoom_title_texture_rect.w = zoom_title_surface->w;
     zoom_title_texture_rect.h = zoom_title_surface->h;
-    zoom_title_texture_rect.x = (camera->w / 2) - 1.5 * section_width - (zoom_title_texture_rect.w / 2);
+    zoom_title_texture_rect.x = (camera->w / 2) - 2 * section_width - (zoom_title_texture_rect.w / 2);
     zoom_title_texture_rect.y = box_rect.y + inner_padding;
     SDL_RenderCopy(renderer, zoom_title_texture, NULL, &zoom_title_texture_rect);
     SDL_FreeSurface(zoom_title_surface);
@@ -298,13 +301,13 @@ void console_draw_ship_console(const GameState *game_state, const NavigationStat
     SDL_Rect zoom_value_texture_rect;
     zoom_value_texture_rect.w = zoom_value_surface->w;
     zoom_value_texture_rect.h = zoom_value_surface->h;
-    zoom_value_texture_rect.x = (camera->w / 2) - 1.5 * section_width - (zoom_value_texture_rect.w / 2);
+    zoom_value_texture_rect.x = (camera->w / 2) - 2 * section_width - (zoom_value_texture_rect.w / 2);
     zoom_value_texture_rect.y = box_rect.y + 3.4 * inner_padding;
     SDL_RenderCopy(renderer, zoom_value_texture, NULL, &zoom_value_texture_rect);
     SDL_FreeSurface(zoom_value_surface);
 
     // Velocity vector
-    Point center = {.x = (camera->w / 2) - 0.5 * section_width,
+    Point center = {.x = (camera->w / 2) - 1 * section_width,
                     .y = camera->h - (box_height / 2) - padding};
     console_draw_velocity_vector(ship, center, camera);
 
@@ -315,20 +318,31 @@ void console_draw_ship_console(const GameState *game_state, const NavigationStat
     SDL_Rect speed_title_texture_rect;
     speed_title_texture_rect.w = speed_title_surface->w;
     speed_title_texture_rect.h = speed_title_surface->h;
-    speed_title_texture_rect.x = (camera->w / 2) + 0.5 * section_width - (speed_title_texture_rect.w / 2);
+    speed_title_texture_rect.x = (camera->w / 2) + 0 * section_width - (speed_title_texture_rect.w / 2);
     speed_title_texture_rect.y = box_rect.y + inner_padding;
     SDL_RenderCopy(renderer, speed_title_texture, NULL, &speed_title_texture_rect);
     SDL_FreeSurface(speed_title_surface);
 
     char speed_value[16];
     memset(speed_value, 0, sizeof(speed_value));
-    sprintf(speed_value, "%d", (int)nav_state->velocity.magnitude);
+    double speed_corrected = nav_state->velocity.magnitude;
+    double star_speed_limit = BASE_SPEED_LIMIT + (nav_state->buffer_star->class - 1) * (GALAXY_SPEED_LIMIT - BASE_SPEED_LIMIT) / 6;
+
+    // Fix speed accuracy near speed limit
+    if (nav_state->velocity.magnitude > GALAXY_SPEED_LIMIT - 1 && nav_state->velocity.magnitude < GALAXY_SPEED_LIMIT)
+        speed_corrected = GALAXY_SPEED_LIMIT;
+    else if (nav_state->velocity.magnitude > UNIVERSE_SPEED_LIMIT - 1 && nav_state->velocity.magnitude < UNIVERSE_SPEED_LIMIT)
+        speed_corrected = UNIVERSE_SPEED_LIMIT;
+    else if (nav_state->velocity.magnitude > star_speed_limit - 1 && nav_state->velocity.magnitude < star_speed_limit)
+        speed_corrected = star_speed_limit;
+
+    sprintf(speed_value, "%d", (int)speed_corrected);
     SDL_Surface *speed_value_surface = TTF_RenderText_Blended(fonts[FONT_SIZE_22], speed_value, colors[COLOR_WHITE_180]);
     SDL_Texture *speed_value_texture = SDL_CreateTextureFromSurface(renderer, speed_value_surface);
     SDL_Rect speed_value_texture_rect;
     speed_value_texture_rect.w = speed_value_surface->w;
     speed_value_texture_rect.h = speed_value_surface->h;
-    speed_value_texture_rect.x = (camera->w / 2) + 0.5 * section_width - (speed_value_texture_rect.w / 2);
+    speed_value_texture_rect.x = (camera->w / 2) + 0 * section_width - (speed_value_texture_rect.w / 2);
     speed_value_texture_rect.y = box_rect.y + 3.4 * inner_padding;
     SDL_RenderCopy(renderer, speed_value_texture, NULL, &speed_value_texture_rect);
     SDL_FreeSurface(speed_value_surface);
@@ -340,7 +354,7 @@ void console_draw_ship_console(const GameState *game_state, const NavigationStat
     SDL_Rect position_title_texture_rect;
     position_title_texture_rect.w = position_title_surface->w;
     position_title_texture_rect.h = position_title_surface->h;
-    position_title_texture_rect.x = (camera->w / 2) + 1.5 * section_width - (position_title_texture_rect.w / 2);
+    position_title_texture_rect.x = (camera->w / 2) + 1 * section_width - (position_title_texture_rect.w / 2);
     position_title_texture_rect.y = box_rect.y + inner_padding;
     SDL_RenderCopy(renderer, position_title_texture, NULL, &position_title_texture_rect);
     SDL_FreeSurface(position_title_surface);
@@ -353,7 +367,7 @@ void console_draw_ship_console(const GameState *game_state, const NavigationStat
     SDL_Rect position_x_texture_rect;
     position_x_texture_rect.w = position_x_surface->w;
     position_x_texture_rect.h = position_x_surface->h;
-    position_x_texture_rect.x = (camera->w / 2) + 1.5 * section_width - (position_x_texture_rect.w / 2);
+    position_x_texture_rect.x = (camera->w / 2) + 1 * section_width - (position_x_texture_rect.w / 2);
     position_x_texture_rect.y = box_rect.y + 3 * inner_padding;
     SDL_RenderCopy(renderer, position_x_texture, NULL, &position_x_texture_rect);
     SDL_FreeSurface(position_x_surface);
@@ -366,12 +380,49 @@ void console_draw_ship_console(const GameState *game_state, const NavigationStat
     SDL_Rect position_y_texture_rect;
     position_y_texture_rect.w = position_y_surface->w;
     position_y_texture_rect.h = position_y_surface->h;
-    position_y_texture_rect.x = (camera->w / 2) + 1.5 * section_width - (position_x_texture_rect.w / 2);
+    position_y_texture_rect.x = (camera->w / 2) + 1 * section_width - (position_x_texture_rect.w / 2);
     position_y_texture_rect.y = box_rect.y + 5 * inner_padding;
     SDL_RenderCopy(renderer, position_y_texture, NULL, &position_y_texture_rect);
     SDL_FreeSurface(position_y_surface);
 
+    // Autopilot
+    char *autopilot_title = "AUTOPILOT";
+    SDL_Surface *autopilot_title_surface = TTF_RenderText_Blended(fonts[FONT_SIZE_12], autopilot_title, colors[COLOR_WHITE_100]);
+    SDL_Texture *autopilot_title_texture = SDL_CreateTextureFromSurface(renderer, autopilot_title_surface);
+    SDL_Rect autopilot_title_texture_rect;
+    autopilot_title_texture_rect.w = autopilot_title_surface->w;
+    autopilot_title_texture_rect.h = autopilot_title_surface->h;
+    autopilot_title_texture_rect.x = (camera->w / 2) + 2 * section_width - (autopilot_title_texture_rect.w / 2);
+    autopilot_title_texture_rect.y = box_rect.y + inner_padding;
+    SDL_RenderCopy(renderer, autopilot_title_texture, NULL, &autopilot_title_texture_rect);
+    SDL_FreeSurface(autopilot_title_surface);
+
+    char autopilot_value[16];
+    SDL_Color autopilot_color;
+    memset(autopilot_value, 0, sizeof(autopilot_value));
+    if (input_state->autopilot_on)
+    {
+        sprintf(autopilot_value, "%s", "ON");
+        autopilot_color = colors[COLOR_GREEN];
+    }
+    else
+    {
+        sprintf(autopilot_value, "%s", "OFF");
+        autopilot_color = colors[COLOR_RED];
+    }
+    SDL_Surface *autopilot_value_surface = TTF_RenderText_Blended(fonts[FONT_SIZE_18], autopilot_value, autopilot_color);
+    SDL_Texture *autopilot_value_texture = SDL_CreateTextureFromSurface(renderer, autopilot_value_surface);
+    SDL_Rect autopilot_value_texture_rect;
+    autopilot_value_texture_rect.w = autopilot_value_surface->w;
+    autopilot_value_texture_rect.h = autopilot_value_surface->h;
+    autopilot_value_texture_rect.x = (camera->w / 2) + 2 * section_width - (autopilot_value_texture_rect.w / 2);
+    autopilot_value_texture_rect.y = box_rect.y + 3.4 * inner_padding;
+    SDL_RenderCopy(renderer, autopilot_value_texture, NULL, &autopilot_value_texture_rect);
+    SDL_FreeSurface(autopilot_value_surface);
+
     // Destroy the textures
+    SDL_DestroyTexture(zoom_title_texture);
+    zoom_title_texture = NULL;
     SDL_DestroyTexture(zoom_value_texture);
     zoom_value_texture = NULL;
     SDL_DestroyTexture(speed_title_texture);
@@ -384,6 +435,10 @@ void console_draw_ship_console(const GameState *game_state, const NavigationStat
     position_x_texture = NULL;
     SDL_DestroyTexture(position_y_texture);
     position_y_texture = NULL;
+    SDL_DestroyTexture(autopilot_title_texture);
+    autopilot_title_texture = NULL;
+    SDL_DestroyTexture(autopilot_value_texture);
+    autopilot_value_texture = NULL;
 }
 
 /**
@@ -486,20 +541,20 @@ static void console_draw_velocity_vector(const Ship *ship, Point center, const C
  * Draws a console displaying information about waypoint star.
  *
  * @param nav_state A pointer to the current NavigationState object.
+ * @param ship A pointer to the current Ship object.
  * @param camera A pointer to the current Camera object.
  *
  * @return void
  */
-void console_draw_waypoint_console(const NavigationState *nav_state, const Camera *camera)
+void console_draw_waypoint_console(const NavigationState *nav_state, const Ship *ship, const Camera *camera)
 {
     // Draw background box
     SDL_SetRenderDrawColor(renderer, 12, 12, 12, 230);
     int box_width = INFO_BOX_WIDTH;
-    int box_height = 130;
+    int box_height = 110;
     int padding = INFO_BOX_PADDING;
     int inner_padding = 40;
     int star_name_height = 70;
-    int entry_height = 25;
 
     SDL_Rect box_rect;
     box_rect.x = camera->w - (box_width + padding);
@@ -532,16 +587,38 @@ void console_draw_waypoint_console(const NavigationState *nav_state, const Camer
     gfx_draw_fill_diamond(renderer, x_star, y_star, PROJECTION_RADIUS, nav_state->waypoint_star->color);
 
     // Distance
-    double distance_star = maths_distance_between_points(nav_state->waypoint_star->position.x, nav_state->waypoint_star->position.y, nav_state->navigate_offset.x, nav_state->navigate_offset.y);
+    double distance_waypoint = 0.0;
+
+    for (int i = nav_state->next_path_point; i < nav_state->waypoint_star->waypoint_points - 1; i++)
+    {
+        distance_waypoint += maths_distance_between_points(nav_state->waypoint_star->waypoint_path[i].position.x, nav_state->waypoint_star->waypoint_path[i].position.y,
+                                                           nav_state->waypoint_star->waypoint_path[i + 1].position.x, nav_state->waypoint_star->waypoint_path[i + 1].position.y);
+    }
+
+    distance_waypoint += maths_distance_between_points(nav_state->waypoint_star->waypoint_path[nav_state->next_path_point].position.x, nav_state->waypoint_star->waypoint_path[nav_state->next_path_point].position.y,
+                                                       ship->position.x, ship->position.y);
+
     char distance_text[16];
     memset(distance_text, 0, sizeof(distance_text));
-    utils_add_thousand_separators((int)distance_star, distance_text, sizeof(distance_text));
+    utils_add_thousand_separators((int)distance_waypoint, distance_text, sizeof(distance_text));
+
+    // Time
+    char time_text[16];
+    memset(time_text, 0, sizeof(time_text));
+
+    if (nav_state->velocity.magnitude > 5)
+    {
+        int seconds = distance_waypoint / nav_state->velocity.magnitude;
+        utils_convert_seconds_to_time_string(seconds, time_text);
+    }
+    else
+        sprintf(time_text, "%s", "-");
 
     char distance_row_text[64];
     memset(distance_row_text, 0, sizeof(distance_row_text));
-    sprintf(distance_row_text, "Distance: %*s%s", 4, "", distance_text);
+    sprintf(distance_row_text, "Distance: %*s %s %*s (%s)", 1, "", distance_text, 1, "", time_text);
 
-    SDL_Surface *distance_surface = TTF_RenderText_Blended(fonts[FONT_SIZE_15], distance_row_text, colors[COLOR_WHITE_140]);
+    SDL_Surface *distance_surface = TTF_RenderText_Blended(fonts[FONT_SIZE_14], distance_row_text, colors[COLOR_WHITE_140]);
     SDL_Texture *distance_texture = SDL_CreateTextureFromSurface(renderer, distance_surface);
     SDL_Rect distance_texture_rect = {.x = camera->w - (box_width - 2.5 * padding),
                                       .y = camera->h - (box_height + padding) + star_name_height,
@@ -551,29 +628,6 @@ void console_draw_waypoint_console(const NavigationState *nav_state, const Camer
     SDL_FreeSurface(distance_surface);
     SDL_RenderCopy(renderer, distance_texture, NULL, &distance_texture_rect);
     SDL_DestroyTexture(distance_texture);
-
-    // Time
-    if (nav_state->velocity.magnitude > 5)
-    {
-        int seconds = distance_star / nav_state->velocity.magnitude;
-        char time_row_text[64];
-        memset(time_row_text, 0, sizeof(time_row_text));
-        char time_text[32];
-        memset(time_text, 0, sizeof(time_text));
-        utils_convert_seconds_to_time_string(seconds, time_text);
-        sprintf(time_row_text, "%*s%s", 14, "", time_text);
-
-        SDL_Surface *time_surface = TTF_RenderText_Blended(fonts[FONT_SIZE_14], time_row_text, colors[COLOR_WHITE_140]);
-        SDL_Texture *time_texture = SDL_CreateTextureFromSurface(renderer, time_surface);
-        SDL_Rect time_texture_rect = {.x = camera->w - (box_width - 2.5 * padding),
-                                      .y = camera->h - (box_height + padding) + star_name_height + entry_height,
-                                      .w = time_surface->w,
-                                      .h = time_surface->h};
-
-        SDL_FreeSurface(time_surface);
-        SDL_RenderCopy(renderer, time_texture, NULL, &time_texture_rect);
-        SDL_DestroyTexture(time_texture);
-    }
 }
 
 /**

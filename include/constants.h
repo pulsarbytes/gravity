@@ -44,13 +44,14 @@
 #define SHIP_PROJECTION_RADIUS 12 // Default: 12
 #define SHIP_RADIUS 17            // Default: 17
 #define BASE_SPEED_LIMIT 300      // Default: 300
-#define GALAXY_SPEED_LIMIT 1500   // Default: 1800
+#define GALAXY_SPEED_LIMIT 1500   // Default: 1500
 #define UNIVERSE_SPEED_LIMIT 3000 // Default: 3000
 #define MAP_SPEED_MAX 25          // Zoom in. Default: 25
 #define MAP_SPEED_MIN 10          // Zoom out. Default: 10
 #define UNIVERSE_SPEED_MAX 15     // Zoom in. Default: 15
 #define UNIVERSE_SPEED_MIN 4      // Zoom out. Default: 4
 #define MOUSE_SCROLL_DISTANCE 20  // Distance from the edge of the screen where scrolling starts. Default: 20
+#define MAX_NEAREST_STARS 196     // Default: 196
 #define MAX_CONTROLS_GROUPS 4
 #define MAX_CONTROLS_ENTRIES 13
 
@@ -105,8 +106,8 @@
                                 // Class 4: -100000, -40000
                                 // Class 5: -110000, -120000
                                 // Class 6: -250000, -60000
-#define GALAXY_START_X -109000  // Default: 0
-#define GALAXY_START_Y -60000   // Default: 0
+#define GALAXY_START_X -3328000 // Default: 0
+#define GALAXY_START_Y 5075000  // Default: 0
 
 // Galaxies
 #define GALAXY_SCALE 10000        // We multiply by this factor to get values in galaxy scale. Default: 10000 (min 1000)
@@ -205,5 +206,10 @@
 // Buttons
 #define WAYPOINT_BUTTON_WIDTH 130 // Default: 130
 #define WAYPOINT_BUTTON_HEIGHT 26 // Default: 26
+
+// WAYPOINT PATH
+#define WAYPOINT_CIRCLE_RADIUS 100
+#define WAYPOINT_LINE_WIDTH 300
+#define WAYPOINT_ORBIT_RADII 3
 
 #endif /* CONSTANTS_H */

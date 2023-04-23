@@ -19,7 +19,7 @@ void gfx_project_galaxy_on_edge(int state, const NavigationState *, Galaxy *, co
 bool maths_check_point_in_array(Point, Point arr[], int len);
 double maths_distance_between_points(double x1, double y1, double x2, double y2);
 double maths_get_nearest_section_line(double offset, int size);
-bool maths_is_point_in_circle(Point, Point, int radius);
+bool maths_is_point_in_circle(Point, Point, double radius);
 uint64_t maths_hash_position_to_index(Point, int modulo, int entity_type);
 uint64_t maths_hash_position_to_uint64(Point);
 uint64_t maths_hash_position_to_uint64_2(Point);

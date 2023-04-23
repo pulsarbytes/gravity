@@ -1,6 +1,12 @@
 #ifndef STRUCTS_H
 #define STRUCTS_H
 
+typedef struct
+{
+    double x;
+    double y;
+} Point;
+
 // Structs for the controls table
 typedef struct
 {
@@ -36,12 +42,6 @@ typedef struct
     SDL_Rect texture_rect;
 } InfoBoxEntry;
 
-typedef struct
-{
-    double x;
-    double y;
-} Point;
-
 // Struct for a waypoint button
 typedef struct
 {
@@ -71,6 +71,8 @@ typedef struct
     double buffer_y;
 } PointState;
 
+typedef struct PathPoint PathPoint;
+
 typedef struct CelestialBody
 {
     int initialized;
@@ -93,10 +95,19 @@ typedef struct CelestialBody
     bool is_selected; // Whether the body is selected in Map
     char galaxy_name[MAX_OBJECT_NAME];
     WaypointButton waypoint_button;
+    PathPoint *waypoint_path;
+    int waypoint_points;
 } CelestialBody;
 
 typedef CelestialBody Planet;
 typedef CelestialBody Star;
+
+// Struct for a path point
+typedef struct PathPoint
+{
+    unsigned short type;
+    Point position;
+} PathPoint;
 
 // Struct for a star entry in stars hash table
 typedef struct StarEntry
@@ -153,7 +164,7 @@ typedef struct Ship
     int radius;
     Point position;
     Point previous_position;
-    float angle;
+    float angle; // Reference is the vertical axis
     float vx;
     float vy;
     SDL_Texture *texture;
@@ -208,6 +219,7 @@ typedef struct
     bool zoom_out;
     bool fps_on;
     bool orbits_on;
+    bool autopilot_on;
     unsigned short selected_menu_button_index;
     bool is_hovering_galaxy;
     bool is_hovering_star;
@@ -238,6 +250,10 @@ typedef struct
     bool is_centering_universe;
     bool zoom_preview;      // Whether the stars preview has been requested by a zoom event
     bool lazy_load_started; // Whether lazy-loading for stars preview has started
+    bool arrived_at_waypoint;
+    bool autopilot_rotated_ship;
+    bool deccelerate_to_waypoint;
+    bool is_centering_waypoint;
 } GameEvents;
 
 typedef struct
@@ -251,6 +267,7 @@ typedef struct
     Star *selected_star;
     Star *waypoint_star;
     int waypoint_planet_index;
+    unsigned int next_path_point;
     Star *buffer_star; // Stores star of current ship position
     PointState galaxy_offset;
     Point universe_cross_line; // Keep track of nearest line position

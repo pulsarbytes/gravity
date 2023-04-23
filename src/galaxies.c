@@ -232,7 +232,7 @@ static void galaxies_delete_entry(GalaxyEntry *galaxies[], Point position)
 void galaxies_draw_galaxy(const InputState *input_state, NavigationState *nav_state, Galaxy *galaxy, const Camera *camera, int state, long double scale)
 {
     // Get relative position of galaxy in game_scale
-    int cutoff = galaxy->cutoff * scale * GALAXY_SCALE;
+    double cutoff = galaxy->cutoff * scale * GALAXY_SCALE;
     int x = (galaxy->position.x - camera->x) * scale * GALAXY_SCALE;
     int y = (galaxy->position.y - camera->y) * scale * GALAXY_SCALE;
     Point galaxy_position = {.x = x, .y = y};
@@ -645,7 +645,7 @@ static double galaxies_nearest_center_distance(Point position)
     // If we find a galaxy, the function returns.
 
     // Keep track of checked points
-    Point checked_points[196];
+    Point checked_points[MAX_NEAREST_STARS];
     int num_checked_points = 0;
 
     // Use a local rng
@@ -689,7 +689,7 @@ static double galaxies_nearest_center_distance(Point position)
 }
 
 /**
- * Finds the galaxy closest to the circumference of the circle surrounding the given point.
+ * Finds the galaxy whose circumference is closest to the given point.
  * Excludes the current galaxy if exclude flag is set.
  *
  * @param nav_state A pointer to the current NavigationState object.

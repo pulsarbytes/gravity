@@ -22,8 +22,8 @@ extern SDL_Color colors[];
 
 // Static function prototypes
 static void stars_add_entry(StarEntry *stars[], Point, Star *);
-static void stars_cleanup_planets(CelestialBody *);
-static Star *stars_create_star(const NavigationState *, Point, int preview, long double scale);
+void stars_cleanup_planets(CelestialBody *);
+static Star *stars_create_star(const NavigationState *, Point, int preview);
 static void stars_delete_entry(StarEntry *stars[], Point);
 static bool stars_entry_exists(StarEntry *stars[], Point);
 static int stars_planet_size_class(float radius);
@@ -64,7 +64,7 @@ static void stars_add_entry(StarEntry *stars[], Point position, Star *star)
  *
  * @return void
  */
-static void stars_cleanup_planets(CelestialBody *body)
+void stars_cleanup_planets(CelestialBody *body)
 {
     int planets_size = sizeof(body->planets) / sizeof(body->planets[0]);
 
@@ -110,14 +110,13 @@ void stars_clear_table(StarEntry *stars[], const NavigationState *nav_state, boo
  * @param nav_state A pointer to the current NavigationState object.
  * @param position A point struct representing the position of the star.
  * @param preview An integer representing whether or not the star is a preview.
- * @param scale A long double representing the scale factor of the star's position.
  *
  * @return Returns a pointer to a new Star object.
  */
-static Star *stars_create_star(const NavigationState *nav_state, Point position, int preview, long double scale)
+static Star *stars_create_star(const NavigationState *nav_state, Point position, int preview)
 {
     // Find distance to nearest star
-    double distance = stars_nearest_center_distance(position, nav_state->current_galaxy, nav_state->initseq, GALAXY_DENSITY);
+    double distance = stars_nearest_star_distance(position, nav_state->current_galaxy, nav_state->initseq, GALAXY_DENSITY);
 
     // Get star class
     unsigned short class = stars_size_class(distance);
@@ -212,6 +211,9 @@ static Star *stars_create_star(const NavigationState *nav_state, Point position,
                            .w = 0,
                            .h = 0}};
 
+    star->waypoint_path = NULL;
+    star->waypoint_points = 0;
+
     return star;
 }
 
@@ -238,6 +240,12 @@ static void stars_delete_entry(StarEntry *stars[], Point position)
             // Clean up planets
             if (entry->star != NULL && entry->star->planets[0] != NULL)
                 stars_cleanup_planets(entry->star);
+
+            if (entry->star->waypoint_path != NULL)
+            {
+                free(entry->star->waypoint_path);
+                entry->star->waypoint_path = NULL;
+            }
 
             free(entry->star);
             entry->star = NULL;
@@ -696,7 +704,7 @@ void stars_draw_star_system(GameState *game_state, const InputState *input_state
         if (game_state->state == MAP)
         {
             // Get relative position of star in game_scale
-            int radius = (body->class * GALAXY_SECTION_SIZE / 2) * game_state->game_scale;
+            double radius = (body->class * GALAXY_SECTION_SIZE / 2) * game_state->game_scale;
             int x = (body->position.x - camera->x) * game_state->game_scale;
             int y = (body->position.y - camera->y) * game_state->game_scale;
 
@@ -972,7 +980,7 @@ static bool stars_entry_exists(StarEntry *stars[], Point position)
  */
 void stars_generate(GameState *game_state, GameEvents *game_events, NavigationState *nav_state, Bstar *bstars, Ship *ship)
 {
-    Point offset;
+    Point offset = {.x = 0, .y = 0};
 
     if (game_state->state == NAVIGATE)
     {
@@ -1159,7 +1167,7 @@ void stars_generate(GameState *game_state, GameEvents *game_events, NavigationSt
                 else
                 {
                     // Create star
-                    Star *star = stars_create_star(nav_state, position, false, game_state->game_scale);
+                    Star *star = stars_create_star(nav_state, position, false);
 
                     // Add star to hash table
                     stars_add_entry(nav_state->stars, position, star);
@@ -1303,7 +1311,7 @@ void stars_generate_preview(GameEvents *game_events, NavigationState *nav_state,
                 else
                 {
                     // Create star
-                    Star *star = stars_create_star(nav_state, position, true, scale);
+                    Star *star = stars_create_star(nav_state, position, true);
 
                     // Add star to hash table
                     stars_add_entry(nav_state->stars, position, star);
@@ -1370,6 +1378,9 @@ void stars_initialize_star(Star *star)
                            .y = 0,
                            .w = 0,
                            .h = 0}};
+
+    star->waypoint_path = NULL;
+    star->waypoint_points = 0;
 }
 
 /**
@@ -1384,14 +1395,14 @@ void stars_initialize_star(Star *star)
  * @return The distance from the given position to the nearest star in the current galaxy.
  *         If no star is found within the galaxy, the function returns 7 * GALAXY_SECTION_SIZE.
  */
-double stars_nearest_center_distance(Point position, Galaxy *current_galaxy, uint64_t initseq, int galaxy_density)
+double stars_nearest_star_distance(Point position, Galaxy *current_galaxy, uint64_t initseq, int galaxy_density)
 {
     // We use 6 * GALAXY_SECTION_SIZE as max, since a CLASS_6 star needs 6 + 1 empty sections
     // We search inner circumferences of points first and work towards outward circumferences
     // If we find a star, the function returns.
 
     // Keep track of checked points
-    Point checked_points[196];
+    Point checked_points[MAX_NEAREST_STARS];
     int num_checked_points = 0;
 
     // Use a local rng
@@ -1447,6 +1458,123 @@ double stars_nearest_center_distance(Point position, Galaxy *current_galaxy, uin
     }
 
     return 7 * GALAXY_SECTION_SIZE;
+}
+
+/**
+ * Finds the star in nav_state->stars whose cutoff is closest to the given point.
+ *
+ * @param nav_state A pointer to the current NavigationState object.
+ * @param position The point to find the closest star cutoff to.
+ * @param exclude Whether to exclude the buffer_star or not.
+ *
+ * @return Pointer to the closest star found or NULL if none found.
+ */
+Star *stars_nearest_star_in_nav_state(const NavigationState *nav_state, Point position, bool exclude)
+{
+    Star *closest = NULL;
+    double closest_distance = INFINITY;
+
+    for (int i = 0; i < MAX_STARS; i++)
+    {
+        if (nav_state->stars[i] != NULL)
+        {
+            StarEntry *entry = nav_state->stars[i];
+
+            while (entry != NULL)
+            {
+                // Exlude buffer_star
+                if (exclude)
+                {
+                    if (maths_points_equal(entry->star->position, nav_state->buffer_star->position))
+                    {
+                        entry = entry->next;
+                        continue;
+                    }
+                }
+
+                double cx = entry->star->position.x;
+                double cy = entry->star->position.y;
+                double r = entry->star->cutoff;
+                double d = maths_distance_between_points(position.x, position.y, cx, cy);
+
+                // Check if there is a star at max distance <6 * GALAXY_SECTION_SIZE>
+                if (d <= 6 * GALAXY_SECTION_SIZE)
+                {
+                    double angle = atan2(position.y - cy, position.x - cx);
+                    double px = cx + r * cos(angle);
+                    double py = cy + r * sin(angle);
+                    double pd = maths_distance_between_points(position.x, position.y, px, py);
+
+                    if (pd < closest_distance)
+                    {
+                        closest = entry->star;
+                        closest_distance = pd;
+                    }
+                }
+
+                entry = entry->next;
+            }
+        }
+    }
+
+    return closest;
+}
+
+/**
+ * Finds the nearest stars to the given point. Searches an area of
+ * (6 * GALAXY_SECTION_SIZE) * (6 * GALAXY_SECTION_SIZE).
+ *
+ * @param nav_state A pointer to the current NavigationState object.
+ * @param position The point to search for nearest stars.
+ * @param stars An array of pointers to stars in which to store the nearest stars.
+ *
+ * @return Number of stars found.
+ */
+int stars_nearest_stars_to_point(const NavigationState *nav_state, Point position, Star *stars[])
+{
+    // Use a local rng
+    pcg32_random_t rng;
+
+    // Density scaling parameter
+    double a = nav_state->current_galaxy->radius * GALAXY_SCALE / 2.0f;
+
+    int index = 0;
+
+    for (double ix = position.x - 6 * GALAXY_SECTION_SIZE; ix <= position.x + 6 * GALAXY_SECTION_SIZE; ix += GALAXY_SECTION_SIZE)
+    {
+        for (double iy = position.y - 6 * GALAXY_SECTION_SIZE; iy <= position.y + 6 * GALAXY_SECTION_SIZE; iy += GALAXY_SECTION_SIZE)
+        {
+            // Check that point is within galaxy radius
+            double distance_from_center = sqrt(ix * ix + iy * iy);
+
+            if (distance_from_center > (nav_state->current_galaxy->radius * GALAXY_SCALE))
+                continue;
+
+            Point p = {ix, iy};
+
+            // Create rng seed by combining x,y values
+            uint64_t seed = maths_hash_position_to_uint64(p);
+
+            // Seed with a fixed constant
+            pcg32_srandom_r(&rng, seed, nav_state->initseq);
+
+            // Calculate density based on distance from center
+            double density = (GALAXY_DENSITY / pow((distance_from_center / a + 1), 6));
+
+            int has_star = abs(pcg32_random_r(&rng)) % 1000 < density;
+
+            if (has_star)
+            {
+                // Create star
+                Star *star = stars_create_star(nav_state, p, false);
+
+                stars[index] = star;
+                index++;
+            }
+        }
+    }
+
+    return index;
 }
 
 /**
@@ -1655,6 +1783,16 @@ void stars_populate_body(CelestialBody *body, Point position, pcg32_random_t rng
                 planet->parent->num_planets++;
                 body->planets[i] = planet;
                 body->planets[i + 1] = NULL;
+
+                planet->waypoint_button = (WaypointButton){
+                    .rect = (SDL_Rect){.x = 0,
+                                       .y = 0,
+                                       .w = 0,
+                                       .h = 0}};
+
+                planet->waypoint_path = NULL;
+                planet->waypoint_points = 0;
+
                 i++;
 
                 stars_populate_body(planet, position, rng, scale);
@@ -1804,6 +1942,16 @@ void stars_populate_body(CelestialBody *body, Point position, pcg32_random_t rng
                 moon->parent->num_planets++;
                 body->planets[i] = moon;
                 body->planets[i + 1] = NULL;
+
+                moon->waypoint_button = (WaypointButton){
+                    .rect = (SDL_Rect){.x = 0,
+                                       .y = 0,
+                                       .w = 0,
+                                       .h = 0}};
+
+                moon->waypoint_path = NULL;
+                moon->waypoint_points = 0;
+
                 i++;
             }
             else
@@ -1921,7 +2069,7 @@ void stars_update_orbital_positions(GameState *game_state, const InputState *inp
         if (game_state->state == MAP)
         {
             // Get relative position of star in game_scale
-            int radius = (body->class * GALAXY_SECTION_SIZE / 2) * game_state->game_scale;
+            double radius = (body->class * GALAXY_SECTION_SIZE / 2) * game_state->game_scale;
             int x = (body->position.x - camera->x) * game_state->game_scale;
             int y = (body->position.y - camera->y) * game_state->game_scale;
             Point relative_star_position = {.x = x, .y = y};
@@ -1971,7 +2119,7 @@ void stars_update_orbital_positions(GameState *game_state, const InputState *inp
 
     // Update ship speed due to gravity
     if (game_state->state == NAVIGATE && SHIP_GRAVITY_ON)
-        phys_apply_gravity_to_ship(game_state, input_state->thrust_on, nav_state, body, ship, star_class);
+        phys_apply_gravity_to_ship(game_state, input_state, nav_state, body, ship, star_class);
 
     // Update velocity
     phys_update_velocity(&nav_state->velocity, ship);

@@ -32,33 +32,35 @@ void controls_create_table(GameState *game_state, const Camera *camera)
 {
     // Navigate mode
     sprintf(game_state->controls_groups[0].title, "%s", "Navigate mode");
-    game_state->controls_groups[0].num_controls = 12;
+    game_state->controls_groups[0].num_controls = 13;
 
     sprintf(game_state->controls_groups[0].controls[0].key, "%s", "Up");
     sprintf(game_state->controls_groups[0].controls[1].key, "%s", "Down");
     sprintf(game_state->controls_groups[0].controls[2].key, "%s", "Right");
     sprintf(game_state->controls_groups[0].controls[3].key, "%s", "Left");
-    sprintf(game_state->controls_groups[0].controls[4].key, "%s", "C");
-    sprintf(game_state->controls_groups[0].controls[5].key, "%s", "M");
-    sprintf(game_state->controls_groups[0].controls[6].key, "%s", "O");
-    sprintf(game_state->controls_groups[0].controls[7].key, "%s", "S");
-    sprintf(game_state->controls_groups[0].controls[8].key, "%s", "U");
-    sprintf(game_state->controls_groups[0].controls[9].key, "%s", "[ or Mouse Wheel Backward");
-    sprintf(game_state->controls_groups[0].controls[10].key, "%s", "] or Mouse Wheel Forward");
-    sprintf(game_state->controls_groups[0].controls[11].key, "%s", "Space");
+    sprintf(game_state->controls_groups[0].controls[4].key, "%s", "A");
+    sprintf(game_state->controls_groups[0].controls[5].key, "%s", "C");
+    sprintf(game_state->controls_groups[0].controls[6].key, "%s", "M");
+    sprintf(game_state->controls_groups[0].controls[7].key, "%s", "O");
+    sprintf(game_state->controls_groups[0].controls[8].key, "%s", "S");
+    sprintf(game_state->controls_groups[0].controls[9].key, "%s", "U");
+    sprintf(game_state->controls_groups[0].controls[10].key, "%s", "[ or Mouse Wheel Backward");
+    sprintf(game_state->controls_groups[0].controls[11].key, "%s", "] or Mouse Wheel Forward");
+    sprintf(game_state->controls_groups[0].controls[12].key, "%s", "Space");
 
     sprintf(game_state->controls_groups[0].controls[0].description, "%s", "Forward thrust");
     sprintf(game_state->controls_groups[0].controls[1].description, "%s", "Reverse thrust");
     sprintf(game_state->controls_groups[0].controls[2].description, "%s", "Rotate right");
     sprintf(game_state->controls_groups[0].controls[3].description, "%s", "Rotate left");
-    sprintf(game_state->controls_groups[0].controls[4].description, "%s", "Toggle camera");
-    sprintf(game_state->controls_groups[0].controls[5].description, "%s", "Enter Map mode");
-    sprintf(game_state->controls_groups[0].controls[6].description, "%s", "Show orbits");
-    sprintf(game_state->controls_groups[0].controls[7].description, "%s", "Stop ship");
-    sprintf(game_state->controls_groups[0].controls[8].description, "%s", "Enter Universe mode");
-    sprintf(game_state->controls_groups[0].controls[9].description, "%s", "Zoom out");
-    sprintf(game_state->controls_groups[0].controls[10].description, "%s", "Zoom in");
-    sprintf(game_state->controls_groups[0].controls[11].description, "%s", "Reset zoom scale");
+    sprintf(game_state->controls_groups[0].controls[4].description, "%s", "Engage autopilot");
+    sprintf(game_state->controls_groups[0].controls[5].description, "%s", "Toggle camera");
+    sprintf(game_state->controls_groups[0].controls[6].description, "%s", "Enter Map mode");
+    sprintf(game_state->controls_groups[0].controls[7].description, "%s", "Show orbits");
+    sprintf(game_state->controls_groups[0].controls[8].description, "%s", "Stop ship");
+    sprintf(game_state->controls_groups[0].controls[9].description, "%s", "Enter Universe mode");
+    sprintf(game_state->controls_groups[0].controls[10].description, "%s", "Zoom out");
+    sprintf(game_state->controls_groups[0].controls[11].description, "%s", "Zoom in");
+    sprintf(game_state->controls_groups[0].controls[12].description, "%s", "Reset zoom scale");
 
     // Map mode
     sprintf(game_state->controls_groups[1].title, "%s", "Map mode");
